@@ -1,13 +1,17 @@
 import {
   createConfig,
+  deserialize,
   fallback,
   http,
   injected,
+  serialize,
   unstable_connector,
   WagmiProvider,
 } from "wagmi";
 import { base, mainnet } from "viem/chains";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import DashboardPage from "./app/dashboard/page";
 
 const wagmiConfig = createConfig({
@@ -25,16 +29,36 @@ const wagmiConfig = createConfig({
       http(undefined, { retryCount: 5, retryDelay: 500 }),
     ]),
   },
+  batch: {
+    multicall: {
+      batchSize: 2048,
+      wait: 500,
+    },
+  },
+  cacheTime: 4000,
+  pollingInterval: 4000,
 });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 7 * 24 * 60 * 60 * 1_000, // 7 days
+    },
+  },
+});
+
+const persister = createSyncStoragePersister({
+  serialize,
+  storage: window.localStorage,
+  deserialize,
+});
 
 function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
         <DashboardPage />
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </WagmiProvider>
   );
 }
