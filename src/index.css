@@ -2,7 +2,7 @@
 
 @plugin "tailwindcss-animate";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: hsl(0 0% 100%);
@@ -218,5 +218,28 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .is-frame {
+    clip-path: polygon(
+      evenodd,
+      0% 0%,
+      0% 100%,
+      100% 100%,
+      100% 0%,
+      0% 0%,
+
+      14px 14px,
+      14px calc(100% - 14px),
+      calc(100% - 14px) calc(100% - 14px),
+      calc(100% - 14px) 14px,
+      14px 14px
+    );
+  }
+
+  .apply-rounding-blur {
+    filter: url("#rounding_blur");
   }
 }
