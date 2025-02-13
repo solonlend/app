@@ -4,7 +4,7 @@ import useContractEvents from "@/hooks/use-contract-events";
 import { useMemo } from "react";
 import { useAccount, useBlockNumber, useReadContracts } from "wagmi";
 import { Address, erc20Abi } from "viem";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { blo } from "blo";
 import { formatBalance, Token } from "@/components/utils";
@@ -134,6 +134,11 @@ export function BorrowSubPage() {
       <div className="dark:bg-background/70 grow rounded-t-xl">
         <div className="text-primary w-full max-w-7xl px-8 pt-8 pb-32 md:px-32">
           <Table className="border-separate border-spacing-y-3">
+            <TableCaption>
+              Showing markets in which you have (or had) positions.
+              <br />
+              Click on a market to manage your position.
+            </TableCaption>
             <TableHeader className="bg-secondary">
               <TableRow>
                 <TableHead className="text-primary rounded-l-lg pl-4 text-xs font-light">Collateral</TableHead>
