@@ -15,7 +15,7 @@ function TokenTableCell({ address, symbol }: { address: Address; symbol?: string
       <Avatar className="h-4 w-4 rounded-sm">
         <AvatarImage src={blo(address)} alt="Avatar" />
       </Avatar>
-      {symbol ?? ""}
+      {symbol ?? "－"}
       <span className="text-primary/30 font-mono">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
     </div>
   );
@@ -140,9 +140,10 @@ export function BorrowSubPage() {
                   </TableCell>
                   <TableCell>{(Number(marketParams[idx].lltv / 1_000_000_000n) / 1e7).toFixed(2)}%</TableCell>
                   <TableCell className="rounded-r-lg">
-                    {markets && erc20Decimals?.[Math.floor(idx / 2)].result
+                    {(markets && erc20Decimals?.[Math.floor(idx / 2)].result
                       ? formatBalance(markets[idx][0] - markets[idx][2], erc20Decimals[Math.floor(idx / 2)].result ?? 1)
-                      : "－"}
+                      : "－"
+                    ).concat(" ", erc20Symbols?.[Math.floor(idx / 2) + 1].result ?? "")}
                   </TableCell>
                 </TableRow>
               ))}
