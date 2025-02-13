@@ -27,8 +27,7 @@ import { JSX, useEffect, useMemo, useState } from "react";
 import { Address } from "viem";
 import { blo } from "blo";
 import { mainnet } from "viem/chains";
-
-const CORE_DEPLOYMENTS = new Set(["Ethereum", "Base"]);
+import { CORE_DEPLOYMENTS } from "@/components/constants";
 
 function ChainIcon({ name }: { name: string }): JSX.Element {
   switch (name) {
@@ -142,7 +141,7 @@ export function WalletMenu({
     }
   }, [currentChainId, chains, selectedChainName, setSelectedChainName]);
 
-  const isSomeChainLightweight = useMemo(() => chains.some((chain) => !CORE_DEPLOYMENTS.has(chain.name)), [chains]);
+  const isSomeChainLightweight = useMemo(() => chains.some((chain) => !CORE_DEPLOYMENTS.has(chain.id)), [chains]);
 
   return (
     <>
@@ -164,7 +163,7 @@ export function WalletMenu({
           <SelectGroup>
             <SelectLabel>Core</SelectLabel>
             {chains
-              .filter((chain) => CORE_DEPLOYMENTS.has(chain.name))
+              .filter((chain) => CORE_DEPLOYMENTS.has(chain.id))
               .map((chain, idx) => (
                 <SelectItem key={idx} value={chain.name}>
                   <ChainIcon name={chain.name} /> {chain.name}
@@ -172,7 +171,7 @@ export function WalletMenu({
               ))}
             {isSomeChainLightweight && <SelectLabel>Lightweight</SelectLabel>}
             {chains
-              .filter((chain) => !CORE_DEPLOYMENTS.has(chain.name))
+              .filter((chain) => !CORE_DEPLOYMENTS.has(chain.id))
               .map((chain, idx) => (
                 <SelectItem key={idx} value={chain.name}>
                   <ChainIcon name={chain.name} /> {chain.name}

@@ -19,13 +19,13 @@ const wagmiConfig = createConfig({
   connectors: [injected({ shimDisconnect: true })],
   transports: {
     [mainnet.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected" }),
-      http("https://eth.drpc.org"),
+      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
+      http("https://eth.drpc.org", { retryCount: 5, retryDelay: 500 }),
       http(undefined, { retryCount: 5, retryDelay: 500 }),
     ]),
     [base.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected" }),
-      http("https://base.drpc.org"),
+      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
+      http("https://base.drpc.org", { retryCount: 5, retryDelay: 500 }),
       http(undefined, { retryCount: 5, retryDelay: 500 }),
     ]),
   },

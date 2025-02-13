@@ -18,7 +18,7 @@ export default function Page() {
   const [selectedChainName, setSelectedChainName] = useState("Ethereum");
 
   return (
-    <div className="dark">
+    <div className="dark dark:bg-neutral-900">
       <Header className="flex items-center justify-between px-5 py-3">
         <div className="flex gap-4">
           <div className="text-primary flex items-center gap-2 text-xl">
@@ -62,7 +62,8 @@ export default function Page() {
           <WalletMenu selectedChainName={selectedChainName} setSelectedChainName={setSelectedChainName} />
         </div>
       </Header>
-      <div className="bg-background">{selectedSubPage === SubPage.Earn ? <EarnSubPage /> : <BorrowSubPage />}</div>
+      {selectedSubPage === SubPage.Earn ? <EarnSubPage /> : <BorrowSubPage />}
+      <div className="fixed bottom-0 h-[12px] w-full bg-slate-100 dark:bg-slate-700"></div>
     </div>
   );
 }

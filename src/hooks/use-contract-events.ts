@@ -81,7 +81,7 @@ export default function useContractEvents<
     }),
   });
 
-  const data = results.flatMap((result) => result.data);
+  const data = results.flatMap((result) => result.data ?? []);
   const isFetching = results.reduce((a, b) => a || b.isFetching, false);
 
   return { data, isFetching };

@@ -25,7 +25,7 @@ export function Header({ className, children, ...props }: React.ComponentProps<"
           </svg>
           <div className="is-frame w-full bg-slate-100 dark:bg-slate-700"></div>
         </div>
-        <div className="mt-[-10px] h-[12px] bg-slate-100 dark:bg-slate-700"></div>
+        {/* <div className="mt-[-10px] h-[12px] bg-slate-100 dark:bg-slate-700"></div> */}
       </aside>
     </div>
   );
