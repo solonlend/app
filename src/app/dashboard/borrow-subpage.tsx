@@ -11,6 +11,9 @@ import { formatBalance, Token } from "@/components/utils";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { MarketId, MarketParams } from "@morpho-org/blue-sdk";
+import { Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { keepPreviousData } from "@tanstack/react-query";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -105,6 +108,7 @@ export function BorrowSubPage() {
         }) as const,
     ),
     allowFailure: false,
+    query: { staleTime: 10 * 60 * 1000, gcTime: Infinity, placeholderData: keepPreviousData },
   });
 
   const tokens = useMemo(() => {
@@ -112,14 +116,14 @@ export function BorrowSubPage() {
     filteredCreateMarketArgs.forEach((args, idx) => {
       map.set(args.marketParams.collateralToken, {
         address: args.marketParams.collateralToken,
-        symbol: erc20Symbols?.[Math.floor(idx / 2)].result,
-        decimals: erc20Decimals?.[Math.floor(idx / 2)].result,
+        symbol: erc20Symbols?.[Math.floor(idx * 2)].result,
+        decimals: erc20Decimals?.[Math.floor(idx * 2)].result,
         imageSrc: blo(args.marketParams.collateralToken),
       });
       map.set(args.marketParams.loanToken, {
         address: args.marketParams.loanToken,
-        symbol: erc20Symbols?.[Math.floor(idx / 2) + 1].result,
-        decimals: erc20Decimals?.[Math.floor(idx / 2) + 1].result,
+        symbol: erc20Symbols?.[Math.floor(idx * 2) + 1].result,
+        decimals: erc20Decimals?.[Math.floor(idx * 2) + 1].result,
         imageSrc: blo(args.marketParams.loanToken),
       });
     });
@@ -131,7 +135,7 @@ export function BorrowSubPage() {
   return (
     <div className="flex min-h-screen flex-col px-2.5">
       <div className="h-[380px] px-8 py-18 md:p-32 dark:bg-neutral-900"></div>
-      <div className="dark:bg-background/70 grow rounded-t-xl">
+      <div className="bg-background dark:bg-background/70 flex grow justify-center rounded-t-xl">
         <div className="text-primary w-full max-w-7xl px-8 pt-8 pb-32 md:px-32">
           <Table className="border-separate border-spacing-y-3">
             <TableCaption>
@@ -144,7 +148,22 @@ export function BorrowSubPage() {
                 <TableHead className="text-primary rounded-l-lg pl-4 text-xs font-light">Collateral</TableHead>
                 <TableHead className="text-primary text-xs font-light">Loan</TableHead>
                 <TableHead className="text-primary text-xs font-light">LLTV</TableHead>
-                <TableHead className="text-primary rounded-r-lg text-xs font-light">Liquidity</TableHead>
+                <TableHead className="text-primary rounded-r-lg text-xs font-light">
+                  <div className="flex items-center gap-1">
+                    Liquidity
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4" />
+                        </TooltipTrigger>
+                        <TooltipContent className="text-secondary max-w-56 p-3 font-light">
+                          This value will be smaller than that of the full app. It doesn't include shared market
+                          liquidity which could be reallocated upon borrow.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
