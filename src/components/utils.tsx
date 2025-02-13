@@ -1,4 +1,4 @@
-import { formatUnits } from "viem";
+import { Address, formatUnits } from "viem";
 
 export function formatBalance(balance: bigint, decimals: number) {
   const balanceNumber = Number(formatUnits(balance, decimals));
@@ -12,3 +12,5 @@ export function formatBalance(balance: bigint, decimals: number) {
   const scaled = balanceNumber / Math.pow(10, magnitude * 3);
   return scaled.toPrecision(4) + suffixes[magnitude];
 }
+
+export type Token = { address: Address; symbol?: string; decimals?: number; imageSrc: string };

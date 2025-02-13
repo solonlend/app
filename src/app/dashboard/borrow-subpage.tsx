@@ -7,13 +7,16 @@ import { Address, erc20Abi } from "viem";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { blo } from "blo";
-import { formatBalance } from "@/components/utils";
+import { formatBalance, Token } from "@/components/utils";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
+import { BorrowSheetContent } from "@/components/borrow-sheet-content";
+import { MarketId, MarketParams } from "@morpho-org/blue-sdk";
 
-function TokenTableCell({ address, symbol }: { address: Address; symbol?: string }) {
+function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
     <div className="flex items-center gap-2">
       <Avatar className="h-4 w-4 rounded-sm">
-        <AvatarImage src={blo(address)} alt="Avatar" />
+        <AvatarImage src={imageSrc} alt="Avatar" />
       </Avatar>
       {symbol ?? "－"}
       <span className="text-primary/30 font-mono">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
@@ -61,22 +64,19 @@ export function BorrowSubPage() {
     },
   });
 
-  const { marketIds, marketParams } = useMemo(() => {
-    const filtered = createMarketEvents.filter((createMarketEvent) =>
-      supplyCollateralEvents.some((ev) => ev.args.id === createMarketEvent.args.id),
-    );
-
-    return {
-      marketIds: filtered.map((ev) => ev.args.id),
-      marketParams: filtered.map((ev) => ev.args.marketParams),
-    };
-  }, [createMarketEvents, supplyCollateralEvents]);
+  const filteredCreateMarketArgs = useMemo(
+    () =>
+      createMarketEvents
+        .filter((createMarketEvent) => supplyCollateralEvents.some((ev) => ev.args.id === createMarketEvent.args.id))
+        .map((ev) => ev.args),
+    [createMarketEvents, supplyCollateralEvents],
+  );
 
   const { data: erc20Symbols, isFetching: isFetchingErc20Symbols } = useReadContracts({
-    contracts: marketParams
-      .map((x) => [
-        { address: x.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
-        { address: x.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
+    contracts: filteredCreateMarketArgs
+      .map((args) => [
+        { address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
+        { address: args.marketParams.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -84,10 +84,10 @@ export function BorrowSubPage() {
   });
 
   const { data: erc20Decimals, isFetching: isFetchingErc20Decimals } = useReadContracts({
-    contracts: marketParams
-      .map((x) => [
-        { address: x.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
-        { address: x.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
+    contracts: filteredCreateMarketArgs
+      .map((args) => [
+        { address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
+        { address: args.marketParams.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -95,17 +95,36 @@ export function BorrowSubPage() {
   });
 
   const { data: markets, isFetching: isFetchingMarkets } = useReadContracts({
-    contracts: marketIds.map(
-      (marketId) =>
+    contracts: filteredCreateMarketArgs.map(
+      (args) =>
         ({
           address: morpho.address,
           abi: morphoAbi,
           functionName: "market",
-          args: [marketId],
+          args: [args.id],
         }) as const,
     ),
     allowFailure: false,
   });
+
+  const tokens = useMemo(() => {
+    const map = new Map<Address, Token>();
+    filteredCreateMarketArgs.forEach((args, idx) => {
+      map.set(args.marketParams.collateralToken, {
+        address: args.marketParams.collateralToken,
+        symbol: erc20Symbols?.[Math.floor(idx / 2)].result,
+        decimals: erc20Decimals?.[Math.floor(idx / 2)].result,
+        imageSrc: blo(args.marketParams.collateralToken),
+      });
+      map.set(args.marketParams.loanToken, {
+        address: args.marketParams.loanToken,
+        symbol: erc20Symbols?.[Math.floor(idx / 2) + 1].result,
+        decimals: erc20Decimals?.[Math.floor(idx / 2) + 1].result,
+        imageSrc: blo(args.marketParams.loanToken),
+      });
+    });
+    return map;
+  }, [filteredCreateMarketArgs, erc20Symbols, erc20Decimals]);
 
   console.log(isFetchingSupplyCollateralEvents, isFetchingErc20Symbols, isFetchingErc20Decimals, isFetchingMarkets);
 
@@ -124,28 +143,34 @@ export function BorrowSubPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {marketIds.map((marketId, idx) => (
-                <TableRow key={marketId} className="bg-secondary">
-                  <TableCell className="rounded-l-lg p-5">
-                    <TokenTableCell
-                      address={marketParams[idx].collateralToken}
-                      symbol={erc20Symbols?.[Math.floor(idx / 2)].result}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TokenTableCell
-                      address={marketParams[idx].loanToken}
-                      symbol={erc20Symbols?.[Math.floor(idx / 2) + 1].result}
-                    />
-                  </TableCell>
-                  <TableCell>{(Number(marketParams[idx].lltv / 1_000_000_000n) / 1e7).toFixed(2)}%</TableCell>
-                  <TableCell className="rounded-r-lg">
-                    {(markets && erc20Decimals?.[Math.floor(idx / 2)].result
-                      ? formatBalance(markets[idx][0] - markets[idx][2], erc20Decimals[Math.floor(idx / 2)].result ?? 1)
-                      : "－"
-                    ).concat(" ", erc20Symbols?.[Math.floor(idx / 2) + 1].result ?? "")}
-                  </TableCell>
-                </TableRow>
+              {filteredCreateMarketArgs.map((args, idx) => (
+                <Sheet key={args.id}>
+                  <SheetTrigger asChild>
+                    <TableRow className="bg-secondary">
+                      <TableCell className="rounded-l-lg p-5">
+                        <TokenTableCell {...tokens.get(args.marketParams.collateralToken)!} />
+                      </TableCell>
+                      <TableCell>
+                        <TokenTableCell {...tokens.get(args.marketParams.loanToken)!} />
+                      </TableCell>
+                      <TableCell>{(Number(args.marketParams.lltv / 1_000_000_000n) / 1e7).toFixed(2)}%</TableCell>
+                      <TableCell className="rounded-r-lg">
+                        {(markets && tokens.get(args.marketParams.loanToken)?.decimals
+                          ? formatBalance(
+                              markets[idx][0] - markets[idx][2],
+                              tokens.get(args.marketParams.loanToken)?.decimals ?? 18,
+                            )
+                          : "－"
+                        ).concat(" ", tokens.get(args.marketParams.loanToken)?.symbol ?? "")}
+                      </TableCell>
+                    </TableRow>
+                  </SheetTrigger>
+                  <BorrowSheetContent
+                    marketId={args.id as MarketId}
+                    marketParams={new MarketParams(args.marketParams)}
+                    tokens={tokens}
+                  />
+                </Sheet>
               ))}
             </TableBody>
           </Table>
