@@ -7,7 +7,7 @@ import { Address, erc20Abi } from "viem";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { blo } from "blo";
-import { formatBalance, Token } from "@/lib/utils";
+import { formatBalanceWithSymbol, formatLtv, Token } from "@/lib/utils";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { MarketId, MarketParams } from "@morpho-org/blue-sdk";
@@ -31,7 +31,7 @@ export function BorrowSubPage() {
   const { chainId, address: userAddress } = useAccount();
   const { data: blockNumber } = useBlockNumber({
     watch: false,
-    query: { staleTime: Infinity, gcTime: Infinity, refetchOnMount: "always" },
+    query: { staleTime: Infinity, gcTime: Infinity, refetchOnMount: false },
   });
 
   const morpho = useMemo(() => getContractDeploymentInfo(chainId, "Morpho"), [chainId]);
@@ -137,7 +137,7 @@ export function BorrowSubPage() {
         <div className="text-primary w-full max-w-7xl px-8 pt-8 pb-32 md:px-32">
           <Table className="border-separate border-spacing-y-3">
             <TableCaption>
-              Showing markets in which you have (or had) positions.
+              Showing markets in which you've opened positions.
               <br />
               Click on a market to manage your position.
             </TableCaption>
@@ -175,21 +175,34 @@ export function BorrowSubPage() {
                       <TableCell>
                         <TokenTableCell {...tokens.get(args.marketParams.loanToken)!} />
                       </TableCell>
-                      <TableCell>{(Number(args.marketParams.lltv / 1_000_000_000n) / 1e7).toFixed(2)}%</TableCell>
+                      <TableCell>{formatLtv(args.marketParams.lltv)}</TableCell>
                       <TableCell className="rounded-r-lg">
-                        {(markets && tokens.get(args.marketParams.loanToken)?.decimals !== undefined
-                          ? formatBalance(
+                        {markets && tokens.get(args.marketParams.loanToken)?.decimals !== undefined
+                          ? formatBalanceWithSymbol(
                               markets[idx][0] - markets[idx][2],
                               tokens.get(args.marketParams.loanToken)!.decimals!,
+                              tokens.get(args.marketParams.loanToken)?.symbol,
                             )
-                          : "－"
-                        ).concat(" ", tokens.get(args.marketParams.loanToken)?.symbol ?? "")}
+                          : "－"}
                       </TableCell>
                     </TableRow>
                   </SheetTrigger>
                   <BorrowSheetContent
                     marketId={args.id as MarketId}
                     marketParams={new MarketParams(args.marketParams)}
+                    imarket={
+                      markets
+                        ? {
+                            params: new MarketParams(args.marketParams),
+                            totalSupplyAssets: markets[idx][0],
+                            totalSupplyShares: markets[idx][1],
+                            totalBorrowAssets: markets[idx][2],
+                            totalBorrowShares: markets[idx][3],
+                            lastUpdate: markets[idx][4],
+                            fee: markets[idx][5],
+                          }
+                        : undefined
+                    }
                     tokens={tokens}
                   />
                 </Sheet>

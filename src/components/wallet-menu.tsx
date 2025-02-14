@@ -102,7 +102,7 @@ function WalletButton({ address }: { address: Address }) {
           <Avatar className="h-4 w-4">
             <AvatarImage src={ensAvatar ?? blo(address)} alt="Avatar" />
           </Avatar>
-          {`${address.slice(0, 6)}...${address.slice(-4)}`}
+          {ensName ?? `${address.slice(0, 6)}...${address.slice(-4)}`}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-min rounded-xl">

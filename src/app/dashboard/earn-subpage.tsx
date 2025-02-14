@@ -7,7 +7,7 @@ import { Address, erc20Abi, erc4626Abi } from "viem";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { blo } from "blo";
-import { formatBalance, Token } from "@/lib/utils";
+import { formatBalanceWithSymbol, Token } from "@/lib/utils";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { keepPreviousData } from "@tanstack/react-query";
 import { metaMorphoFactoryAbi } from "@/assets/abis/meta-morpho-factory";
@@ -186,10 +186,9 @@ export function EarnSubPage() {
                         <TokenTableCell {...vault.asset} />
                       </TableCell>
                       <TableCell>
-                        {(vault.info && vault.asset.decimals
-                          ? formatBalance(vault.info.totalAssets, vault.asset.decimals)
-                          : "－"
-                        ).concat(" ", vault.asset.symbol ?? "")}
+                        {vault.info && vault.asset.decimals
+                          ? formatBalanceWithSymbol(vault.info.totalAssets, vault.asset.decimals, vault.asset.symbol)
+                          : "－"}
                       </TableCell>
                       <TableCell>
                         {vault.info ? `${vault.info.owner.slice(0, 6)}...${vault.info.owner.slice(-4)}` : "－"}

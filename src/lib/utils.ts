@@ -19,4 +19,14 @@ export function formatBalance(balance: bigint, decimals: number) {
   return scaled.toPrecision(4) + suffixes[magnitude];
 }
 
+export function formatBalanceWithSymbol(balance: bigint, decimals: number, symbol?: string) {
+  const balanceStr = formatBalance(balance, decimals);
+  if (symbol) return `${balanceStr} ${symbol}`;
+  return balanceStr;
+}
+
+export function formatLtv(ltv: bigint) {
+  return `${(Number(ltv / 1_000_000_000n) / 1e7).toFixed(2)}%`;
+}
+
 export type Token = { address: Address; symbol?: string; decimals?: number; imageSrc: string };
