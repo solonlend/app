@@ -7,7 +7,7 @@ import { Address, erc20Abi } from "viem";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { blo } from "blo";
-import { formatBalance, Token } from "@/components/utils";
+import { formatBalance, Token } from "@/lib/utils";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { MarketId, MarketParams } from "@morpho-org/blue-sdk";
@@ -54,9 +54,7 @@ export function BorrowSubPage() {
     toBlock: blockNumber,
     maxBlockRange: 10_000n,
     eventName: "SupplyCollateral",
-    args: {
-      onBehalf: userAddress,
-    },
+    args: { onBehalf: userAddress },
     strict: true,
     query: {
       enabled:
@@ -116,14 +114,14 @@ export function BorrowSubPage() {
     filteredCreateMarketArgs.forEach((args, idx) => {
       map.set(args.marketParams.collateralToken, {
         address: args.marketParams.collateralToken,
-        symbol: erc20Symbols?.[Math.floor(idx * 2)].result,
-        decimals: erc20Decimals?.[Math.floor(idx * 2)].result,
+        symbol: erc20Symbols?.[idx * 2].result,
+        decimals: erc20Decimals?.[idx * 2].result,
         imageSrc: blo(args.marketParams.collateralToken),
       });
       map.set(args.marketParams.loanToken, {
         address: args.marketParams.loanToken,
-        symbol: erc20Symbols?.[Math.floor(idx * 2) + 1].result,
-        decimals: erc20Decimals?.[Math.floor(idx * 2) + 1].result,
+        symbol: erc20Symbols?.[idx * 2 + 1].result,
+        decimals: erc20Decimals?.[idx * 2 + 1].result,
         imageSrc: blo(args.marketParams.loanToken),
       });
     });
@@ -179,10 +177,10 @@ export function BorrowSubPage() {
                       </TableCell>
                       <TableCell>{(Number(args.marketParams.lltv / 1_000_000_000n) / 1e7).toFixed(2)}%</TableCell>
                       <TableCell className="rounded-r-lg">
-                        {(markets && tokens.get(args.marketParams.loanToken)?.decimals
+                        {(markets && tokens.get(args.marketParams.loanToken)?.decimals !== undefined
                           ? formatBalance(
                               markets[idx][0] - markets[idx][2],
-                              tokens.get(args.marketParams.loanToken)?.decimals ?? 18,
+                              tokens.get(args.marketParams.loanToken)!.decimals!,
                             )
                           : "－"
                         ).concat(" ", tokens.get(args.marketParams.loanToken)?.symbol ?? "")}
