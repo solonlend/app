@@ -14,6 +14,7 @@ import { metaMorphoFactoryAbi } from "@/assets/abis/meta-morpho-factory";
 import { metaMorphoAbi } from "@/assets/abis/meta-morpho";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
+import { EarnSheetContent } from "@/components/earn-sheet-content";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -198,11 +199,7 @@ export function EarnSubPage() {
                       </TableCell>
                     </TableRow>
                   </SheetTrigger>
-                  {/* <BorrowSheetContent
-                    marketId={args.id as MarketId}
-                    marketParams={new MarketParams(args.marketParams)}
-                    tokens={tokens}
-                  /> */}
+                  <EarnSheetContent vaultAddress={vault.address} asset={vault.asset} />
                 </Sheet>
               ))}
             </TableBody>
