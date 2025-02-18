@@ -1,27 +1,51 @@
-import { RadialBar, RadialBarChart } from "recharts";
+import { Area, AreaChart, CartesianGrid, RadialBar, RadialBarChart, XAxis } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useContext, useMemo, useState } from "react";
 import { RequestTrackingContext } from "@/lib/request-tracking-context";
+// @ts-expect-error: this package lacks types
+import humanizeDuration from "humanize-duration";
 
 const INITIAL_METHOD_NAMES = ["eth_accounts", "eth_blockNumber", "eth_call", "eth_chainId", "eth_getLogs"];
 
+const TIME_SERIES_WINDOW_MS = 2 * 60 * 1000;
+const TIME_SERIES_BINS = 60;
+
+function initTimeSeries(ti: number, tf: number) {
+  const arr: {
+    t0: number;
+    t1: number;
+    success: number;
+    failure: number;
+    pending: number;
+  }[] = [];
+  ti = Math.max(ti, tf - TIME_SERIES_WINDOW_MS);
+  const w = (tf - ti) / TIME_SERIES_BINS;
+  for (let i = 0; i < TIME_SERIES_BINS; i += 1) {
+    arr.push({
+      t0: ti + i * w,
+      t1: ti + (i + 1) * w,
+      success: 0,
+      failure: 0,
+      pending: 0,
+    });
+  }
+  return arr;
+}
+
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
-  },
   pending: {
-    label: "Success",
+    label: "Pending",
     color: "#d0d0d0",
   },
   success: {
     label: "Success",
-    color: "var(--chart-2)",
+    color: "var(--chart-1)",
   },
   failure: {
     label: "Failure",
-    color: "var(--chart-5)",
+    color: "var(--chart-4)",
   },
   eth_accounts: {
     label: "eth_accounts",
@@ -77,69 +101,70 @@ export function RequestChart() {
   const {
     providers,
     providerRequestCounts,
+    timeSeriesData,
     barChartData: chartData,
   } = useMemo(() => {
+    // Prepare data containers
+    // --> provider→total
     const providerRequestCounts: Record<ProviderName, number> = {};
+    // --> provider→method→status→count
     const methodRequestCounts: Record<
       ProviderName,
       Record<MethodName, { success: number; failure: number; pending: number }>
     > = {};
+    // --> provider→{...}[]
+    const timeSeriesData: Record<ProviderName, ReturnType<typeof initTimeSeries>> = {};
 
-    requests.forEach((entry) => {
-      providerRequestCounts[entry.provider] = (providerRequestCounts[entry.provider] ?? 0) + 1;
+    // Populate data containers
+    requests.forEach((request) => {
+      // --> per-provider counts
+      providerRequestCounts[request.provider] = (providerRequestCounts[request.provider] ?? 0) + 1;
 
-      const counts =
-        methodRequestCounts[entry.provider] ??
+      // --> per-method per-status counts
+      const allCounts =
+        methodRequestCounts[request.provider] ??
         Object.fromEntries(INITIAL_METHOD_NAMES.map((method) => [method, { success: 0, failure: 0, pending: 0 }]));
-      if (!(entry.method in counts)) {
-        counts[entry.method] = { success: 0, failure: 0, pending: 0 };
+      if (!(request.method in allCounts)) {
+        allCounts[request.method] = { success: 0, failure: 0, pending: 0 };
       }
-      switch (entry.responseStatus) {
+      switch (request.responseStatus) {
         case undefined:
-          counts[entry.method].pending += 1;
+          allCounts[request.method].pending += 1;
           break;
         case 200:
-          counts[entry.method].success += 1;
+          allCounts[request.method].success += 1;
           break;
         default:
-          counts[entry.method].failure += 1;
+          allCounts[request.method].failure += 1;
       }
-      methodRequestCounts[entry.provider] = counts;
-    });
+      methodRequestCounts[request.provider] = allCounts;
 
-    // transform from provider→method→status→count to provider→method→{method, status, count, ...}[]
-    const pieChartData = mapValues(methodRequestCounts, ([, allCounts]) =>
-      mapValues(allCounts, ([method, counts]) =>
-        Object.entries(counts).map(([responseStatus, count]) => {
-          let fillOpacity: number;
-          let mask: string | undefined;
+      // --> time-series
+      if (!(request.provider in timeSeriesData)) {
+        let ti = Date.now();
+        let tf = 0;
 
-          switch (responseStatus as keyof typeof counts) {
-            case "pending":
-              fillOpacity = 0.5;
-              mask = undefined;
-              break;
-            case "success":
-              fillOpacity = 1.0;
-              mask = undefined;
-              break;
-            case "failure":
-              fillOpacity = 1.0;
-              mask = undefined; // "url(#stripesMask)";
-              break;
+        for (const entry of requests.values()) {
+          if (entry.provider !== request.provider) continue;
+          const ts = entry.responseTimestamp ?? entry.requestTimestamp;
+          if (ts < ti) ti = ts;
+          if (ts > tf) tf = ts;
+        }
+
+        timeSeriesData[request.provider] = initTimeSeries(ti, tf + 1);
+      }
+      for (let i = 0; i < timeSeriesData[request.provider].length; i += 1) {
+        const bin = timeSeriesData[request.provider][i];
+
+        if (request.requestTimestamp < bin.t1) {
+          if (request.responseTimestamp && request.responseTimestamp < bin.t1) {
+            bin[request.responseStatus === 200 ? "success" : "failure"] += 1;
+          } else {
+            bin.pending += 1;
           }
-
-          return {
-            method,
-            responseStatus,
-            count,
-            fill: `var(--color-${responseStatus})`,
-            fillOpacity,
-            mask,
-          };
-        }),
-      ),
-    );
+        }
+      }
+    });
 
     // transform from provider→method→status→count to provider→{method, successes, failures, pending, ...}[]
     const barChartData = mapValues(methodRequestCounts, ([, allCounts]) =>
@@ -161,8 +186,8 @@ export function RequestChart() {
       providers: Array.from(Object.keys(providerRequestCounts)).sort(),
       providerRequestCounts,
       methodRequestCounts,
+      timeSeriesData,
       barChartData,
-      pieChartData,
     };
   }, [requests]);
 
@@ -193,23 +218,85 @@ export function RequestChart() {
           })}
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
-        <ChartContainer config={chartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
+      <CardContent className="flex px-2 sm:p-6">
+        <ChartContainer config={chartConfig} className="h-[200px] min-h-[200px] w-full">
+          <AreaChart
+            data={timeSeriesData[activeChart] ?? []}
+            margin={{
+              left: 12,
+              right: 12,
+              top: 12,
+            }}
+            // stackOffset="expand"
+          >
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="t1"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) =>
+                humanizeDuration(value - timeSeriesData[activeChart]!.at(0)!.t0, {
+                  units: ["h", "m", "s"],
+                  spacer: "",
+                  delimiter: "",
+                  language: "shortEn",
+                  languages: {
+                    shortEn: {
+                      y: () => "y",
+                      mo: () => "mo",
+                      w: () => "w",
+                      d: () => "d",
+                      h: () => "h",
+                      m: () => "m",
+                      s: () => "s",
+                      ms: () => "ms",
+                    },
+                  },
+                })
+              }
+            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+            <Area
+              isAnimationActive={false}
+              dataKey="success"
+              type="stepBefore"
+              fill="var(--color-success)"
+              fillOpacity={1.0}
+              stroke="var(--color-success)"
+              strokeWidth={0}
+              stackId="a"
+            />
+            <Area
+              isAnimationActive={false}
+              dataKey="failure"
+              type="stepBefore"
+              fill="var(--color-failure)"
+              fillOpacity={1.0}
+              stroke="var(--color-failure)"
+              strokeWidth={0}
+              stackId="a"
+            />
+            <Area
+              isAnimationActive={false}
+              dataKey="pending"
+              type="stepBefore"
+              fill="var(--color-pending)"
+              fillOpacity={1.0}
+              stroke="var(--color-pending)"
+              strokeWidth={0}
+              stackId="a"
+            />
+          </AreaChart>
+        </ChartContainer>
+        <ChartContainer config={chartConfig} className="aspect-square h-[200px] min-h-[200px]">
           <RadialBarChart
             data={chartData[activeChart] ?? []}
             startAngle={180}
             endAngle={-180}
             innerRadius={0}
-            outerRadius={125}
+            outerRadius={100}
           >
-            {/* <defs>
-              <pattern id="stripes" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <line x1="0" y="0" x2="0" y2="10" stroke="white" strokeWidth="10" />
-              </pattern>
-              <mask id="stripesMask">
-                <rect x="0" y="0" width="100%" height="100%" fill="url(#stripes)" />
-              </mask>
-            </defs> */}
             <ChartTooltip
               cursor={false}
               content={

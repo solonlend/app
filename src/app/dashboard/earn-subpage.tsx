@@ -158,7 +158,7 @@ export function EarnSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      <div className="px-8 py-18 md:p-32 dark:bg-neutral-900">
+      <div className="px-8 pt-24 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
         <RequestChart />
       </div>
       <div className="bg-background dark:bg-background/70 flex grow justify-center rounded-t-xl">
