@@ -15,6 +15,7 @@ import { metaMorphoAbi } from "@/assets/abis/meta-morpho";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
 import { EarnSheetContent } from "@/components/earn-sheet-content";
+import { RequestChart } from "@/components/request-chart";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -157,7 +158,9 @@ export function EarnSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      <div className="h-[380px] px-8 py-18 md:p-32 dark:bg-neutral-900"></div>
+      <div className="px-8 py-18 md:p-32 dark:bg-neutral-900">
+        <RequestChart />
+      </div>
       <div className="bg-background dark:bg-background/70 flex grow justify-center rounded-t-xl">
         <div className="text-primary w-full max-w-7xl px-8 pt-8 pb-32 md:px-32">
           <Table className="border-separate border-spacing-y-3">

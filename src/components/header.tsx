@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 
 export function Header({ className, children, ...props }: React.ComponentProps<"div">) {
   return (
-    <div className="fixed top-0 flex h-screen w-screen flex-col">
-      <header className={cn("h-16 bg-slate-100 dark:bg-slate-700", className)} {...props}>
+    <div className="pointer-events-none fixed top-0 z-[9999] flex h-screen w-screen flex-col">
+      <header className={cn("pointer-events-auto h-16 bg-slate-100 dark:bg-slate-700", className)} {...props}>
         {children}
       </header>
 
