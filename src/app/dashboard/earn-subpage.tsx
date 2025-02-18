@@ -15,6 +15,8 @@ import { metaMorphoAbi } from "@/assets/abis/meta-morpho";
 import humanizeDuration from "humanize-duration";
 import { EarnSheetContent } from "@/components/earn-sheet-content";
 import { RequestChart } from "@/components/request-chart";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -44,7 +46,11 @@ export function EarnSubPage() {
   );
 
   // MARK: Fetch `MetaMorphoFactory.CreateMetaMorpho` on all factory versions so that we have all deployments
-  const { data: createMetaMorphoEvents, isFetching: isFetchingCreateMetaMorphoEvents } = useContractEvents({
+  const {
+    data: createMetaMorphoEvents,
+    isFetching: isFetchingCreateMetaMorphoEvents,
+    fractionFetched: ffCreateMetaMorphoEvents,
+  } = useContractEvents({
     abi: metaMorphoFactoryAbi,
     address: [factory.address, factoryV1_1.address],
     fromBlock: factory.fromBlock,
@@ -59,7 +65,11 @@ export function EarnSubPage() {
   });
 
   // MARK: Fetch `ERC4626.Deposit` so that we know where user has deposited. Includes non-MetaMorpho ERC4626 deposits
-  const { data: depositEvents, isFetching: isFetchingDepositEvents } = useContractEvents({
+  const {
+    data: depositEvents,
+    isFetching: isFetchingDepositEvents,
+    fractionFetched: ffDepositEvents,
+  } = useContractEvents({
     abi: erc4626Abi,
     fromBlock: factory.fromBlock,
     toBlock: blockNumber,
@@ -140,11 +150,29 @@ export function EarnSubPage() {
     });
   }, [filteredCreateMetaMorphoArgs, assets, assetsInfo, vaultsInfo]);
 
-  console.log(isFetchingCreateMetaMorphoEvents, isFetchingDepositEvents, isFetchingAssetsInfo, isFetchingVaultsInfo);
+  const totalProgress = isFetchingCreateMetaMorphoEvents
+    ? 0
+    : isFetchingDepositEvents
+      ? 1
+      : isFetchingAssetsInfo
+        ? 2
+        : isFetchingVaultsInfo
+          ? 3
+          : 4;
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      <div className="px-8 pt-24 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
+      <div className="flex justify-between gap-4 px-8 pt-24 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
+        <Card>
+          <CardContent className="flex h-full w-[220px] flex-col gap-4 px-2 text-xs font-light sm:p-6">
+            <span>Indexing MetaMorpho vaults</span>
+            <Progress value={ffCreateMetaMorphoEvents * 100} />
+            Indexing your deposits
+            <Progress value={ffDepositEvents * 100} className="mb-auto" />
+            <i className="bottom-0">Total Progress</i>
+            <Progress value={(totalProgress * 100) / 4} />
+          </CardContent>
+        </Card>
         <RequestChart />
       </div>
       <div className="bg-background dark:bg-background/70 flex grow justify-center rounded-t-xl">

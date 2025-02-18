@@ -83,8 +83,9 @@ export default function useContractEvents<
 
   const data = results.flatMap((result) => result.data ?? []);
   const isFetching = results.reduce((a, b) => a || b.isFetching, false);
+  const fractionFetched = results.reduce((a, result) => a + (result.isFetched ? 1 : 0), 0) / (results.length || 1);
 
-  return { data, isFetching };
+  return { data, isFetching, fractionFetched };
 }
 
 function replaceBigInts(obj: unknown): unknown {

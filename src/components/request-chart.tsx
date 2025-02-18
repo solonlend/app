@@ -194,7 +194,7 @@ export function RequestChart() {
   const [activeChart, setActiveChart] = useState(providers.at(0) ?? "Wallet");
 
   return (
-    <Card>
+    <Card className="grow">
       <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
           <CardTitle>EVM Requests</CardTitle>
