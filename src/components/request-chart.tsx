@@ -2,14 +2,15 @@ import { Area, AreaChart, CartesianGrid, RadialBar, RadialBarChart, XAxis } from
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useState } from "react";
 import { RequestTrackingContext } from "@/lib/request-tracking-context";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
+import { useDebouncedMemo } from "@/hooks/use-debounced";
 
 const INITIAL_METHOD_NAMES = ["eth_accounts", "eth_blockNumber", "eth_call", "eth_chainId", "eth_getLogs"];
 
-const TIME_SERIES_WINDOW_MS = 2 * 60 * 1000;
+const TIME_SERIES_WINDOW_MS = 5 * 60 * 1000;
 const TIME_SERIES_BINS = 60;
 
 function initTimeSeries(ti: number, tf: number) {
@@ -47,42 +48,7 @@ const chartConfig = {
     label: "Failure",
     color: "var(--chart-4)",
   },
-  eth_accounts: {
-    label: "eth_accounts",
-    color: "var(--chart-1)",
-  },
-  eth_blockNumber: {
-    label: "eth_blockNumber",
-    color: "var(--chart-2)",
-  },
-  eth_call: {
-    label: "eth_call",
-    color: "var(--chart-3)",
-  },
-  eth_chainId: {
-    label: "eth_chainId",
-    color: "var(--chart-4)",
-  },
-  eth_getLogs: {
-    label: "eth_getLogs",
-    color: "var(--chart-5)",
-  },
 } satisfies ChartConfig;
-
-// const chartConfig = {
-//   pending: {
-//     label: "Pending",
-//     color: "#e6e6e6",
-//   },
-//   success: {
-//     label: "Success",
-//     color: "#00ff00",
-//   },
-//   failure: {
-//     label: "Failure",
-//     color: "#ff0000",
-//   },
-// } satisfies ChartConfig;
 
 type ProviderName = string;
 type MethodName = string;
@@ -103,93 +69,97 @@ export function RequestChart() {
     providerRequestCounts,
     timeSeriesData,
     barChartData: chartData,
-  } = useMemo(() => {
-    // Prepare data containers
-    // --> provider→total
-    const providerRequestCounts: Record<ProviderName, number> = {};
-    // --> provider→method→status→count
-    const methodRequestCounts: Record<
-      ProviderName,
-      Record<MethodName, { success: number; failure: number; pending: number }>
-    > = {};
-    // --> provider→{...}[]
-    const timeSeriesData: Record<ProviderName, ReturnType<typeof initTimeSeries>> = {};
+  } = useDebouncedMemo(
+    () => {
+      // Prepare data containers
+      // --> provider→total
+      const providerRequestCounts: Record<ProviderName, number> = {};
+      // --> provider→method→status→count
+      const methodRequestCounts: Record<
+        ProviderName,
+        Record<MethodName, { success: number; failure: number; pending: number }>
+      > = {};
+      // --> provider→{...}[]
+      const timeSeriesData: Record<ProviderName, ReturnType<typeof initTimeSeries>> = {};
 
-    // Populate data containers
-    requests.forEach((request) => {
-      // --> per-provider counts
-      providerRequestCounts[request.provider] = (providerRequestCounts[request.provider] ?? 0) + 1;
+      // Populate data containers
+      requests.forEach((request) => {
+        // --> per-provider counts
+        providerRequestCounts[request.provider] = (providerRequestCounts[request.provider] ?? 0) + 1;
 
-      // --> per-method per-status counts
-      const allCounts =
-        methodRequestCounts[request.provider] ??
-        Object.fromEntries(INITIAL_METHOD_NAMES.map((method) => [method, { success: 0, failure: 0, pending: 0 }]));
-      if (!(request.method in allCounts)) {
-        allCounts[request.method] = { success: 0, failure: 0, pending: 0 };
-      }
-      switch (request.responseStatus) {
-        case undefined:
-          allCounts[request.method].pending += 1;
-          break;
-        case 200:
-          allCounts[request.method].success += 1;
-          break;
-        default:
-          allCounts[request.method].failure += 1;
-      }
-      methodRequestCounts[request.provider] = allCounts;
-
-      // --> time-series
-      if (!(request.provider in timeSeriesData)) {
-        let ti = Date.now();
-        let tf = 0;
-
-        for (const entry of requests.values()) {
-          if (entry.provider !== request.provider) continue;
-          const ts = entry.responseTimestamp ?? entry.requestTimestamp;
-          if (ts < ti) ti = ts;
-          if (ts > tf) tf = ts;
+        // --> per-method per-status counts
+        const allCounts =
+          methodRequestCounts[request.provider] ??
+          Object.fromEntries(INITIAL_METHOD_NAMES.map((method) => [method, { success: 0, failure: 0, pending: 0 }]));
+        if (!(request.method in allCounts)) {
+          allCounts[request.method] = { success: 0, failure: 0, pending: 0 };
         }
+        switch (request.responseStatus) {
+          case undefined:
+            allCounts[request.method].pending += 1;
+            break;
+          case 200:
+            allCounts[request.method].success += 1;
+            break;
+          default:
+            allCounts[request.method].failure += 1;
+        }
+        methodRequestCounts[request.provider] = allCounts;
 
-        timeSeriesData[request.provider] = initTimeSeries(ti, tf + 1);
-      }
-      for (let i = 0; i < timeSeriesData[request.provider].length; i += 1) {
-        const bin = timeSeriesData[request.provider][i];
+        // --> time-series
+        if (!(request.provider in timeSeriesData)) {
+          let ti = Date.now();
+          let tf = 0;
 
-        if (request.requestTimestamp < bin.t1) {
-          if (request.responseTimestamp && request.responseTimestamp < bin.t1) {
-            bin[request.responseStatus === 200 ? "success" : "failure"] += 1;
-          } else {
-            bin.pending += 1;
+          for (const entry of requests.values()) {
+            if (entry.provider !== request.provider) continue;
+            const ts = entry.responseTimestamp ?? entry.requestTimestamp;
+            if (ts < ti) ti = ts;
+            if (ts > tf) tf = ts;
+          }
+
+          timeSeriesData[request.provider] = initTimeSeries(ti, tf + 1);
+        }
+        for (let i = 0; i < timeSeriesData[request.provider].length; i += 1) {
+          const bin = timeSeriesData[request.provider][i];
+
+          if (request.requestTimestamp < bin.t1) {
+            if (request.responseTimestamp && request.responseTimestamp < bin.t1) {
+              bin[request.responseStatus === 200 ? "success" : "failure"] += 1;
+            } else {
+              bin.pending += 1;
+            }
           }
         }
-      }
-    });
+      });
 
-    // transform from provider→method→status→count to provider→{method, successes, failures, pending, ...}[]
-    const barChartData = mapValues(methodRequestCounts, ([, allCounts]) =>
-      Object.entries(allCounts)
-        .map(([method, counts]) => {
-          const total = Object.values(counts).reduce((a, b) => a + b, 0);
-          const fractions = Object.fromEntries(
-            Object.entries(counts).map(([responseStatus, count]) => [
-              `${responseStatus}Fraction`,
-              count / (total || 1),
-            ]),
-          ) as { [K in keyof typeof counts as `${K}Fraction`]: number };
-          return { method, total, ...counts, ...fractions };
-        })
-        .sort((a, b) => a.method.localeCompare(b.method)),
-    );
+      // transform from provider→method→status→count to provider→{method, successes, failures, pending, ...}[]
+      const barChartData = mapValues(methodRequestCounts, ([, allCounts]) =>
+        Object.entries(allCounts)
+          .map(([method, counts]) => {
+            const total = Object.values(counts).reduce((a, b) => a + b, 0);
+            const fractions = Object.fromEntries(
+              Object.entries(counts).map(([responseStatus, count]) => [
+                `${responseStatus}Fraction`,
+                count / (total || 1),
+              ]),
+            ) as { [K in keyof typeof counts as `${K}Fraction`]: number };
+            return { method, total, ...counts, ...fractions };
+          })
+          .sort((a, b) => a.method.localeCompare(b.method)),
+      );
 
-    return {
-      providers: Array.from(Object.keys(providerRequestCounts)).sort(),
-      providerRequestCounts,
-      methodRequestCounts,
-      timeSeriesData,
-      barChartData,
-    };
-  }, [requests]);
+      return {
+        providers: Array.from(Object.keys(providerRequestCounts)).sort(),
+        providerRequestCounts,
+        methodRequestCounts,
+        timeSeriesData,
+        barChartData,
+      };
+    },
+    [requests],
+    500,
+  );
 
   const [activeChart, setActiveChart] = useState(providers.at(0) ?? "Wallet");
 
