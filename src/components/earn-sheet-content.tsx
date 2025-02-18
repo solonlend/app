@@ -39,8 +39,8 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
       <SheetHeader>
         <SheetTitle>Your Position</SheetTitle>
         <SheetDescription>
-          You can view your position here, and take actions that increase its health. To access all features (including
-          borrowing) open this market in the{" "}
+          You can view and edit your position here. To access all features and understand more about risks open this
+          market in the{" "}
           <a
             className="underline"
             href={`https://app.morpho.org/${chain.name.toLowerCase()}/vault/${vaultAddress}`}

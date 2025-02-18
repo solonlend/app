@@ -13,6 +13,14 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import DashboardPage from "./app/dashboard/page";
+import { HttpTransportConfig } from "viem";
+import { RequestTrackingProvider } from "./hooks/use-request-tracking";
+
+const httpConfig: HttpTransportConfig = {
+  retryCount: 5,
+  retryDelay: 500,
+  timeout: 60_000,
+};
 
 const wagmiConfig = createConfig({
   chains: [mainnet, base],
@@ -20,13 +28,13 @@ const wagmiConfig = createConfig({
   transports: {
     [mainnet.id]: fallback([
       unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://eth.drpc.org", { retryCount: 5, retryDelay: 500 }),
-      http(undefined, { retryCount: 5, retryDelay: 500 }),
+      http("https://eth.drpc.org", httpConfig),
+      http(undefined, httpConfig),
     ]),
     [base.id]: fallback([
       unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://base.drpc.org", { retryCount: 5, retryDelay: 500 }),
-      http(undefined, { retryCount: 5, retryDelay: 500 }),
+      http("https://base.drpc.org", httpConfig),
+      http(undefined, httpConfig),
     ]),
   },
   batch: {
@@ -57,7 +65,9 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-        <DashboardPage />
+        <RequestTrackingProvider>
+          <DashboardPage />
+        </RequestTrackingProvider>
       </PersistQueryClientProvider>
     </WagmiProvider>
   );
