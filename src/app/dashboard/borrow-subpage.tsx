@@ -14,6 +14,9 @@ import { MarketId, MarketParams } from "@morpho-org/blue-sdk";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { keepPreviousData } from "@tanstack/react-query";
+import { RequestChart } from "@/components/request-chart";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -36,7 +39,11 @@ export function BorrowSubPage() {
 
   const morpho = useMemo(() => getContractDeploymentInfo(chainId, "Morpho"), [chainId]);
 
-  const { data: createMarketEvents, isFetching: isFetchingCreateMarketEvents } = useContractEvents({
+  const {
+    data: createMarketEvents,
+    isFetching: isFetchingCreateMarketEvents,
+    fractionFetched: ffCreateMarketEvents,
+  } = useContractEvents({
     abi: morphoAbi,
     address: morpho.address,
     fromBlock: morpho.fromBlock,
@@ -47,7 +54,11 @@ export function BorrowSubPage() {
     query: { enabled: chainId !== undefined && blockNumber !== undefined },
   });
 
-  const { data: supplyCollateralEvents, isFetching: isFetchingSupplyCollateralEvents } = useContractEvents({
+  const {
+    data: supplyCollateralEvents,
+    isFetching: isFetchingSupplyCollateralEvents,
+    fractionFetched: ffSupplyCollateralEvents,
+  } = useContractEvents({
     abi: morphoAbi,
     address: morpho.address,
     fromBlock: morpho.fromBlock,
@@ -128,11 +139,33 @@ export function BorrowSubPage() {
     return map;
   }, [filteredCreateMarketArgs, erc20Symbols, erc20Decimals]);
 
-  console.log(isFetchingSupplyCollateralEvents, isFetchingErc20Symbols, isFetchingErc20Decimals, isFetchingMarkets);
+  const totalProgress = isFetchingCreateMarketEvents
+    ? 0
+    : isFetchingSupplyCollateralEvents
+      ? 1
+      : isFetchingErc20Symbols
+        ? 2
+        : isFetchingErc20Decimals
+          ? 3
+          : isFetchingMarkets
+            ? 4
+            : 5;
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      <div className="h-[380px] px-8 py-18 md:p-32 dark:bg-neutral-900"></div>
+      <div className="flex justify-between gap-4 px-8 pt-24 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
+        <Card>
+          <CardContent className="flex h-full w-[220px] flex-col gap-4 px-2 text-xs font-light sm:p-6">
+            <span>Indexing Morpho Blue markets</span>
+            <Progress value={ffCreateMarketEvents * 100} />
+            Indexing your collateral supply
+            <Progress value={ffSupplyCollateralEvents * 100} className="mb-auto" />
+            <i className="bottom-0">Total Progress</i>
+            <Progress value={(totalProgress * 100) / 5} />
+          </CardContent>
+        </Card>
+        <RequestChart />
+      </div>
       <div className="bg-background dark:bg-background/70 flex grow justify-center rounded-t-xl">
         <div className="text-primary w-full max-w-7xl px-8 pt-8 pb-32 md:px-32">
           <Table className="border-separate border-spacing-y-3">
