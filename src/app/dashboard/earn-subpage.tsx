@@ -151,9 +151,9 @@ export function EarnSubPage() {
   }, [filteredCreateMetaMorphoArgs, assets, assetsInfo, vaultsInfo]);
 
   const totalProgress = isFetchingCreateMetaMorphoEvents
-    ? 0
+    ? ffCreateMetaMorphoEvents
     : isFetchingDepositEvents
-      ? 1
+      ? 1 + ffDepositEvents
       : isFetchingAssetsInfo
         ? 2
         : isFetchingVaultsInfo

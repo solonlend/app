@@ -140,9 +140,9 @@ export function BorrowSubPage() {
   }, [filteredCreateMarketArgs, erc20Symbols, erc20Decimals]);
 
   const totalProgress = isFetchingCreateMarketEvents
-    ? 0
+    ? ffCreateMarketEvents
     : isFetchingSupplyCollateralEvents
-      ? 1
+      ? 1 + ffSupplyCollateralEvents
       : isFetchingErc20Symbols
         ? 2
         : isFetchingErc20Decimals

@@ -9,16 +9,16 @@ import {
 } from "@/components/ui/sheet";
 import { AccrualPosition, IMarket, Market, MarketId, MarketParams, Position } from "@morpho-org/blue-sdk";
 import { formatBalance, formatLtv, Token } from "@/lib/utils";
-import { Address, extractChain } from "viem";
-import { useAccount, useChainId, useChains, useReadContract } from "wagmi";
+import { Address, erc20Abi, extractChain, parseUnits } from "viem";
+import { useAccount, useChainId, useChains, useReadContract, useReadContracts, useWriteContract } from "wagmi";
 import { CircleArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { getContractDeploymentInfo } from "./constants";
 import { morphoAbi } from "@/assets/abis/morpho";
 import { keepPreviousData } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { oracleAbi } from "@/assets/abis/oracle";
+import { TokenAmountInput } from "./token-amount-input";
 
 enum Actions {
   SupplyCollateral = "Add",
@@ -40,9 +40,15 @@ export function BorrowSheetContent({
   const chains = useChains();
   const chain = extractChain({ chains, id: chainId });
   const { address: userAddress } = useAccount();
+  const { writeContract } = useWriteContract();
+
+  const [selectedTab, setSelectedTab] = useState(Actions.SupplyCollateral);
+  const [textInputValue, setTextInputValue] = useState("");
+
+  const morpho = getContractDeploymentInfo(chainId, "Morpho").address;
 
   const { data: positionRaw } = useReadContract({
-    address: getContractDeploymentInfo(chainId, "Morpho").address,
+    address: morpho,
     abi: morphoAbi,
     functionName: "position",
     args: userAddress ? [marketId, userAddress] : undefined,
@@ -54,6 +60,25 @@ export function BorrowSheetContent({
     abi: oracleAbi,
     functionName: "price",
     query: { staleTime: 1 * 60 * 1000, placeholderData: keepPreviousData, refetchInterval: 1 * 60 * 1000 },
+  });
+
+  const { data: allowances, refetch: refetchAllowances } = useReadContracts({
+    contracts: [
+      {
+        address: marketParams.collateralToken,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [userAddress ?? "0x", morpho],
+      },
+      {
+        address: marketParams.loanToken,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [userAddress ?? "0x", morpho],
+      },
+    ],
+    allowFailure: false,
+    query: { enabled: !!userAddress, staleTime: 5_000, gcTime: 5_000 },
   });
 
   const market = useMemo(
@@ -79,6 +104,47 @@ export function BorrowSheetContent({
     () => (market && position ? new AccrualPosition(position, market) : undefined),
     [position, market],
   );
+
+  const { token, inputValue } = useMemo(() => {
+    const token = tokens.get(marketParams[selectedTab === Actions.SupplyCollateral ? "collateralToken" : "loanToken"]);
+    return {
+      token,
+      inputValue: token?.decimals !== undefined ? parseUnits(textInputValue, token.decimals) : undefined,
+    };
+  }, [textInputValue, selectedTab, tokens, marketParams]);
+
+  const approvalTxnConfig =
+    token !== undefined &&
+    inputValue !== undefined &&
+    allowances !== undefined &&
+    allowances[selectedTab === Actions.SupplyCollateral ? 0 : 1] < inputValue
+      ? ({
+          address: token.address,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [morpho, inputValue],
+        } as const satisfies Parameters<typeof writeContract>[0])
+      : undefined;
+
+  const supplyCollateralTxnConfig =
+    inputValue !== undefined && userAddress !== undefined
+      ? ({
+          address: morpho,
+          abi: morphoAbi,
+          functionName: "supplyCollateral",
+          args: [{ ...marketParams }, inputValue, userAddress, "0x"],
+        } as const satisfies Parameters<typeof writeContract>[0])
+      : undefined;
+
+  const repayTxnConfig =
+    inputValue !== undefined && userAddress !== undefined
+      ? ({
+          address: morpho,
+          abi: morphoAbi,
+          functionName: "repay",
+          args: [{ ...marketParams }, inputValue, 0n, userAddress, "0x"],
+        } as const satisfies Parameters<typeof writeContract>[0])
+      : undefined;
 
   const {
     symbol: collateralSymbol,
@@ -130,7 +196,14 @@ export function BorrowSheetContent({
           {accrualPosition?.ltv ? formatLtv(accrualPosition.ltv) : "－"} / {formatLtv(marketParams.lltv)}
         </p>
       </div>
-      <Tabs defaultValue={Actions.SupplyCollateral} className="w-full gap-3 px-4">
+      <Tabs
+        defaultValue={Actions.SupplyCollateral}
+        className="w-full gap-3 px-4"
+        onValueChange={(value) => {
+          setSelectedTab(value as Actions);
+          setTextInputValue("");
+        }}
+      >
         <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
           <TabsTrigger className="rounded-full" value={Actions.SupplyCollateral}>
             {Actions.SupplyCollateral}
@@ -145,10 +218,26 @@ export function BorrowSheetContent({
               Supply Collateral {collateralSymbol ?? ""}
               <img className="rounded-full" height={16} width={16} src={collateralImgSrc} />
             </div>
-            <Input className="p-0 font-mono text-2xl font-bold" type="number" defaultValue="0" />
+            <TokenAmountInput decimals={token?.decimals} value={textInputValue} onChange={setTextInputValue} />
           </div>
-          <Button className="text-md mt-3 h-12 w-full rounded-full font-light" variant="blue">
-            Execute
+          <Button
+            className="text-md mt-3 h-12 w-full rounded-full font-light"
+            variant="blue"
+            onClick={() => {
+              if (approvalTxnConfig) {
+                writeContract(approvalTxnConfig, {
+                  onSettled(txnHash, err) {
+                    console.log(txnHash, err);
+                    refetchAllowances();
+                  },
+                });
+              } else if (supplyCollateralTxnConfig) {
+                writeContract(supplyCollateralTxnConfig);
+              }
+            }}
+            disabled={inputValue === 0n}
+          >
+            {approvalTxnConfig ? "Approve" : "Execute"}
           </Button>
         </TabsContent>
         <TabsContent value={Actions.Repay}>
@@ -157,10 +246,26 @@ export function BorrowSheetContent({
               Repay Loan {loanSymbol ?? ""}
               <img className="rounded-full" height={16} width={16} src={loanImgSrc} />
             </div>
-            <Input className="p-0 font-mono text-2xl font-bold" type="number" defaultValue="0" />
+            <TokenAmountInput decimals={token?.decimals} value={textInputValue} onChange={setTextInputValue} />
           </div>
-          <Button className="text-md mt-3 h-12 w-full rounded-full font-light" variant="blue">
-            Execute
+          <Button
+            className="text-md mt-3 h-12 w-full rounded-full font-light"
+            variant="blue"
+            onClick={() => {
+              if (approvalTxnConfig) {
+                writeContract(approvalTxnConfig, {
+                  onSettled(txnHash, err) {
+                    console.log(txnHash, err);
+                    refetchAllowances();
+                  },
+                });
+              } else if (repayTxnConfig) {
+                writeContract(repayTxnConfig);
+              }
+            }}
+            disabled={inputValue === 0n}
+          >
+            {approvalTxnConfig ? "Approve" : "Execute"}
           </Button>
         </TabsContent>
       </Tabs>
