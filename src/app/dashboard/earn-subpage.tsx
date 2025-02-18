@@ -1,4 +1,3 @@
-import { morphoAbi } from "@/assets/abis/morpho";
 import { getContractDeploymentInfo } from "@/components/constants";
 import useContractEvents from "@/hooks/use-contract-events";
 import { useMemo } from "react";
@@ -36,26 +35,13 @@ export function EarnSubPage() {
     query: { staleTime: Infinity, gcTime: Infinity, refetchOnMount: "always" },
   });
 
-  const [morpho, factory, factoryV1_1] = useMemo(
+  const [factory, factoryV1_1] = useMemo(
     () => [
-      getContractDeploymentInfo(chainId, "Morpho"),
       getContractDeploymentInfo(chainId, "MetaMorphoFactory"),
       getContractDeploymentInfo(chainId, "MetaMorphoV1_1Factory"),
     ],
     [chainId],
   );
-
-  // MARK: Fetch `Morpho.CreateMarket` so that we have `collateralToken` information for all constituent markets
-  const { data: createMarketEvents, isFetching: isFetchingCreateMarketEvents } = useContractEvents({
-    abi: morphoAbi,
-    address: morpho.address,
-    fromBlock: morpho.fromBlock,
-    toBlock: blockNumber,
-    maxBlockRange: 10_000n,
-    eventName: "CreateMarket",
-    strict: true,
-    query: { enabled: chainId !== undefined && blockNumber !== undefined },
-  });
 
   // MARK: Fetch `MetaMorphoFactory.CreateMetaMorpho` on all factory versions so that we have all deployments
   const { data: createMetaMorphoEvents, isFetching: isFetchingCreateMetaMorphoEvents } = useContractEvents({
@@ -68,7 +54,7 @@ export function EarnSubPage() {
     strict: true,
     query: {
       // Wait to fetch so we don't get rate-limited.
-      enabled: chainId !== undefined && blockNumber !== undefined && !isFetchingCreateMarketEvents,
+      enabled: chainId !== undefined && blockNumber !== undefined,
     },
   });
 
@@ -154,7 +140,7 @@ export function EarnSubPage() {
     });
   }, [filteredCreateMetaMorphoArgs, assets, assetsInfo, vaultsInfo]);
 
-  console.log(createMarketEvents, isFetchingDepositEvents, isFetchingAssetsInfo, isFetchingVaultsInfo);
+  console.log(isFetchingCreateMetaMorphoEvents, isFetchingDepositEvents, isFetchingAssetsInfo, isFetchingVaultsInfo);
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
