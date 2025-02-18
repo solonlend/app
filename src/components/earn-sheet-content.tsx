@@ -35,7 +35,7 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
   });
 
   return (
-    <SheetContent className="gap-3 overflow-y-scroll dark:bg-neutral-900">
+    <SheetContent className="z-[9999] gap-3 overflow-y-scroll dark:bg-neutral-900">
       <SheetHeader>
         <SheetTitle>Your Position</SheetTitle>
         <SheetDescription>

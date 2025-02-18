@@ -241,6 +241,7 @@ export function RequestChart() {
                   spacer: "",
                   delimiter: "",
                   language: "shortEn",
+                  round: true,
                   languages: {
                     shortEn: {
                       y: () => "y",
