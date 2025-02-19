@@ -1,4 +1,4 @@
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import {
   SheetContent,
   SheetHeader,
@@ -14,6 +14,7 @@ import { CircleArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { keepPreviousData } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 
 enum Actions {
   Deposit = "Deposit",
@@ -36,6 +37,7 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
 
   return (
     <SheetContent className="z-[9999] gap-3 overflow-y-scroll dark:bg-neutral-900">
+      <Toaster theme="dark" position="bottom-left" richColors />
       <SheetHeader>
         <SheetTitle>Your Position</SheetTitle>
         <SheetDescription>

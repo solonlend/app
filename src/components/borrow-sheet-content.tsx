@@ -1,4 +1,4 @@
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import {
   SheetContent,
   SheetHeader,
@@ -10,15 +10,17 @@ import {
 import { AccrualPosition, IMarket, Market, MarketId, MarketParams, Position } from "@morpho-org/blue-sdk";
 import { formatBalance, formatLtv, Token } from "@/lib/utils";
 import { Address, erc20Abi, extractChain, parseUnits } from "viem";
-import { useAccount, useChainId, useChains, useReadContract, useReadContracts, useWriteContract } from "wagmi";
+import { useAccount, useChainId, useChains, useReadContract, useReadContracts } from "wagmi";
 import { CircleArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { getContractDeploymentInfo } from "./constants";
+import { getContractDeploymentInfo } from "@/components/constants";
 import { morphoAbi } from "@/assets/abis/morpho";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { oracleAbi } from "@/assets/abis/oracle";
-import { TokenAmountInput } from "./token-amount-input";
+import { TokenAmountInput } from "@/components/token-amount-input";
+import { TransactionButton } from "@/components/transaction-button";
+import { Toaster } from "sonner";
 
 enum Actions {
   SupplyCollateral = "Add",
@@ -40,7 +42,6 @@ export function BorrowSheetContent({
   const chains = useChains();
   const chain = extractChain({ chains, id: chainId });
   const { address: userAddress } = useAccount();
-  const { writeContract } = useWriteContract();
 
   const [selectedTab, setSelectedTab] = useState(Actions.SupplyCollateral);
   const [textInputValue, setTextInputValue] = useState("");
@@ -123,7 +124,7 @@ export function BorrowSheetContent({
           abi: erc20Abi,
           functionName: "approve",
           args: [morpho, inputValue],
-        } as const satisfies Parameters<typeof writeContract>[0])
+        } as const)
       : undefined;
 
   const supplyCollateralTxnConfig =
@@ -133,7 +134,7 @@ export function BorrowSheetContent({
           abi: morphoAbi,
           functionName: "supplyCollateral",
           args: [{ ...marketParams }, inputValue, userAddress, "0x"],
-        } as const satisfies Parameters<typeof writeContract>[0])
+        } as const)
       : undefined;
 
   const repayTxnConfig =
@@ -143,7 +144,7 @@ export function BorrowSheetContent({
           abi: morphoAbi,
           functionName: "repay",
           args: [{ ...marketParams }, inputValue, 0n, userAddress, "0x"],
-        } as const satisfies Parameters<typeof writeContract>[0])
+        } as const)
       : undefined;
 
   const {
@@ -155,6 +156,7 @@ export function BorrowSheetContent({
 
   return (
     <SheetContent className="z-[9999] gap-3 overflow-y-scroll dark:bg-neutral-900">
+      <Toaster theme="dark" position="bottom-left" richColors />
       <SheetHeader>
         <SheetTitle>Your Position</SheetTitle>
         <SheetDescription>
@@ -220,25 +222,19 @@ export function BorrowSheetContent({
             </div>
             <TokenAmountInput decimals={token?.decimals} value={textInputValue} onChange={setTextInputValue} />
           </div>
-          <Button
-            className="text-md mt-3 h-12 w-full rounded-full font-light"
-            variant="blue"
-            onClick={() => {
-              if (approvalTxnConfig) {
-                writeContract(approvalTxnConfig, {
-                  onSettled(txnHash, err) {
-                    console.log(txnHash, err);
-                    refetchAllowances();
-                  },
-                });
-              } else if (supplyCollateralTxnConfig) {
-                writeContract(supplyCollateralTxnConfig);
-              }
-            }}
-            disabled={inputValue === 0n}
-          >
-            {approvalTxnConfig ? "Approve" : "Execute"}
-          </Button>
+          {approvalTxnConfig ? (
+            <TransactionButton
+              variables={approvalTxnConfig}
+              disabled={inputValue === 0n}
+              onTxnReceipt={() => refetchAllowances()}
+            >
+              Approve
+            </TransactionButton>
+          ) : (
+            <TransactionButton variables={supplyCollateralTxnConfig} disabled={inputValue === 0n}>
+              Supply Collateral
+            </TransactionButton>
+          )}
         </TabsContent>
         <TabsContent value={Actions.Repay}>
           <div className="bg-secondary flex flex-col gap-4 rounded-2xl p-4">
@@ -248,25 +244,19 @@ export function BorrowSheetContent({
             </div>
             <TokenAmountInput decimals={token?.decimals} value={textInputValue} onChange={setTextInputValue} />
           </div>
-          <Button
-            className="text-md mt-3 h-12 w-full rounded-full font-light"
-            variant="blue"
-            onClick={() => {
-              if (approvalTxnConfig) {
-                writeContract(approvalTxnConfig, {
-                  onSettled(txnHash, err) {
-                    console.log(txnHash, err);
-                    refetchAllowances();
-                  },
-                });
-              } else if (repayTxnConfig) {
-                writeContract(repayTxnConfig);
-              }
-            }}
-            disabled={inputValue === 0n}
-          >
-            {approvalTxnConfig ? "Approve" : "Execute"}
-          </Button>
+          {approvalTxnConfig ? (
+            <TransactionButton
+              variables={approvalTxnConfig}
+              disabled={inputValue === 0n}
+              onTxnReceipt={() => refetchAllowances()}
+            >
+              Approve
+            </TransactionButton>
+          ) : (
+            <TransactionButton variables={repayTxnConfig} disabled={inputValue === 0n}>
+              Repay
+            </TransactionButton>
+          )}
         </TabsContent>
       </Tabs>
       <SheetFooter>
