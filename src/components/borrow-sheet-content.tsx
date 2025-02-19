@@ -201,6 +201,7 @@ export function BorrowSheetContent({
       <Tabs
         defaultValue={Actions.SupplyCollateral}
         className="w-full gap-3 px-4"
+        value={selectedTab}
         onValueChange={(value) => {
           setSelectedTab(value as Actions);
           setTextInputValue("");
@@ -231,7 +232,7 @@ export function BorrowSheetContent({
               Approve
             </TransactionButton>
           ) : (
-            <TransactionButton variables={supplyCollateralTxnConfig} disabled={inputValue === 0n}>
+            <TransactionButton variables={supplyCollateralTxnConfig} disabled={!inputValue}>
               Supply Collateral
             </TransactionButton>
           )}
@@ -253,7 +254,7 @@ export function BorrowSheetContent({
               Approve
             </TransactionButton>
           ) : (
-            <TransactionButton variables={repayTxnConfig} disabled={inputValue === 0n}>
+            <TransactionButton variables={repayTxnConfig} disabled={!inputValue}>
               Repay
             </TransactionButton>
           )}

@@ -48,6 +48,11 @@ const chartConfig = {
     label: "Failure",
     color: "var(--chart-4)",
   },
+  eth_accounts: { label: "eth_accounts" },
+  eth_blockNumber: { label: "eth_blockNumber" },
+  eth_call: { label: "eth_call" },
+  eth_chainId: { label: "eth_chainId" },
+  eth_getLogs: { label: "eth_getLogs" },
 } satisfies ChartConfig;
 
 type ProviderName = string;

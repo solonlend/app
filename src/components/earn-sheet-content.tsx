@@ -8,13 +8,15 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { formatBalance, Token } from "@/lib/utils";
-import { Address, erc4626Abi, extractChain } from "viem";
+import { Address, erc4626Abi, extractChain, parseUnits } from "viem";
 import { useAccount, useChainId, useChains, useReadContract } from "wagmi";
 import { CircleArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Toaster } from "sonner";
+import { useMemo, useState } from "react";
+import { TokenAmountInput } from "@/components/token-amount-input";
+import { TransactionButton } from "@/components/transaction-button";
 
 enum Actions {
   Deposit = "Deposit",
@@ -27,6 +29,9 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
   const chain = extractChain({ chains, id: chainId });
   const { address: userAddress } = useAccount();
 
+  const [selectedTab, setSelectedTab] = useState(Actions.Withdraw);
+  const [textInputValue, setTextInputValue] = useState("");
+
   const { data: maxWithdraw } = useReadContract({
     address: vaultAddress,
     abi: erc4626Abi,
@@ -34,6 +39,22 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
     args: [userAddress ?? "0x"],
     query: { enabled: !!userAddress, staleTime: 10 * 60 * 1000, gcTime: Infinity, placeholderData: keepPreviousData },
   });
+
+  const { inputValue, withdrawTxnConfig } = useMemo(() => {
+    const inputValue = asset.decimals !== undefined ? parseUnits(textInputValue, asset.decimals) : undefined;
+    return {
+      inputValue,
+      withdrawTxnConfig:
+        userAddress !== undefined && inputValue !== undefined
+          ? ({
+              address: vaultAddress,
+              abi: erc4626Abi,
+              functionName: "withdraw",
+              args: [inputValue, userAddress, userAddress],
+            } as const)
+          : undefined,
+    };
+  }, [vaultAddress, userAddress, asset, textInputValue]);
 
   return (
     <SheetContent className="z-[9999] gap-3 overflow-y-scroll dark:bg-neutral-900">
@@ -62,9 +83,17 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
           {maxWithdraw && asset.decimals !== undefined ? formatBalance(maxWithdraw, asset.decimals) : "－"}
         </p>
       </div>
-      <Tabs defaultValue={Actions.Deposit} className="w-full gap-3 px-4">
+      <Tabs
+        defaultValue={Actions.Deposit}
+        className="w-full gap-3 px-4"
+        value={selectedTab}
+        onValueChange={(value) => {
+          setSelectedTab(value as Actions);
+          setTextInputValue("");
+        }}
+      >
         <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
-          <TabsTrigger className="rounded-full" value={Actions.Deposit}>
+          <TabsTrigger className="rounded-full" value={Actions.Deposit} disabled>
             {Actions.Deposit}
           </TabsTrigger>
           <TabsTrigger className="rounded-full" value={Actions.Withdraw}>
@@ -77,7 +106,7 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
               Deposit {asset.symbol ?? ""}
               <img className="rounded-full" height={16} width={16} src={asset.imageSrc} />
             </div>
-            <Input className="p-0 font-mono text-2xl font-bold" type="number" defaultValue="0" />
+            <TokenAmountInput decimals={asset.decimals} value={textInputValue} onChange={setTextInputValue} />
           </div>
           <Button className="text-md mt-3 h-12 w-full rounded-full font-light" variant="blue">
             Execute
@@ -89,11 +118,11 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
               Withdraw {asset.symbol ?? ""}
               <img className="rounded-full" height={16} width={16} src={asset.imageSrc} />
             </div>
-            <Input className="p-0 font-mono text-2xl font-bold" type="number" defaultValue="0" />
+            <TokenAmountInput decimals={asset.decimals} value={textInputValue} onChange={setTextInputValue} />
           </div>
-          <Button className="text-md mt-3 h-12 w-full rounded-full font-light" variant="blue">
-            Execute
-          </Button>
+          <TransactionButton variables={withdrawTxnConfig} disabled={!inputValue}>
+            Withdraw
+          </TransactionButton>
         </TabsContent>
       </Tabs>
       <SheetFooter>
