@@ -32,12 +32,12 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
   const [selectedTab, setSelectedTab] = useState(Actions.Withdraw);
   const [textInputValue, setTextInputValue] = useState("");
 
-  const { data: maxWithdraw } = useReadContract({
+  const { data: maxWithdraw, refetch: refetchMaxWithdraw } = useReadContract({
     address: vaultAddress,
     abi: erc4626Abi,
     functionName: "maxWithdraw",
     args: [userAddress ?? "0x"],
-    query: { enabled: !!userAddress, staleTime: 10 * 60 * 1000, gcTime: Infinity, placeholderData: keepPreviousData },
+    query: { enabled: !!userAddress, staleTime: 1 * 60 * 1000, placeholderData: keepPreviousData },
   });
 
   const { inputValue, withdrawTxnConfig } = useMemo(() => {
@@ -109,7 +109,7 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
             <TokenAmountInput decimals={asset.decimals} value={textInputValue} onChange={setTextInputValue} />
           </div>
           <Button className="text-md mt-3 h-12 w-full rounded-full font-light" variant="blue">
-            Execute
+            Deposit
           </Button>
         </TabsContent>
         <TabsContent value={Actions.Withdraw}>
@@ -118,9 +118,21 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
               Withdraw {asset.symbol ?? ""}
               <img className="rounded-full" height={16} width={16} src={asset.imageSrc} />
             </div>
-            <TokenAmountInput decimals={asset.decimals} value={textInputValue} onChange={setTextInputValue} />
+            <TokenAmountInput
+              decimals={asset.decimals}
+              value={textInputValue}
+              maxValue={maxWithdraw}
+              onChange={setTextInputValue}
+            />
           </div>
-          <TransactionButton variables={withdrawTxnConfig} disabled={!inputValue}>
+          <TransactionButton
+            variables={withdrawTxnConfig}
+            disabled={!inputValue}
+            onTxnReceipt={() => {
+              setTextInputValue("");
+              refetchMaxWithdraw();
+            }}
+          >
             Withdraw
           </TransactionButton>
         </TabsContent>

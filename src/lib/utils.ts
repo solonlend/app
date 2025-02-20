@@ -12,11 +12,11 @@ export function formatBalance(balance: bigint, decimals: number) {
   const suffixes = ["", "k", "M", "B", "T", "P", "E"]; // Supports up to Exa (1e18)
   const magnitude = balanceNumber === 0 ? 0 : Math.floor(Math.log10(Math.abs(balanceNumber)) / 3);
 
-  if (magnitude >= suffixes.length || magnitude < -3) return balanceNumber.toExponential(4); // Use scientific notation for very large numbers
-  if (magnitude < 0) return balanceNumber.toPrecision(3);
+  if (magnitude >= suffixes.length || magnitude < -3) return balanceNumber.toExponential(5); // Use scientific notation for very large numbers
+  if (magnitude < 0) return balanceNumber.toPrecision(5);
 
   const scaled = balanceNumber / Math.pow(10, magnitude * 3);
-  return scaled.toPrecision(4) + suffixes[magnitude];
+  return scaled.toPrecision(5) + suffixes[magnitude];
 }
 
 export function formatBalanceWithSymbol(balance: bigint, decimals: number, symbol?: string) {

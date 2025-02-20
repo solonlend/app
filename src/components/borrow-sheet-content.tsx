@@ -49,12 +49,12 @@ export function BorrowSheetContent({
 
   const morpho = getContractDeploymentInfo(chainId, "Morpho").address;
 
-  const { data: positionRaw } = useReadContract({
+  const { data: positionRaw, refetch: refetchPosition } = useReadContract({
     address: morpho,
     abi: morphoAbi,
     functionName: "position",
     args: userAddress ? [marketId, userAddress] : undefined,
-    query: { staleTime: 10 * 60 * 1000, gcTime: Infinity, placeholderData: keepPreviousData },
+    query: { staleTime: 1 * 60 * 1000, placeholderData: keepPreviousData },
   });
 
   const { data: price } = useReadContract({
@@ -165,6 +165,10 @@ export function BorrowSheetContent({
   } = tokens.get(marketParams.collateralToken) ?? {};
   const { symbol: loanSymbol, decimals: loanDecimals, imageSrc: loanImgSrc } = tokens.get(marketParams.loanToken) ?? {};
 
+  let withdrawCollateralMax = accrualPosition?.withdrawableCollateral;
+  if (withdrawCollateralMax !== undefined) withdrawCollateralMax = (withdrawCollateralMax * 999n) / 1000n; // safety
+  const repayMax = accrualPosition?.borrowAssets;
+
   return (
     <SheetContent className="z-[9999] gap-3 overflow-y-scroll dark:bg-neutral-900">
       <Toaster theme="dark" position="bottom-left" richColors />
@@ -246,7 +250,14 @@ export function BorrowSheetContent({
               Approve
             </TransactionButton>
           ) : (
-            <TransactionButton variables={supplyCollateralTxnConfig} disabled={!inputValue}>
+            <TransactionButton
+              variables={supplyCollateralTxnConfig}
+              disabled={!inputValue}
+              onTxnReceipt={() => {
+                setTextInputValue("");
+                refetchPosition();
+              }}
+            >
               Supply Collateral
             </TransactionButton>
           )}
@@ -257,9 +268,21 @@ export function BorrowSheetContent({
               Withdraw Collateral {collateralSymbol ?? ""}
               <img className="rounded-full" height={16} width={16} src={collateralImgSrc} />
             </div>
-            <TokenAmountInput decimals={token?.decimals} value={textInputValue} onChange={setTextInputValue} />
+            <TokenAmountInput
+              decimals={token?.decimals}
+              value={textInputValue}
+              maxValue={withdrawCollateralMax}
+              onChange={setTextInputValue}
+            />
           </div>
-          <TransactionButton variables={withdrawCollateralTxnConfig} disabled={!inputValue}>
+          <TransactionButton
+            variables={withdrawCollateralTxnConfig}
+            disabled={!inputValue}
+            onTxnReceipt={() => {
+              setTextInputValue("");
+              refetchPosition();
+            }}
+          >
             Withdraw Collateral
           </TransactionButton>
         </TabsContent>
@@ -269,7 +292,12 @@ export function BorrowSheetContent({
               Repay Loan {loanSymbol ?? ""}
               <img className="rounded-full" height={16} width={16} src={loanImgSrc} />
             </div>
-            <TokenAmountInput decimals={token?.decimals} value={textInputValue} onChange={setTextInputValue} />
+            <TokenAmountInput
+              decimals={token?.decimals}
+              value={textInputValue}
+              maxValue={repayMax}
+              onChange={setTextInputValue}
+            />
           </div>
           {approvalTxnConfig ? (
             <TransactionButton
@@ -280,7 +308,14 @@ export function BorrowSheetContent({
               Approve
             </TransactionButton>
           ) : (
-            <TransactionButton variables={repayTxnConfig} disabled={!inputValue}>
+            <TransactionButton
+              variables={repayTxnConfig}
+              disabled={!inputValue}
+              onTxnReceipt={() => {
+                setTextInputValue("");
+                refetchPosition();
+              }}
+            >
               Repay
             </TransactionButton>
           )}

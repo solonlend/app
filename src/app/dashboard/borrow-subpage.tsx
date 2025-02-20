@@ -34,7 +34,7 @@ export function BorrowSubPage() {
   const { chainId, address: userAddress } = useAccount();
   const { data: blockNumber } = useBlockNumber({
     watch: false,
-    query: { staleTime: Infinity, gcTime: Infinity, refetchOnMount: false },
+    query: { staleTime: Infinity, gcTime: Infinity, refetchOnMount: "always" },
   });
 
   const morpho = useMemo(() => getContractDeploymentInfo(chainId, "Morpho"), [chainId]);
