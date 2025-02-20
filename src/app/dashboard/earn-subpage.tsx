@@ -120,6 +120,12 @@ export function EarnSubPage() {
         { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
         { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
         { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
+        {
+          address: args.metaMorpho,
+          abi: metaMorphoAbi,
+          functionName: "maxWithdraw",
+          args: [userAddress ?? "0x"],
+        } as const,
       ])
       .flat(),
     allowFailure: false,
@@ -134,12 +140,13 @@ export function EarnSubPage() {
         imageSrc: blo(args.metaMorpho),
         info: vaultsInfo
           ? {
-              owner: vaultsInfo[idx * 6 + 0] as Address,
-              curator: vaultsInfo[idx * 6 + 1] as Address,
-              guardian: vaultsInfo[idx * 6 + 2] as Address,
-              timelock: vaultsInfo[idx * 6 + 3] as bigint,
-              name: vaultsInfo[idx * 6 + 4] as string,
-              totalAssets: vaultsInfo[idx * 6 + 5] as bigint,
+              owner: vaultsInfo[idx * 7 + 0] as Address,
+              curator: vaultsInfo[idx * 7 + 1] as Address,
+              guardian: vaultsInfo[idx * 7 + 2] as Address,
+              timelock: vaultsInfo[idx * 7 + 3] as bigint,
+              name: vaultsInfo[idx * 7 + 4] as string,
+              totalAssets: vaultsInfo[idx * 7 + 5] as bigint,
+              maxWithdraw: vaultsInfo[idx * 7 + 6] as bigint,
             }
           : undefined,
         asset: {
@@ -189,7 +196,8 @@ export function EarnSubPage() {
               <TableRow>
                 <TableHead className="text-primary rounded-l-lg pl-4 text-xs font-light">Vault</TableHead>
                 <TableHead className="text-primary text-xs font-light">Asset</TableHead>
-                <TableHead className="text-primary text-xs font-light">Deposits</TableHead>
+                <TableHead className="text-primary text-xs font-light text-nowrap">Total Supply</TableHead>
+                <TableHead className="text-primary text-xs font-light text-nowrap">Balance</TableHead>
                 <TableHead className="text-primary text-xs font-light">Curator</TableHead>
                 <TableHead className="text-primary rounded-r-lg text-xs font-light">Timelock</TableHead>
               </TableRow>
@@ -198,7 +206,7 @@ export function EarnSubPage() {
               {vaults.map((vault) => (
                 <Sheet key={vault.address}>
                   <SheetTrigger asChild>
-                    <TableRow className="bg-secondary">
+                    <TableRow className="bg-secondary text-">
                       <TableCell className="rounded-l-lg p-5">
                         <TokenTableCell address={vault.address} symbol={vault.info?.name} imageSrc={vault.imageSrc} />
                       </TableCell>
@@ -208,6 +216,11 @@ export function EarnSubPage() {
                       <TableCell>
                         {vault.info && vault.asset.decimals
                           ? formatBalanceWithSymbol(vault.info.totalAssets, vault.asset.decimals, vault.asset.symbol)
+                          : "－"}
+                      </TableCell>
+                      <TableCell>
+                        {vault.info && vault.asset.decimals
+                          ? formatBalanceWithSymbol(vault.info.maxWithdraw, vault.asset.decimals, vault.asset.symbol)
                           : "－"}
                       </TableCell>
                       <TableCell>
