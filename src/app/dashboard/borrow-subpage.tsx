@@ -158,7 +158,7 @@ export function BorrowSubPage() {
           <CardContent className="flex h-full w-[220px] flex-col gap-4 px-2 text-xs font-light sm:p-6">
             <span>Indexing Morpho Blue markets</span>
             <Progress value={ffCreateMarketEvents * 100} />
-            Indexing your collateral supply
+            Indexing your positions
             <Progress value={ffSupplyCollateralEvents * 100} className="mb-auto" />
             <i className="bottom-0">Total Progress</i>
             <Progress value={(totalProgress * 100) / 5} />

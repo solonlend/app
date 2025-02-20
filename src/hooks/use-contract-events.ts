@@ -89,7 +89,7 @@ export default function useContractEvents<
 }
 
 function replaceBigInts(obj: unknown): unknown {
-  return JSON.parse(JSON.stringify(obj, (key, value) => (typeof value === "bigint" ? `${value.toString()}n` : value)));
+  return JSON.parse(JSON.stringify(obj, (_key, value) => (typeof value === "bigint" ? `${value.toString()}n` : value)));
 }
 
 function sliceBlockRange([fromBlock, toBlock]: [bigint, bigint], rangeConstraint: bigint) {
