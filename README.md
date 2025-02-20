@@ -1,50 +1,49 @@
-# React + TypeScript + Vite
+# Resilient Web App for Morpho Blue
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React web app for Morpho Blue and MetaMorpho contracts that's designed to work using only public RPCs－no other infrastructure required.
 
-Currently, two official plugins are available:
+## Installation
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+To get started:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ["./tsconfig.node.json", "./tsconfig.app.json"],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-});
+```shell
+git clone https://github.com/morpho-org/morpho-blue-offchain-public.git
+cd morpho-blue-offchain-public
+# Install packages and run
+pnpm install
+pnpm run dev
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+After running the commands above, open [http://localhost:5173/](http://localhost:5173/) in your browser to use the app.
 
-```js
-// eslint.config.js
-import react from "eslint-plugin-react";
+## Features
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: "18.3" } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs["jsx-runtime"].rules,
-  },
-});
-```
+- 🦋 View your deposits in MetaMorpho vaults
+- 🌌 View your borrow positions
+- 📤 Withdraw from MetaMorpho vaults
+- ⚡️ Repay loans, add collateral, and remove collateral
+- ⛓️ Support any chain with Morpho contracts
+- 🏗️ Requires no additional infrastructure/services
+
+> [!TIP]
+> The app uses your wallet RPC by default, then falls back to [drpc](https://drpc.org). You can switch the order or add additional RPCs by modifying the `wagmiConfig` in [App.tsx](/src/App.tsx#L25).
+
+## Architecture
+
+This is a single page app built with React 19, Vite, [shadcn](https://ui.shadcn.com), and [wagmi](https://wagmi.sh).
+
+_Key Components_
+
+- [src/App.tsx](/src/App.tsx) -- Defines a `wagmiConfig` and sets up various providers and contexts for data caching
+- [src/hooks/use-contract-events.ts](/src/hooks/use-contract-events.ts) -- React hook for calling `eth_getLogs` with retries and caching, respecting an optional constraint on the largest-fetchable block range
+- [src/app/dashboard/earn-subpage.tsx](/src/app/dashboard/earn-subpage.tsx) -- Main component for the Earn page. Fetches data as follows:
+  1. `CreateMetaMorpho` events, so we know addresses of all MetaMorpho vault contracts
+  2. The user's `Deposit` events for _all_ ERC4626 vaults (even non-Morpho). We filter these down using results from (1)
+  3. ERC20 symbols and decimals for each underlying asset
+  4. Vault info, including name, curator, timelock, and `totalAssets`
+- [src/app/dashboard/borrow-subpage.tsx](/src/app/dashboard/earn-subpage.tsx) -- Main component for the Borrow page
+  1. `SupplyCollateral` events on the Morpho Blue contract, so we know where the user has (or had) positions
+  2. `marketParams` struct for each `marketId` referenced in events from (1)
+  3. `markets` struct for each `marketId` referenced in events from (1)
+  4. ERC20 symbols and decimals for each `collateralToken` and `loanToken`
+- [src/components/ui/...](/src/components/ui/) -- shadcn reusable component library
