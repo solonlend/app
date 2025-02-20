@@ -56,6 +56,7 @@ export function EarnSubPage() {
     fromBlock: factory.fromBlock,
     toBlock: blockNumber,
     maxBlockRange: 10_000n,
+    reverseChronologicalOrder: true,
     eventName: "CreateMetaMorpho",
     strict: true,
     query: {
@@ -74,6 +75,7 @@ export function EarnSubPage() {
     fromBlock: factory.fromBlock,
     toBlock: blockNumber,
     maxBlockRange: 10_000n,
+    reverseChronologicalOrder: true,
     eventName: "Deposit", // ERC-4626
     args: { receiver: userAddress },
     strict: true,
