@@ -93,10 +93,10 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
         }}
       >
         <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
-          <TabsTrigger className="rounded-full" value={Actions.Deposit} disabled>
+          {/* <TabsTrigger className="rounded-full" value={Actions.Deposit} disabled>
             {Actions.Deposit}
-          </TabsTrigger>
-          <TabsTrigger className="rounded-full" value={Actions.Withdraw}>
+          </TabsTrigger> */}
+          <TabsTrigger className="col-span-2 rounded-full" value={Actions.Withdraw}>
             {Actions.Withdraw}
           </TabsTrigger>
         </TabsList>
