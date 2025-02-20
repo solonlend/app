@@ -161,7 +161,6 @@ export function WalletMenu({
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectLabel>Core</SelectLabel>
             {chains
               .filter((chain) => CORE_DEPLOYMENTS.has(chain.id))
               .map((chain, idx) => (
