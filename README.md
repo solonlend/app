@@ -2,6 +2,8 @@
 
 React web app for Morpho Blue and MetaMorpho contracts that's designed to work using only public RPCs－no other infrastructure required.
 
+![resilient-web-app](https://github.com/user-attachments/assets/126d847c-4f8b-47a9-aa4b-7cfc9b7262b1)
+
 ## Installation
 
 To get started:
