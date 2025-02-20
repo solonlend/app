@@ -1,8 +1,32 @@
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { XIcon } from "lucide-react";
 
 export function Header({ className, children, ...props }: React.ComponentProps<"div">) {
+  const [shouldShowBanner, setShouldShowBanner] = useState(true);
+
   return (
     <div className="pointer-events-none fixed top-0 z-50 flex h-screen w-screen flex-col">
+      {shouldShowBanner && (
+        <aside className="pointer-events-auto flex items-center bg-blue-600 px-1 text-sm font-light italic">
+          <span className="grow py-2 text-center">
+            This app is built for emergencies, so it prioritizes resilience over speed. Please be patient as it loads.
+            You can also run it yourself{" "}
+            <a
+              className="underline"
+              href="https://github.com/morpho-org/morpho-blue-offchain-public"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              here.
+            </a>
+          </span>
+          <Button size="sm" variant="ghost" onClick={() => setShouldShowBanner(false)}>
+            <XIcon />
+          </Button>
+        </aside>
+      )}
       <header className={cn("pointer-events-auto h-16 bg-slate-100 dark:bg-slate-700", className)} {...props}>
         {children}
       </header>
