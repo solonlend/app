@@ -98,7 +98,7 @@ function WalletButton({ address }: { address: Address }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="secondary" size="lg" className="rounded-full p-4 font-light">
+        <Button variant="tertiary" size="lg" className="rounded-full p-4 font-light">
           <Avatar className="h-4 w-4">
             <AvatarImage src={ensAvatar ?? blo(address)} alt="Avatar" />
           </Avatar>
@@ -154,7 +154,7 @@ export function WalletMenu({
           }
         }}
       >
-        <SelectTrigger className="bg-secondary h-[40px] w-16 rounded-full">
+        <SelectTrigger className="bg-tertiary-dark h-[40px] w-16 rounded-full">
           <SelectValue aria-label={selectedChainName}>
             <ChainIcon name={selectedChainName} />
           </SelectValue>

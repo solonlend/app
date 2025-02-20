@@ -179,20 +179,29 @@ export function EarnSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      <div className="flex w-full max-w-5xl flex-col gap-4 px-8 pt-24 pb-10 md:m-auto md:grid md:grid-cols-[35%_65%] md:px-0 md:pt-32 dark:bg-neutral-900">
-        <Card className="h-min md:h-full">
+      <div className="flex w-full max-w-5xl flex-col gap-4 px-8 pt-24 pb-14 md:m-auto md:grid md:grid-cols-[40%_60%] md:px-0 md:pt-32 dark:bg-neutral-900">
+        <Card className="bg-secondary h-min md:h-full">
           <CardContent className="flex h-full flex-col gap-2 p-6 text-xs font-light">
-            <span>Indexing MetaMorpho vaults</span>
+            <div className="flex justify-between">
+              <span>Indexing MetaMorpho vaults</span>
+              {(ffCreateMetaMorphoEvents * 100).toFixed(2)}%
+            </div>
             <Progress finalColor="bg-green-400" value={ffCreateMetaMorphoEvents * 100} />
-            Indexing your deposits
+            <div className="flex justify-between">
+              <span>Indexing your deposits</span>
+              {(ffDepositEvents * 100).toFixed(2)}%
+            </div>
             <Progress finalColor="bg-green-400" value={ffDepositEvents * 100} className="mb-auto" />
-            <i className="bottom-0">Total Progress</i>
+            <div className="bottom-0 flex justify-between">
+              <i>Total Progress</i>
+              {((totalProgress * 100) / 4).toFixed(2)}%
+            </div>
             <Progress finalColor="bg-green-400" value={(totalProgress * 100) / 4} />
           </CardContent>
         </Card>
         <RequestChart />
       </div>
-      <div className="bg-background dark:bg-background/70 flex grow justify-center rounded-t-xl">
+      <div className="bg-background dark:bg-background/30 flex grow justify-center rounded-t-xl">
         <div className="text-primary w-full max-w-5xl px-8 pt-8 pb-32">
           <Table className="border-separate border-spacing-y-3">
             <TableCaption>

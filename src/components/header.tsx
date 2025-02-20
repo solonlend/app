@@ -27,7 +27,7 @@ export function Header({ className, children, ...props }: React.ComponentProps<"
           </Button>
         </aside>
       )}
-      <header className={cn("pointer-events-auto h-16 bg-slate-100 dark:bg-slate-700", className)} {...props}>
+      <header className={cn("bg-secondary pointer-events-auto h-16", className)} {...props}>
         {children}
       </header>
 
@@ -47,7 +47,7 @@ export function Header({ className, children, ...props }: React.ComponentProps<"
               </filter>
             </defs>
           </svg>
-          <div className="is-frame w-full bg-slate-100 dark:bg-slate-700"></div>
+          <div className="is-frame bg-secondary w-full"></div>
         </div>
         {/* <div className="mt-[-10px] h-[12px] bg-slate-100 dark:bg-slate-700"></div> */}
       </aside>

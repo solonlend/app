@@ -169,8 +169,8 @@ export function RequestChart() {
   const [activeChart, setActiveChart] = useState(providers.at(0) ?? "Wallet");
 
   return (
-    <Card className="min-w-min grow">
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 md:flex-row">
+    <Card className="bg-secondary min-w-min grow">
+      <CardHeader className="border-tertiary-dark flex flex-col items-stretch space-y-0 border-b p-0 md:flex-row">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-4">
           <CardTitle>RPC Requests</CardTitle>
           <CardDescription>Showing request status as the site loads blockchain data</CardDescription>
@@ -181,7 +181,7 @@ export function RequestChart() {
               <button
                 key={provider}
                 data-active={activeChart === provider}
-                className="data-[active=true]:bg-muted/50 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 even:border-l md:border-t-0 md:border-l"
+                className="data-[active=true]:bg-muted/50 border-tertiary-dark flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 even:border-l md:border-t-0 md:border-l"
                 onClick={() => setActiveChart(provider)}
               >
                 <span className="text-muted-foreground text-xs">{provider.replace("https://", "")}</span>

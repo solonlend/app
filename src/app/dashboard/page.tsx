@@ -25,9 +25,9 @@ export default function Page() {
             <MorphoLogoSvg width={24} height={24} />
             Morpho
           </div>
-          <div className="bg-background flex items-center gap-2 rounded-full p-1">
+          <div className="flex items-center gap-2 rounded-full bg-transparent p-1">
             <Button
-              variant={selectedSubPage === SubPage.Earn ? "secondary" : "secondaryTab"}
+              variant={selectedSubPage === SubPage.Earn ? "tertiary" : "secondaryTab"}
               size="lg"
               className="rounded-full font-light"
               onClick={() => setSelectedSubPage(SubPage.Earn)}
@@ -35,7 +35,7 @@ export default function Page() {
               Earn
             </Button>
             <Button
-              variant={selectedSubPage === SubPage.Borrow ? "secondary" : "secondaryTab"}
+              variant={selectedSubPage === SubPage.Borrow ? "tertiary" : "secondaryTab"}
               size="lg"
               className="rounded-full font-light"
               onClick={() => setSelectedSubPage(SubPage.Borrow)}
@@ -46,7 +46,7 @@ export default function Page() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="lg"
             className="rounded-full font-light"
             onClick={() =>

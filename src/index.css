@@ -221,6 +221,11 @@
   }
 }
 
+@theme {
+  --color-tertiary: hsl(240 4.8% 99.9%);
+  --color-tertiary-dark: hsl(240 3.7% 25%);
+}
+
 @layer utilities {
   .is-frame {
     clip-path: polygon(
