@@ -24,6 +24,7 @@ import { Toaster } from "sonner";
 
 enum Actions {
   SupplyCollateral = "Add",
+  WithdrawCollateral = "Remove",
   Repay = "Repay",
 }
 
@@ -107,7 +108,7 @@ export function BorrowSheetContent({
   );
 
   const { token, inputValue } = useMemo(() => {
-    const token = tokens.get(marketParams[selectedTab === Actions.SupplyCollateral ? "collateralToken" : "loanToken"]);
+    const token = tokens.get(marketParams[selectedTab === Actions.Repay ? "loanToken" : "collateralToken"]);
     return {
       token,
       inputValue: token?.decimals !== undefined ? parseUnits(textInputValue, token.decimals) : undefined,
@@ -118,7 +119,7 @@ export function BorrowSheetContent({
     token !== undefined &&
     inputValue !== undefined &&
     allowances !== undefined &&
-    allowances[selectedTab === Actions.SupplyCollateral ? 0 : 1] < inputValue
+    allowances[selectedTab === Actions.Repay ? 1 : 0] < inputValue
       ? ({
           address: token.address,
           abi: erc20Abi,
@@ -134,6 +135,16 @@ export function BorrowSheetContent({
           abi: morphoAbi,
           functionName: "supplyCollateral",
           args: [{ ...marketParams }, inputValue, userAddress, "0x"],
+        } as const)
+      : undefined;
+
+  const withdrawCollateralTxnConfig =
+    inputValue !== undefined && userAddress !== undefined
+      ? ({
+          address: morpho,
+          abi: morphoAbi,
+          functionName: "withdrawCollateral",
+          args: [{ ...marketParams }, inputValue, userAddress, userAddress],
         } as const)
       : undefined;
 
@@ -207,9 +218,12 @@ export function BorrowSheetContent({
           setTextInputValue("");
         }}
       >
-        <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
+        <TabsList className="grid w-full grid-cols-3 bg-transparent p-0">
           <TabsTrigger className="rounded-full" value={Actions.SupplyCollateral}>
             {Actions.SupplyCollateral}
+          </TabsTrigger>
+          <TabsTrigger className="rounded-full" value={Actions.WithdrawCollateral}>
+            {Actions.WithdrawCollateral}
           </TabsTrigger>
           <TabsTrigger className="rounded-full" value={Actions.Repay}>
             {Actions.Repay}
@@ -236,6 +250,18 @@ export function BorrowSheetContent({
               Supply Collateral
             </TransactionButton>
           )}
+        </TabsContent>
+        <TabsContent value={Actions.WithdrawCollateral}>
+          <div className="bg-secondary flex flex-col gap-4 rounded-2xl p-4">
+            <div className="text-primary/70 flex items-center justify-between text-xs font-light">
+              Withdraw Collateral {collateralSymbol ?? ""}
+              <img className="rounded-full" height={16} width={16} src={collateralImgSrc} />
+            </div>
+            <TokenAmountInput decimals={token?.decimals} value={textInputValue} onChange={setTextInputValue} />
+          </div>
+          <TransactionButton variables={withdrawCollateralTxnConfig} disabled={!inputValue}>
+            Withdraw Collateral
+          </TransactionButton>
         </TabsContent>
         <TabsContent value={Actions.Repay}>
           <div className="bg-secondary flex flex-col gap-4 rounded-2xl p-4">
