@@ -40,22 +40,6 @@ export function BorrowSubPage() {
   const morpho = useMemo(() => getContractDeploymentInfo(chainId, "Morpho"), [chainId]);
 
   const {
-    data: createMarketEvents,
-    isFetching: isFetchingCreateMarketEvents,
-    fractionFetched: ffCreateMarketEvents,
-  } = useContractEvents({
-    abi: morphoAbi,
-    address: morpho.address,
-    fromBlock: morpho.fromBlock,
-    toBlock: blockNumber,
-    maxBlockRange: 10_000n,
-    reverseChronologicalOrder: true,
-    eventName: "CreateMarket",
-    strict: true,
-    query: { enabled: chainId !== undefined && blockNumber !== undefined },
-  });
-
-  const {
     data: supplyCollateralEvents,
     isFetching: isFetchingSupplyCollateralEvents,
     fractionFetched: ffSupplyCollateralEvents,
@@ -70,20 +54,45 @@ export function BorrowSubPage() {
     args: { onBehalf: userAddress },
     strict: true,
     query: {
-      enabled:
-        chainId !== undefined &&
-        blockNumber !== undefined &&
-        userAddress !== undefined &&
-        !isFetchingCreateMarketEvents, // We could fetch despite this, but we may get rate-limited.
+      enabled: chainId !== undefined && blockNumber !== undefined && userAddress !== undefined,
     },
+  });
+
+  const marketIds = useMemo(() => {
+    // Get unique set of all marketIds the user has interacted with
+    const ids = Array.from(new Set(supplyCollateralEvents.map((ev) => ev.args.id)));
+    // Sort them so that queryKey is consistent in the `useReadContracts` hooks below
+    ids.sort();
+    return ids;
+  }, [supplyCollateralEvents]);
+
+  const { data: marketParamsRaw, isFetching: isFetchingMarketParams } = useReadContracts({
+    contracts: marketIds.map(
+      (marketId) =>
+        ({
+          address: morpho.address,
+          abi: morphoAbi,
+          functionName: "idToMarketParams",
+          args: [marketId],
+        }) as const,
+    ),
+    allowFailure: false,
+    query: { staleTime: Infinity, gcTime: Infinity },
   });
 
   const filteredCreateMarketArgs = useMemo(
     () =>
-      createMarketEvents
-        .filter((createMarketEvent) => supplyCollateralEvents.some((ev) => ev.args.id === createMarketEvent.args.id))
-        .map((ev) => ev.args),
-    [createMarketEvents, supplyCollateralEvents],
+      marketParamsRaw?.map((raw, idx) => ({
+        id: marketIds[idx],
+        marketParams: {
+          loanToken: raw[0],
+          collateralToken: raw[1],
+          oracle: raw[2],
+          irm: raw[3],
+          lltv: raw[4],
+        },
+      })) ?? [],
+    [marketIds, marketParamsRaw],
   );
 
   const { data: erc20Symbols, isFetching: isFetchingErc20Symbols } = useReadContracts({
@@ -141,10 +150,10 @@ export function BorrowSubPage() {
     return map;
   }, [filteredCreateMarketArgs, erc20Symbols, erc20Decimals]);
 
-  const totalProgress = isFetchingCreateMarketEvents
-    ? ffCreateMarketEvents
-    : isFetchingSupplyCollateralEvents
-      ? 1 + ffSupplyCollateralEvents
+  const totalProgress = isFetchingSupplyCollateralEvents
+    ? ffSupplyCollateralEvents
+    : isFetchingMarketParams
+      ? 1
       : isFetchingErc20Symbols
         ? 2
         : isFetchingErc20Decimals
@@ -158,8 +167,6 @@ export function BorrowSubPage() {
       <div className="flex justify-between gap-4 px-8 pt-24 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
         <Card>
           <CardContent className="flex h-full w-[220px] flex-col gap-4 px-2 text-xs font-light sm:p-6">
-            <span>Indexing Morpho Blue markets</span>
-            <Progress value={ffCreateMarketEvents * 100} />
             Indexing your positions
             <Progress value={ffSupplyCollateralEvents * 100} className="mb-auto" />
             <i className="bottom-0">Total Progress</i>
