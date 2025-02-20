@@ -9,7 +9,7 @@ export function Header({ className, children, ...props }: React.ComponentProps<"
   return (
     <div className="pointer-events-none fixed top-0 z-50 flex h-screen w-screen flex-col">
       {shouldShowBanner && (
-        <aside className="pointer-events-auto flex items-center bg-blue-600 px-1 text-sm font-light italic">
+        <aside className="pointer-events-auto flex items-center bg-pink-500 px-1 text-sm font-light italic">
           <span className="grow py-2 text-center">
             This app is built for emergencies, so it prioritizes resilience over speed. Please be patient as it loads.
             You can also run it yourself{" "}

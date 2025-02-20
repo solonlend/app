@@ -164,13 +164,13 @@ export function BorrowSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      <div className="flex justify-between gap-4 px-8 pt-24 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
+      <div className="flex justify-center gap-4 px-8 pt-28 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
         <Card>
           <CardContent className="flex h-full w-[220px] flex-col gap-4 px-2 text-xs font-light sm:p-6">
             Indexing your positions
             <Progress value={ffSupplyCollateralEvents * 100} className="mb-auto" />
             <i className="bottom-0">Total Progress</i>
-            <Progress value={(totalProgress * 100) / 5} />
+            <Progress progressColor="bg-blue-600" value={(totalProgress * 100) / 5} />
           </CardContent>
         </Card>
         <RequestChart />

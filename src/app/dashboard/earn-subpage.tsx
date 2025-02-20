@@ -133,7 +133,7 @@ export function EarnSubPage() {
   });
 
   const vaults = useMemo(() => {
-    return filteredCreateMetaMorphoArgs.map((args, idx) => {
+    const arr = filteredCreateMetaMorphoArgs.map((args, idx) => {
       const assetIdx = assets.indexOf(args.asset);
       return {
         address: args.metaMorpho,
@@ -157,6 +157,14 @@ export function EarnSubPage() {
         } as Token,
       };
     });
+    // Sort vaults so that ones with an open balance appear first
+    arr.sort((a, b) => {
+      if (!a.info?.maxWithdraw && !b.info?.maxWithdraw) return 0;
+      if (!a.info?.maxWithdraw) return 1;
+      if (!b.info?.maxWithdraw) return -1;
+      return 0;
+    });
+    return arr;
   }, [filteredCreateMetaMorphoArgs, assets, assetsInfo, vaultsInfo]);
 
   const totalProgress = isFetchingCreateMetaMorphoEvents
@@ -171,7 +179,7 @@ export function EarnSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      <div className="flex justify-between gap-4 px-8 pt-24 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
+      <div className="flex justify-center gap-4 px-8 pt-28 pb-10 md:px-32 md:pt-32 md:pb-18 dark:bg-neutral-900">
         <Card>
           <CardContent className="flex h-full w-[220px] flex-col gap-4 px-2 text-xs font-light sm:p-6">
             <span>Indexing MetaMorpho vaults</span>
@@ -179,7 +187,7 @@ export function EarnSubPage() {
             Indexing your deposits
             <Progress value={ffDepositEvents * 100} className="mb-auto" />
             <i className="bottom-0">Total Progress</i>
-            <Progress value={(totalProgress * 100) / 4} />
+            <Progress progressColor="bg-blue-600" value={(totalProgress * 100) / 4} />
           </CardContent>
         </Card>
         <RequestChart />
@@ -206,7 +214,7 @@ export function EarnSubPage() {
               {vaults.map((vault) => (
                 <Sheet key={vault.address}>
                   <SheetTrigger asChild>
-                    <TableRow className="bg-secondary text-">
+                    <TableRow className="bg-secondary">
                       <TableCell className="rounded-l-lg p-5">
                         <TokenTableCell address={vault.address} symbol={vault.info?.name} imageSrc={vault.imageSrc} />
                       </TableCell>

@@ -171,9 +171,9 @@ export function RequestChart() {
   return (
     <Card className="grow">
       <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
-        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
-          <CardTitle>EVM Requests</CardTitle>
-          <CardDescription>Showing blockchain data requests for diagnostic purposes</CardDescription>
+        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-4">
+          <CardTitle>RPC Requests</CardTitle>
+          <CardDescription>Showing request status as the site loads blockchain data</CardDescription>
         </div>
         <div className="flex">
           {providers.map((provider) => {
@@ -181,7 +181,7 @@ export function RequestChart() {
               <button
                 key={provider}
                 data-active={activeChart === provider}
-                className="data-[active=true]:bg-muted/50 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 even:border-l sm:border-t-0 sm:border-l sm:px-8 sm:py-6"
+                className="data-[active=true]:bg-muted/50 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 even:border-l sm:border-t-0 sm:border-l"
                 onClick={() => setActiveChart(provider)}
               >
                 <span className="text-muted-foreground text-xs">{provider.replace("https://", "")}</span>
@@ -194,7 +194,7 @@ export function RequestChart() {
         </div>
       </CardHeader>
       <CardContent className="flex px-2 sm:p-6">
-        <ChartContainer config={chartConfig} className="h-[200px] min-h-[200px] w-full">
+        <ChartContainer config={chartConfig} className="h-[160px] min-h-[160px] w-full">
           <AreaChart
             data={timeSeriesData[activeChart] ?? []}
             margin={{
@@ -265,13 +265,13 @@ export function RequestChart() {
             />
           </AreaChart>
         </ChartContainer>
-        <ChartContainer config={chartConfig} className="aspect-square h-[200px] min-h-[200px]">
+        <ChartContainer config={chartConfig} className="aspect-square h-[160px] min-h-[160px]">
           <RadialBarChart
             data={chartData[activeChart] ?? []}
             startAngle={180}
             endAngle={-180}
             innerRadius={0}
-            outerRadius={100}
+            outerRadius={80}
           >
             <ChartTooltip
               cursor={false}
