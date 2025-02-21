@@ -167,7 +167,7 @@ export function EarnSubPage() {
     return arr;
   }, [filteredCreateMetaMorphoArgs, assets, assetsInfo, vaultsInfo]);
 
-  const totalProgress = isFetchingCreateMetaMorphoEvents
+  let totalProgress = isFetchingCreateMetaMorphoEvents
     ? ffCreateMetaMorphoEvents
     : isFetchingDepositEvents
       ? 1 + ffDepositEvents
@@ -176,6 +176,7 @@ export function EarnSubPage() {
         : isFetchingVaultsInfo
           ? 3
           : 4;
+  if (!userAddress) totalProgress = 0;
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">

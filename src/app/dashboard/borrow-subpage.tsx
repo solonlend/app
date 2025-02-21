@@ -150,7 +150,7 @@ export function BorrowSubPage() {
     return map;
   }, [filteredCreateMarketArgs, erc20Symbols, erc20Decimals]);
 
-  const totalProgress = isFetchingSupplyCollateralEvents
+  let totalProgress = isFetchingSupplyCollateralEvents
     ? ffSupplyCollateralEvents
     : isFetchingMarketParams
       ? 1
@@ -161,6 +161,7 @@ export function BorrowSubPage() {
           : isFetchingMarkets
             ? 4
             : 5;
+  if (!userAddress) totalProgress = 0;
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
