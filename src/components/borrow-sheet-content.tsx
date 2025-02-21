@@ -13,7 +13,7 @@ import { Address, erc20Abi, extractChain, parseUnits } from "viem";
 import { useAccount, useChainId, useChains, useReadContract, useReadContracts } from "wagmi";
 import { CircleArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { getContractDeploymentInfo } from "@/components/constants";
+import { getContractDeploymentInfo } from "@/lib/constants";
 import { morphoAbi } from "@/assets/abis/morpho";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useMemo, useState } from "react";

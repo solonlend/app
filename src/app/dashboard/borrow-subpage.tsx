@@ -1,5 +1,5 @@
 import { morphoAbi } from "@/assets/abis/morpho";
-import { getContractDeploymentInfo } from "@/components/constants";
+import { getContractDeploymentInfo } from "@/lib/constants";
 import useContractEvents from "@/hooks/use-contract-events";
 import { useMemo } from "react";
 import { useAccount, useBlockNumber, useReadContracts } from "wagmi";

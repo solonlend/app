@@ -49,3 +49,16 @@ _Key Components_
   3. `markets` struct for each `marketId` referenced in events from (1)
   4. ERC20 symbols and decimals for each `collateralToken` and `loanToken`
 - [src/components/ui/...](/src/components/ui/) -- shadcn reusable component library
+
+## Development
+
+### How to add a chain
+
+1. Update the `wagmiConfig` in [App.tsx](/src/App.tsx#L25). You'll need at least 1 public RPC node that supports `eth_getLogs`.
+2. Update the `DEPLOYMENTS` mapping in [constants.ts](/src/lib/constants.ts#L8). You should match the formatting of existing chains, and properly capitalize addresses.
+3. Test!
+
+> [!WARNING]
+> Currently, we split block ranges into 10_000-block chunks for `eth_getLogs`.
+> If there's a new chain with a more restrictive RPC, some additional work
+> will be required to add support.

@@ -27,7 +27,7 @@ import { JSX, useEffect, useMemo, useState } from "react";
 import { Address } from "viem";
 import { blo } from "blo";
 import { mainnet } from "viem/chains";
-import { CORE_DEPLOYMENTS } from "@/components/constants";
+import { CORE_DEPLOYMENTS } from "@/lib/constants";
 
 function ChainIcon({ name }: { name: string }): JSX.Element {
   switch (name) {
