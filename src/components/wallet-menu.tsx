@@ -10,35 +10,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import EthereumChainSvg from "@/assets/chains/ethereum.svg?react";
-import BaseChainSvg from "@/assets/chains/base.svg?react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { useAccount, useConnect, useDisconnect, useEnsAvatar, useEnsName, useSwitchChain } from "wagmi";
-import { CircleHelpIcon, PowerOff } from "lucide-react";
-import { JSX, useEffect, useMemo, useState } from "react";
+import { PowerOff } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Address } from "viem";
 import { blo } from "blo";
 import { mainnet } from "viem/chains";
-import { CORE_DEPLOYMENTS } from "@/lib/constants";
-
-function ChainIcon({ name }: { name: string }): JSX.Element {
-  switch (name) {
-    case "Ethereum":
-      return <EthereumChainSvg />;
-    case "Base":
-      return <BaseChainSvg />;
-    default:
-      return <CircleHelpIcon />;
-  }
-}
+import { ChainIcon } from "@/components/chain-icon";
 
 function ConnectWalletButton() {
   const { connectors, connect } = useConnect();
@@ -141,8 +121,6 @@ export function WalletMenu({
     }
   }, [currentChainId, chains, selectedChainName, setSelectedChainName]);
 
-  const isSomeChainLightweight = useMemo(() => chains.some((chain) => !CORE_DEPLOYMENTS.has(chain.id)), [chains]);
-
   return (
     <>
       <Select
@@ -161,21 +139,11 @@ export function WalletMenu({
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {chains
-              .filter((chain) => CORE_DEPLOYMENTS.has(chain.id))
-              .map((chain, idx) => (
-                <SelectItem key={idx} value={chain.name}>
-                  <ChainIcon name={chain.name} /> {chain.name}
-                </SelectItem>
-              ))}
-            {isSomeChainLightweight && <SelectLabel>Lightweight</SelectLabel>}
-            {chains
-              .filter((chain) => !CORE_DEPLOYMENTS.has(chain.id))
-              .map((chain, idx) => (
-                <SelectItem key={idx} value={chain.name}>
-                  <ChainIcon name={chain.name} /> {chain.name}
-                </SelectItem>
-              ))}
+            {chains.map((chain, idx) => (
+              <SelectItem key={idx} value={chain.name}>
+                <ChainIcon name={chain.name} /> {chain.name}
+              </SelectItem>
+            ))}
           </SelectGroup>
         </SelectContent>
       </Select>

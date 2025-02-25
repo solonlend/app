@@ -63,7 +63,7 @@ export default function Page() {
         </div>
       </Header>
       {selectedSubPage === SubPage.Earn ? <EarnSubPage /> : <BorrowSubPage />}
-      <div className="fixed bottom-0 h-[12px] w-full bg-slate-100 dark:bg-slate-700"></div>
+      <div className="bg-secondary fixed bottom-0 h-[12px] w-full"></div>
     </div>
   );
 }

@@ -52,8 +52,8 @@ export function EarnSubPage() {
     fractionFetched: ffCreateMetaMorphoEvents,
   } = useContractEvents({
     abi: metaMorphoFactoryAbi,
-    address: [factory.address, factoryV1_1.address],
-    fromBlock: factory.fromBlock,
+    address: [factoryV1_1.address].concat(factory ? [factory.address] : []),
+    fromBlock: factory?.fromBlock ?? factoryV1_1.fromBlock,
     toBlock: blockNumber,
     maxBlockRange: 10_000n,
     reverseChronologicalOrder: true,
@@ -72,7 +72,7 @@ export function EarnSubPage() {
     fractionFetched: ffDepositEvents,
   } = useContractEvents({
     abi: erc4626Abi,
-    fromBlock: factory.fromBlock,
+    fromBlock: factory?.fromBlock ?? factoryV1_1.fromBlock,
     toBlock: blockNumber,
     maxBlockRange: 10_000n,
     reverseChronologicalOrder: true,
@@ -184,7 +184,7 @@ export function EarnSubPage() {
         <Card className="bg-secondary h-min md:h-full">
           <CardContent className="flex h-full flex-col gap-2 p-6 text-xs font-light">
             <div className="flex justify-between">
-              <span>Indexing MetaMorpho vaults</span>
+              <span>Indexing vaults</span>
               {(ffCreateMetaMorphoEvents * 100).toFixed(2)}%
             </div>
             <Progress finalColor="bg-green-400" value={ffCreateMetaMorphoEvents * 100} />
