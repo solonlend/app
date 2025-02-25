@@ -23,8 +23,8 @@ import { TransactionButton } from "@/components/transaction-button";
 import { Toaster } from "sonner";
 
 enum Actions {
-  SupplyCollateral = "Add",
-  WithdrawCollateral = "Remove",
+  SupplyCollateral = "+ Collateral",
+  WithdrawCollateral = "- Collateral",
   Repay = "Repay",
 }
 
