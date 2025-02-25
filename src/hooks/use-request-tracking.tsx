@@ -1,6 +1,6 @@
 import { cyrb64Hash } from "@/lib/cyrb64";
 import { RequestTrackingContext, RequestTrackingValue } from "@/lib/request-tracking-context";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 function extractEthJsonRpcRequest(...args: Parameters<typeof fetch>) {
   if (!args[1] || args[1].method !== "POST" || !args[1].headers || !(typeof args[1].body === "string"))
@@ -154,5 +154,7 @@ export function RequestTrackingProvider({ children }: { children: React.ReactNod
     };
   }, []);
 
-  return <RequestTrackingContext.Provider value={logs}>{children}</RequestTrackingContext.Provider>;
+  const clearLogs = useCallback(() => setLogs(new Map()), [setLogs]);
+
+  return <RequestTrackingContext.Provider value={{ logs, clearLogs }}>{children}</RequestTrackingContext.Provider>;
 }

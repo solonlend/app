@@ -2,11 +2,12 @@ import { Area, AreaChart, CartesianGrid, RadialBar, RadialBarChart, XAxis } from
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { RequestTrackingContext } from "@/lib/request-tracking-context";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
 import { useDebouncedMemo } from "@/hooks/use-debounced";
+import { useChainId } from "wagmi";
 
 const INITIAL_METHOD_NAMES = ["eth_accounts", "eth_blockNumber", "eth_call", "eth_chainId", "eth_getLogs"];
 
@@ -67,7 +68,11 @@ function mapValues<T extends Record<PropertyKey, unknown>, U>(record: T, fn: (va
 }
 
 export function RequestChart() {
-  const requests = useContext(RequestTrackingContext);
+  const { logs: requests, clearLogs } = useContext(RequestTrackingContext);
+
+  const chainId = useChainId();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => clearLogs(), [chainId]);
 
   const {
     providers,

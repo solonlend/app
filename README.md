@@ -54,8 +54,8 @@ _Key Components_
 
 ### How to add a chain
 
-1. Update the `wagmiConfig` in [App.tsx](/src/App.tsx#L25). You'll need at least 1 public RPC node that supports `eth_getLogs`.
-2. Update the `DEPLOYMENTS` mapping in [constants.ts](/src/lib/constants.ts#L8). You should match the formatting of existing chains, and properly capitalize addresses.
+1. Update the `wagmiConfig` in [App.tsx](/src/App.tsx#L66). You'll need at least 1 public RPC node that supports `eth_getLogs`.
+2. Update the `DEPLOYMENTS` mapping in [constants.ts](/src/lib/constants.ts#L32). You should match the formatting of existing chains, and properly capitalize addresses.
 3. \[Optional\] Add chain icon SVG to [src/assets/chains](/src/assets/chains), and update the [`ChainIcon` component](src/components/chain-icon.tsx).
 4. Test!
 

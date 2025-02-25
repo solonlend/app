@@ -5,10 +5,25 @@ import {
   http,
   injected,
   serialize,
+  Transport,
   unstable_connector,
   WagmiProvider,
 } from "wagmi";
-import { base, corn, hemi, mainnet, mode as modeMainnet, sonic } from "viem/chains";
+import {
+  arbitrum,
+  base,
+  corn,
+  fraxtal,
+  hemi,
+  ink,
+  mainnet,
+  mode as modeMainnet,
+  optimism,
+  polygon,
+  scroll as scrollMainnet,
+  sonic,
+  worldchain,
+} from "viem/chains";
 import { unichain } from "viem/op-stack";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -23,46 +38,52 @@ const httpConfig: HttpTransportConfig = {
   timeout: 60_000,
 };
 
+function createFallbackTransport(...rpcUrls: string[]) {
+  return fallback([
+    unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 2, retryDelay: 100 }),
+    ...rpcUrls.map((rpcUrl) => http(rpcUrl, httpConfig)),
+    http(undefined, httpConfig),
+  ]);
+}
+
+const chains = [
+  mainnet,
+  base,
+  ink,
+  optimism,
+  arbitrum,
+  polygon,
+  unichain as Chain,
+  worldchain,
+  scrollMainnet,
+  fraxtal,
+  sonic,
+  corn,
+  modeMainnet,
+  hemi,
+] as const;
+
+const transports: Record<(typeof chains)[number]["id"], Transport> = {
+  [mainnet.id]: createFallbackTransport("https://eth.drpc.org"),
+  [base.id]: createFallbackTransport("https://base.drpc.org"),
+  [ink.id]: createFallbackTransport("https://ink.drpc.org"),
+  [optimism.id]: createFallbackTransport("https://optimism.drpc.org"),
+  [arbitrum.id]: createFallbackTransport("https://arbitrum.drpc.org"),
+  [polygon.id]: createFallbackTransport("https://polygon.drpc.org"),
+  [unichain.id]: createFallbackTransport("https://unichain.drpc.org"),
+  [worldchain.id]: createFallbackTransport("https://worldchain.drpc.org"),
+  [scrollMainnet.id]: createFallbackTransport("https://scroll.drpc.org"),
+  [fraxtal.id]: createFallbackTransport("https://fraxtal.drpc.org"),
+  [sonic.id]: createFallbackTransport("https://sonic.drpc.org"),
+  [corn.id]: createFallbackTransport("https://mainnet.corn-rpc.com", "https://maizenet-rpc.usecorn.com"),
+  [modeMainnet.id]: createFallbackTransport("https://mode.drpc.org"),
+  [hemi.id]: createFallbackTransport(),
+};
+
 const wagmiConfig = createConfig({
-  chains: [mainnet, base, unichain as Chain, corn, modeMainnet, hemi, sonic],
+  chains,
+  transports,
   connectors: [injected({ shimDisconnect: true })],
-  transports: {
-    [mainnet.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://eth.drpc.org", httpConfig),
-      http(undefined, httpConfig),
-    ]),
-    [base.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://base.drpc.org", httpConfig),
-      http(undefined, httpConfig),
-    ]),
-    [unichain.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://unichain.drpc.org", httpConfig),
-      http(undefined, httpConfig),
-    ]),
-    [corn.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://mainnet.corn-rpc.com", httpConfig),
-      http("https://maizenet-rpc.usecorn.com", httpConfig),
-      http(undefined, httpConfig),
-    ]),
-    [modeMainnet.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://mode.drpc.org", httpConfig),
-      http(undefined, httpConfig),
-    ]),
-    [hemi.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http(undefined, httpConfig),
-    ]),
-    [sonic.id]: fallback([
-      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 5, retryDelay: 500 }),
-      http("https://sonic.drpc.org", httpConfig),
-      http(undefined, httpConfig),
-    ]),
-  },
   batch: {
     multicall: {
       batchSize: 2048,

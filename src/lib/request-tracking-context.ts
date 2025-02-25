@@ -8,4 +8,7 @@ export type RequestTrackingValue = {
   responseStatus?: number;
 };
 
-export const RequestTrackingContext = createContext(new Map<string, RequestTrackingValue>());
+export const RequestTrackingContext = createContext({
+  logs: new Map<string, RequestTrackingValue>(),
+  clearLogs: () => {},
+});
