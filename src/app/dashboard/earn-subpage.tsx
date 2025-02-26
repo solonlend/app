@@ -4,9 +4,9 @@ import { useMemo } from "react";
 import { useAccount, useBlockNumber, useReadContracts } from "wagmi";
 import { Address, erc20Abi, erc4626Abi } from "viem";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { blo } from "blo";
-import { formatBalanceWithSymbol, Token } from "@/lib/utils";
+import { formatBalanceWithSymbol, getTokenSymbolURI, Token } from "@/lib/utils";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { keepPreviousData } from "@tanstack/react-query";
 import { metaMorphoFactoryAbi } from "@/assets/abis/meta-morpho-factory";
@@ -23,6 +23,9 @@ function TokenTableCell({ address, symbol, imageSrc }: Token) {
     <div className="flex items-center gap-2">
       <Avatar className="h-4 w-4 rounded-sm">
         <AvatarImage src={imageSrc} alt="Avatar" />
+        <AvatarFallback delayMs={500}>
+          <img src={blo(address)} />
+        </AvatarFallback>
       </Avatar>
       {symbol ?? "－"}
       <span className="text-primary/30 font-mono">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
@@ -135,6 +138,8 @@ export function EarnSubPage() {
   const vaults = useMemo(() => {
     const arr = filteredCreateMetaMorphoArgs.map((args, idx) => {
       const assetIdx = assets.indexOf(args.asset);
+      const symbol = assetIdx > -1 ? (assetsInfo?.[assetIdx * 2 + 0].result as string) : undefined;
+      const decimals = assetIdx > -1 ? (assetsInfo?.[assetIdx * 2 + 1].result as number) : undefined;
       return {
         address: args.metaMorpho,
         imageSrc: blo(args.metaMorpho),
@@ -151,9 +156,9 @@ export function EarnSubPage() {
           : undefined,
         asset: {
           address: args.asset,
-          imageSrc: blo(args.asset),
-          symbol: assetIdx > -1 ? assetsInfo?.[assetIdx * 2 + 0].result : undefined,
-          decimals: assetIdx > -1 ? assetsInfo?.[assetIdx * 2 + 1].result : undefined,
+          imageSrc: getTokenSymbolURI(symbol),
+          symbol,
+          decimals,
         } as Token,
       };
     });

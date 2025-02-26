@@ -45,3 +45,10 @@ export function formatLtv(ltv: bigint) {
 }
 
 export type Token = { address: Address; symbol?: string; decimals?: number; imageSrc: string };
+
+/**
+ * Generate a url for a token's svg leveraging the Morpho CDN.
+ */
+export function getTokenSymbolURI(symbol: string | undefined) {
+  return `https://cdn.morpho.org/assets/logos/${encodeURIComponent((symbol ?? "").toLowerCase())}.svg`;
+}

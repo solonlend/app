@@ -5,9 +5,9 @@ import { useMemo } from "react";
 import { useAccount, useBlockNumber, useReadContracts } from "wagmi";
 import { Address, erc20Abi } from "viem";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { blo } from "blo";
-import { formatBalanceWithSymbol, formatLtv, Token } from "@/lib/utils";
+import { formatBalanceWithSymbol, formatLtv, getTokenSymbolURI, Token } from "@/lib/utils";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { MarketId, MarketParams } from "@morpho-org/blue-sdk";
@@ -23,6 +23,9 @@ function TokenTableCell({ address, symbol, imageSrc }: Token) {
     <div className="flex items-center gap-2">
       <Avatar className="h-4 w-4 rounded-sm">
         <AvatarImage src={imageSrc} alt="Avatar" />
+        <AvatarFallback delayMs={500}>
+          <img src={blo(address)} />
+        </AvatarFallback>
       </Avatar>
       {symbol ?? "－"}
       <span className="text-primary/30 font-mono">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
@@ -134,17 +137,19 @@ export function BorrowSubPage() {
   const tokens = useMemo(() => {
     const map = new Map<Address, Token>();
     filteredCreateMarketArgs.forEach((args, idx) => {
+      const collateralTokenSymbol = erc20Symbols?.[idx * 2].result;
+      const loanTokenSymbol = erc20Symbols?.[idx * 2 + 1].result;
       map.set(args.marketParams.collateralToken, {
         address: args.marketParams.collateralToken,
-        symbol: erc20Symbols?.[idx * 2].result,
+        symbol: collateralTokenSymbol,
         decimals: erc20Decimals?.[idx * 2].result,
-        imageSrc: blo(args.marketParams.collateralToken),
+        imageSrc: getTokenSymbolURI(collateralTokenSymbol),
       });
       map.set(args.marketParams.loanToken, {
         address: args.marketParams.loanToken,
-        symbol: erc20Symbols?.[idx * 2 + 1].result,
+        symbol: loanTokenSymbol,
         decimals: erc20Decimals?.[idx * 2 + 1].result,
-        imageSrc: blo(args.marketParams.loanToken),
+        imageSrc: getTokenSymbolURI(loanTokenSymbol),
       });
     });
     return map;
