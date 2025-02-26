@@ -231,6 +231,8 @@ export function BorrowSubPage() {
                               markets[idx][0] - markets[idx][2],
                               tokens.get(args.marketParams.loanToken)!.decimals!,
                               tokens.get(args.marketParams.loanToken)?.symbol,
+                              5,
+                              true,
                             )
                           : "－"}
                       </TableCell>

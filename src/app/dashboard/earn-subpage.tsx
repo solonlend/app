@@ -233,16 +233,28 @@ export function EarnSubPage() {
                       </TableCell>
                       <TableCell>
                         {vault.info && vault.asset.decimals
-                          ? formatBalanceWithSymbol(vault.info.totalAssets, vault.asset.decimals, vault.asset.symbol)
+                          ? formatBalanceWithSymbol(
+                              vault.info.totalAssets,
+                              vault.asset.decimals,
+                              vault.asset.symbol,
+                              5,
+                              true,
+                            )
                           : "－"}
                       </TableCell>
                       <TableCell>
                         {vault.info && vault.asset.decimals
-                          ? formatBalanceWithSymbol(vault.info.maxWithdraw, vault.asset.decimals, vault.asset.symbol)
+                          ? formatBalanceWithSymbol(
+                              vault.info.maxWithdraw,
+                              vault.asset.decimals,
+                              vault.asset.symbol,
+                              5,
+                              true,
+                            )
                           : "－"}
                       </TableCell>
                       <TableCell>
-                        {vault.info ? `${vault.info.owner.slice(0, 6)}...${vault.info.owner.slice(-4)}` : "－"}
+                        {vault.info?.owner ? `${vault.info.owner.slice(0, 6)}...${vault.info.owner.slice(-4)}` : "－"}
                       </TableCell>
                       <TableCell className="rounded-r-lg">
                         {vault.info ? humanizeDuration(Number(vault.info.timelock) * 1000) : "－"}

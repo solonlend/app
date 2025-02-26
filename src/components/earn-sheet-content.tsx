@@ -80,7 +80,9 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
           <img className="rounded-full" height={16} width={16} src={asset.imageSrc} />
         </div>
         <p className="text-lg font-medium">
-          {maxWithdraw && asset.decimals !== undefined ? formatBalance(maxWithdraw, asset.decimals) : "－"}
+          {maxWithdraw !== undefined && asset.decimals !== undefined
+            ? formatBalance(maxWithdraw, asset.decimals, 5)
+            : "－"}
         </p>
       </div>
       <Tabs

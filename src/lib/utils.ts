@@ -6,21 +6,36 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatBalance(balance: bigint, decimals: number) {
-  const balanceNumber = Number(formatUnits(balance, decimals));
+export function formatBalance(
+  balance: bigint,
+  decimals: number,
+  maxSigDigits: number | "exact" = "exact",
+  enableSuffixes = false,
+) {
+  const numDigits = balance.toString(10).length - 1;
+  if (maxSigDigits !== "exact" && numDigits + 1 > maxSigDigits) {
+    const resolution = 10n ** BigInt(numDigits + 1 - maxSigDigits);
+    balance = (balance / resolution) * resolution;
+  }
 
-  const suffixes = ["", "k", "M", "B", "T", "P", "E"]; // Supports up to Exa (1e18)
-  const magnitude = balanceNumber === 0 ? 0 : Math.floor(Math.log10(Math.abs(balanceNumber)) / 3);
-
-  if (magnitude >= suffixes.length || magnitude < -3) return balanceNumber.toExponential(5); // Use scientific notation for very large numbers
-  if (magnitude < 0) return balanceNumber.toPrecision(5);
-
-  const scaled = balanceNumber / Math.pow(10, magnitude * 3);
-  return scaled.toPrecision(5) + suffixes[magnitude];
+  const suffixes = ["", "k", "M", "B", "T"];
+  let suffixIdx = 0;
+  if (enableSuffixes) {
+    const orderOfMagnitude = Math.max(0, numDigits - decimals);
+    suffixIdx = Math.min(Math.floor(orderOfMagnitude / 3), suffixes.length - 1);
+    decimals += suffixIdx * 3;
+  }
+  return formatUnits(balance, decimals).concat(suffixes[suffixIdx]);
 }
 
-export function formatBalanceWithSymbol(balance: bigint, decimals: number, symbol?: string) {
-  const balanceStr = formatBalance(balance, decimals);
+export function formatBalanceWithSymbol(
+  balance: bigint,
+  decimals: number,
+  symbol?: string,
+  maxSigDigs: number | "exact" = "exact",
+  enableSuffixes = false,
+) {
+  const balanceStr = formatBalance(balance, decimals, maxSigDigs, enableSuffixes);
   if (symbol) return `${balanceStr} ${symbol}`;
   return balanceStr;
 }

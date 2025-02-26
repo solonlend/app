@@ -193,8 +193,8 @@ export function BorrowSheetContent({
           <img className="rounded-full" height={16} width={16} src={collateralImgSrc} />
         </div>
         <p className="text-lg font-medium">
-          {accrualPosition?.collateral && collateralDecimals !== undefined
-            ? formatBalance(accrualPosition.collateral, collateralDecimals)
+          {accrualPosition?.collateral !== undefined && collateralDecimals !== undefined
+            ? formatBalance(accrualPosition.collateral, collateralDecimals, 5)
             : "－"}
         </p>
         <div className="text-primary/70 flex items-center justify-between text-xs font-light">
@@ -202,8 +202,8 @@ export function BorrowSheetContent({
           <img className="rounded-full" height={16} width={16} src={loanImgSrc} />
         </div>
         <p className="text-lg font-medium">
-          {accrualPosition?.borrowAssets && loanDecimals !== undefined
-            ? formatBalance(accrualPosition.borrowAssets, loanDecimals)
+          {accrualPosition?.borrowAssets !== undefined && loanDecimals !== undefined
+            ? formatBalance(accrualPosition.borrowAssets, loanDecimals, 5)
             : "－"}
         </p>
         <div className="text-primary/70 flex items-center justify-between text-xs font-light">
