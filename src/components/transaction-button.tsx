@@ -71,11 +71,17 @@ export function TransactionButton<
             } else {
               toast(`Broadcasted transaction ${txnHash?.slice(0, 8)}.`, {
                 duration: 10_0000,
-                action: {
-                  label: "Etherscan ↗︎",
-                  onClick: () =>
-                    window.open(`${chain.blockExplorers.default.url}/tx/${txnHash}`, "_blank", "noopener,noreferrer"),
-                },
+                action: chain.blockExplorers
+                  ? {
+                      label: "Explorer ↗︎",
+                      onClick: () =>
+                        window.open(
+                          `${chain.blockExplorers!.default.url}/tx/${txnHash}`,
+                          "_blank",
+                          "noopener,noreferrer",
+                        ),
+                    }
+                  : undefined,
               });
               setTxnHash(txnHash);
             }
