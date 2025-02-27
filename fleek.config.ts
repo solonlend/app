@@ -3,7 +3,7 @@ import { FleekConfig } from "@fleek-platform/cli";
 export default {
   sites: [
     {
-      slug: "colossal-machine-hundreds",
+      slug: "morpho-blue-offchain-public",
       distDir: "dist",
       buildCommand: "pnpm run build",
     },
