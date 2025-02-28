@@ -237,7 +237,7 @@ export function EarnSubPage() {
                         <TokenTableCell {...vault.asset} />
                       </TableCell>
                       <TableCell>
-                        {vault.info && vault.asset.decimals
+                        {vault.info?.totalAssets && vault.asset.decimals
                           ? formatBalanceWithSymbol(
                               vault.info.totalAssets,
                               vault.asset.decimals,
@@ -248,7 +248,7 @@ export function EarnSubPage() {
                           : "－"}
                       </TableCell>
                       <TableCell>
-                        {vault.info && vault.asset.decimals
+                        {vault.info?.maxWithdraw && vault.asset.decimals
                           ? formatBalanceWithSymbol(
                               vault.info.maxWithdraw,
                               vault.asset.decimals,

@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import type { Abi, BlockNumber, BlockTag, ContractEventName, GetContractEventsParameters } from "viem";
-import { usePublicClient } from "wagmi";
+import { serialize, usePublicClient } from "wagmi";
 import { hash } from "ohash";
 import { useMemo } from "react";
 
@@ -84,8 +84,8 @@ export default function useContractEvents<
         queryKey: [
           "useContractEvents",
           publicClient?.chain.id,
-          replaceBigInts({ ...args, abi: hash(args.abi) }),
-          replaceBigInts({ fromBlock: blockRange[0], toBlock: blockRange[1] }),
+          serialize({ ...args, abi: hash(args.abi) }),
+          serialize({ fromBlock: blockRange[0], toBlock: blockRange[1] }),
         ],
         queryFn: () => queryFn(blockRange),
         staleTime: typeof blockRange[1] !== "bigint" ? 5 * 60 * 1000 : Infinity,
@@ -118,10 +118,6 @@ export default function useContractEvents<
 
     return { data, isFetching, fractionFetched };
   }, [results]);
-}
-
-function replaceBigInts(obj: unknown): unknown {
-  return JSON.parse(JSON.stringify(obj, (_key, value) => (typeof value === "bigint" ? `${value.toString()}n` : value)));
 }
 
 function sliceBlockRange([fromBlock, toBlock]: [bigint, bigint], rangeConstraint: bigint) {
