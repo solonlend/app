@@ -16,7 +16,15 @@ export function CtaCard({
         <h2 className="font-light">{littleText}</h2>
       </div>
       <div className="hidden items-center justify-end md:flex md:max-h-72">
-        <video loop={true} autoPlay={true} preload="metadata" playsInline={true} className="aspect-square h-full">
+        <video
+          loop={true}
+          autoPlay={true}
+          muted={true}
+          controls={false}
+          playsInline={true}
+          preload="metadata"
+          className="aspect-square h-full"
+        >
           {videoSrc.mov && <source src={videoSrc.mov} type="video/mp4; codecs='hvc1'" />}
           {videoSrc.webm && <source src={videoSrc.webm} type="video/webm; codecs=vp09.00.41.08" />}
         </video>
