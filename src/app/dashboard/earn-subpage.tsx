@@ -17,6 +17,7 @@ import { EarnSheetContent } from "@/components/earn-sheet-content";
 import { RequestChart } from "@/components/request-chart";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
+import { CtaCard } from "@/components/cta-card";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -210,7 +211,17 @@ export function EarnSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5">
-      {isDev ? (
+      {userAddress === undefined ? (
+        <CtaCard
+          className="flex w-full max-w-5xl flex-col gap-4 px-8 pt-24 pb-14 md:m-auto md:grid md:grid-cols-[50%_50%] md:px-0 md:pt-32 dark:bg-neutral-900"
+          bigText="Earn on your terms"
+          littleText="Connect wallet to get started"
+          videoSrc={{
+            mov: "https://cdn.morpho.org/v2/assets/videos/earn-animation.mov",
+            webm: "https://cdn.morpho.org/v2/assets/videos/earn-animation.webm",
+          }}
+        />
+      ) : isDev ? (
         <div className="flex w-full max-w-5xl flex-col gap-4 px-8 pt-24 pb-14 md:m-auto md:grid md:grid-cols-[40%_60%] md:px-0 md:pt-32 dark:bg-neutral-900">
           {progressCard}
           <RequestChart />
