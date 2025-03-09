@@ -35,13 +35,12 @@ import { RequestTrackingProvider } from "./hooks/use-request-tracking";
 const httpConfig: HttpTransportConfig = {
   retryDelay: 500,
   timeout: 60_000,
-  batch: { batchSize: 10 },
 };
 
-function createFallbackTransport(rpcUrls: string[]) {
+function createFallbackTransport(rpcs: { url: string; batch: HttpTransportConfig["batch"] }[]) {
   return fallback([
     unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 2, retryDelay: 100 }),
-    ...rpcUrls.map((rpcUrl) => http(rpcUrl, httpConfig)),
+    ...rpcs.map((rpc) => http(rpc.url, { ...httpConfig, batch: rpc.batch })),
     http(undefined, httpConfig),
   ]);
 }
@@ -64,24 +63,36 @@ const chains = [
 ] as const;
 
 const transports: Record<(typeof chains)[number]["id"], Transport> = {
-  [mainnet.id]: createFallbackTransport(["https://rpc.mevblocker.io", "https://rpc.ankr.com/eth"]),
-  [base.id]: createFallbackTransport([
-    "https://mainnet.base.org",
-    "https://base.lava.build",
-    "https://base.gateway.tenderly.co",
+  [mainnet.id]: createFallbackTransport([
+    { url: "https://rpc.mevblocker.io", batch: { batchSize: 10 } },
+    { url: "https://rpc.ankr.com/eth", batch: { batchSize: 10 } },
+    { url: "https://eth.drpc.org", batch: false },
   ]),
-  [ink.id]: createFallbackTransport(["https://ink.drpc.org"]),
-  [optimism.id]: createFallbackTransport(["https://optimism.lava.build", "https://op-pokt.nodies.app"]),
-  [arbitrum.id]: createFallbackTransport(["https://arbitrum.drpc.org"]),
-  [polygon.id]: createFallbackTransport(["https://polygon.drpc.org"]),
-  [unichain.id]: createFallbackTransport(["https://unichain.drpc.org"]),
-  [worldchain.id]: createFallbackTransport(["https://worldchain.drpc.org"]),
-  [scrollMainnet.id]: createFallbackTransport(["https://scroll.drpc.org"]),
-  [fraxtal.id]: createFallbackTransport(["https://fraxtal.drpc.org"]),
-  [sonic.id]: createFallbackTransport(["https://sonic.drpc.org"]),
-  [corn.id]: createFallbackTransport(["https://mainnet.corn-rpc.com", "https://maizenet-rpc.usecorn.com"]),
-  [modeMainnet.id]: createFallbackTransport(["https://mode.drpc.org"]),
-  [hemi.id]: createFallbackTransport(["https://rpc.hemi.network/rpc"]),
+  [base.id]: createFallbackTransport([
+    { url: "https://mainnet.base.org", batch: { batchSize: 10 } },
+    { url: "https://base.lava.build", batch: { batchSize: 10 } },
+    { url: "https://base.gateway.tenderly.co", batch: { batchSize: 10 } },
+    { url: "https://base.drpc.org", batch: false },
+  ]),
+  [ink.id]: createFallbackTransport([{ url: "https://ink.drpc.org", batch: false }]),
+  [optimism.id]: createFallbackTransport([
+    { url: "https://optimism.lava.build", batch: { batchSize: 10 } },
+    { url: "https://op-pokt.nodies.app", batch: { batchSize: 10 } },
+    { url: "https://optimism.drpc.org", batch: false },
+  ]),
+  [arbitrum.id]: createFallbackTransport([{ url: "https://arbitrum.drpc.org", batch: false }]),
+  [polygon.id]: createFallbackTransport([{ url: "https://polygon.drpc.org", batch: false }]),
+  [unichain.id]: createFallbackTransport([{ url: "https://unichain.drpc.org", batch: false }]),
+  [worldchain.id]: createFallbackTransport([{ url: "https://worldchain.drpc.org", batch: false }]),
+  [scrollMainnet.id]: createFallbackTransport([{ url: "https://scroll.drpc.org", batch: false }]),
+  [fraxtal.id]: createFallbackTransport([{ url: "https://fraxtal.drpc.org", batch: false }]),
+  [sonic.id]: createFallbackTransport([{ url: "https://sonic.drpc.org", batch: false }]),
+  [corn.id]: createFallbackTransport([
+    { url: "https://mainnet.corn-rpc.com", batch: false },
+    { url: "https://maizenet-rpc.usecorn.com", batch: false },
+  ]),
+  [modeMainnet.id]: createFallbackTransport([{ url: "https://mode.drpc.org", batch: false }]),
+  [hemi.id]: createFallbackTransport([{ url: "https://rpc.hemi.network/rpc", batch: false }]),
 };
 
 const wagmiConfig = createConfig({
