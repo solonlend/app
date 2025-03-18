@@ -18,7 +18,7 @@ export function useGhDeployments({
   page?: number;
 }) {
   return useQuery({
-    queryKey: ["useGhIpfsDeployments", owner, repo, environment, per_page, page],
+    queryKey: ["useGhDeployments", owner, repo, environment, per_page, page],
     queryFn: async () => {
       const octokit = new Octokit();
 
