@@ -1,5 +1,5 @@
 import { getContractDeploymentInfo } from "@/lib/constants";
-import useContractEvents from "@/hooks/use-contract-events";
+import useContractEvents from "@/hooks/use-contract-events/use-contract-events";
 import { useMemo } from "react";
 import { useAccount, useBlockNumber, useReadContracts } from "wagmi";
 import { Address, erc20Abi, erc4626Abi } from "viem";
@@ -54,7 +54,7 @@ export function EarnSubPage() {
 
   // MARK: Fetch `MetaMorphoFactory.CreateMetaMorpho` on all factory versions so that we have all deployments
   const {
-    data: createMetaMorphoEvents,
+    logs: { all: createMetaMorphoEvents },
     isFetching: isFetchingCreateMetaMorphoEvents,
     fractionFetched: ffCreateMetaMorphoEvents,
   } = useContractEvents({
@@ -62,7 +62,6 @@ export function EarnSubPage() {
     address: [factoryV1_1.address].concat(factory ? [factory.address] : []),
     fromBlock: factory?.fromBlock ?? factoryV1_1.fromBlock,
     toBlock: blockNumber,
-    maxBlockRange: 10_000n,
     reverseChronologicalOrder: true,
     eventName: "CreateMetaMorpho",
     strict: true,
@@ -74,14 +73,13 @@ export function EarnSubPage() {
 
   // MARK: Fetch `ERC4626.Deposit` so that we know where user has deposited. Includes non-MetaMorpho ERC4626 deposits
   const {
-    data: depositEvents,
+    logs: { all: depositEvents },
     isFetching: isFetchingDepositEvents,
     fractionFetched: ffDepositEvents,
   } = useContractEvents({
     abi: erc4626Abi,
     fromBlock: factory?.fromBlock ?? factoryV1_1.fromBlock,
     toBlock: blockNumber,
-    maxBlockRange: 10_000n,
     reverseChronologicalOrder: true,
     eventName: "Deposit", // ERC-4626
     args: { receiver: userAddress },

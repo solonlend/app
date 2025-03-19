@@ -31,18 +31,21 @@ import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persist
 import DashboardPage from "./app/dashboard/page";
 import type { Chain, HttpTransportConfig } from "viem";
 import { RequestTrackingProvider } from "./hooks/use-request-tracking";
+import { cyrb64Hash } from "@/lib/cyrb64";
 
 const httpConfig: HttpTransportConfig = {
-  retryDelay: 500,
-  timeout: 60_000,
+  retryDelay: 0,
+  timeout: 30_000,
 };
 
 function createFallbackTransport(rpcs: { url: string; batch: HttpTransportConfig["batch"] }[]) {
-  return fallback([
-    unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 2, retryDelay: 100 }),
-    ...rpcs.map((rpc) => http(rpc.url, { ...httpConfig, batch: rpc.batch })),
-    http(undefined, httpConfig),
-  ]);
+  return fallback(
+    [
+      ...rpcs.map((rpc) => http(rpc.url, { ...httpConfig, batch: rpc.batch })),
+      unstable_connector(injected, { key: "injected", name: "Injected", retryCount: 0 }),
+    ],
+    { retryCount: 6, retryDelay: 100 },
+  );
 }
 
 const chains = [
@@ -67,26 +70,35 @@ const transports: Record<(typeof chains)[number]["id"], Transport> = {
     { url: "https://rpc.mevblocker.io", batch: { batchSize: 10 } },
     { url: "https://rpc.ankr.com/eth", batch: { batchSize: 10 } },
     { url: "https://eth.drpc.org", batch: false },
+    { url: "https://eth.merkle.io", batch: false },
   ]),
   [base.id]: createFallbackTransport([
-    { url: "https://mainnet.base.org", batch: { batchSize: 10 } },
-    { url: "https://base.lava.build", batch: { batchSize: 10 } },
     { url: "https://base.gateway.tenderly.co", batch: { batchSize: 10 } },
     { url: "https://base.drpc.org", batch: false },
+    { url: "https://mainnet.base.org", batch: { batchSize: 10 } },
+    { url: "https://base.lava.build", batch: false },
   ]),
   [ink.id]: createFallbackTransport([{ url: "https://ink.drpc.org", batch: false }]),
   [optimism.id]: createFallbackTransport([
-    { url: "https://optimism.lava.build", batch: { batchSize: 10 } },
     { url: "https://op-pokt.nodies.app", batch: { batchSize: 10 } },
     { url: "https://optimism.drpc.org", batch: false },
+    { url: "https://optimism.lava.build", batch: false },
   ]),
-  [arbitrum.id]: createFallbackTransport([{ url: "https://arbitrum.drpc.org", batch: false }]),
+  [arbitrum.id]: createFallbackTransport([
+    { url: "https://arbitrum.gateway.tenderly.co", batch: { batchSize: 10 } },
+    { url: "https://rpc.ankr.com/arbitrum", batch: { batchSize: 10 } },
+    { url: "https://arbitrum.drpc.org", batch: false },
+  ]),
   [polygon.id]: createFallbackTransport([{ url: "https://polygon.drpc.org", batch: false }]),
   [unichain.id]: createFallbackTransport([{ url: "https://unichain.drpc.org", batch: false }]),
   [worldchain.id]: createFallbackTransport([{ url: "https://worldchain.drpc.org", batch: false }]),
   [scrollMainnet.id]: createFallbackTransport([{ url: "https://scroll.drpc.org", batch: false }]),
   [fraxtal.id]: createFallbackTransport([{ url: "https://fraxtal.drpc.org", batch: false }]),
-  [sonic.id]: createFallbackTransport([{ url: "https://sonic.drpc.org", batch: false }]),
+  [sonic.id]: createFallbackTransport([
+    { url: "https://rpc.soniclabs.com", batch: false },
+    { url: "https://rpc.ankr.com/sonic_mainnet", batch: false },
+    { url: "https://sonic.drpc.org", batch: false },
+  ]),
   [corn.id]: createFallbackTransport([
     { url: "https://mainnet.corn-rpc.com", batch: false },
     { url: "https://maizenet-rpc.usecorn.com", batch: false },
@@ -102,10 +114,10 @@ const wagmiConfig = createConfig({
   batch: {
     multicall: {
       batchSize: 2048,
-      wait: 500,
+      wait: 100,
     },
   },
-  cacheTime: 4000,
+  cacheTime: 250,
   pollingInterval: 4000,
 });
 
@@ -113,6 +125,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       gcTime: 7 * 24 * 60 * 60 * 1_000, // 7 days
+      queryKeyHashFn(queryKey) {
+        return cyrb64Hash(serialize(queryKey));
+      },
     },
   },
 });
@@ -126,7 +141,7 @@ const persister = createSyncStoragePersister({
 function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
-      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, buster: "v1" }}>
         <RequestTrackingProvider>
           <DashboardPage />
         </RequestTrackingProvider>

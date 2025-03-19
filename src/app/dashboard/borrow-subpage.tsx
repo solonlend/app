@@ -1,6 +1,6 @@
 import { morphoAbi } from "@/assets/abis/morpho";
 import { getContractDeploymentInfo } from "@/lib/constants";
-import useContractEvents from "@/hooks/use-contract-events";
+import useContractEvents from "@/hooks/use-contract-events/use-contract-events";
 import { useMemo } from "react";
 import { useAccount, useBlockNumber, useReadContracts } from "wagmi";
 import { Address, erc20Abi } from "viem";
@@ -47,7 +47,7 @@ export function BorrowSubPage() {
   const morpho = useMemo(() => getContractDeploymentInfo(chainId, "Morpho"), [chainId]);
 
   const {
-    data: supplyCollateralEvents,
+    logs: { all: supplyCollateralEvents },
     isFetching: isFetchingSupplyCollateralEvents,
     fractionFetched: ffSupplyCollateralEvents,
   } = useContractEvents({
@@ -55,7 +55,6 @@ export function BorrowSubPage() {
     address: morpho.address,
     fromBlock: morpho.fromBlock,
     toBlock: blockNumber,
-    maxBlockRange: 10_000n,
     reverseChronologicalOrder: true,
     eventName: "SupplyCollateral",
     args: { onBehalf: userAddress },
