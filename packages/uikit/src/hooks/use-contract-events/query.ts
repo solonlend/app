@@ -1,3 +1,4 @@
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import {
   type Abi,
   type Address,
@@ -6,8 +7,8 @@ import {
   type EncodeEventTopicsParameters,
   numberToHex,
 } from "viem";
+
 import type { RequestStats, Strategy } from "@/hooks/use-contract-events/strategy";
-import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 export function getQueryFn<
   const abi extends Abi | readonly unknown[],

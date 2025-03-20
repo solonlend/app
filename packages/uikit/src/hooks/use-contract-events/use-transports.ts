@@ -1,7 +1,8 @@
-import { areSetsEqual, promiseWithTimeout } from "@/lib/utils";
 import type { Transport, TransportConfig, EIP1193Parameters, EIP1193RequestFn, RpcSchema, PublicRpcSchema } from "viem";
 import { type UsePublicClientReturnType } from "wagmi";
+
 import { useDeepMemo } from "@/hooks/use-deep-memo";
+import { areSetsEqual, promiseWithTimeout } from "@/lib/utils";
 
 export type EIP1193RequestFnWithTimeout<rpcSchema extends RpcSchema | undefined = undefined> = ReturnType<
   typeof eip1193RequestFnWithTimeout<rpcSchema>

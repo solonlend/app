@@ -1,7 +1,7 @@
+import { retry } from "@octokit/plugin-retry";
+import { Octokit as OctokitBase } from "@octokit/rest";
 import { useQuery } from "@tanstack/react-query";
 
-import { Octokit as OctokitBase } from "@octokit/rest";
-import { retry } from "@octokit/plugin-retry";
 const Octokit = OctokitBase.plugin(retry);
 
 export function useGhDeployments({

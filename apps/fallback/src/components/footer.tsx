@@ -1,7 +1,3 @@
-import { useGhDeployments } from "@morpho-blue-offchain-public/uikit/hooks/use-gh-deployments";
-import { cn } from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { BadgeAlert, BadgeCheck, CheckCheck, Copy, ExternalLink } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +6,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@morpho-blue-offchain-public/uikit/components/shadcn/dialog";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
+import { useGhDeployments } from "@morpho-blue-offchain-public/uikit/hooks/use-gh-deployments";
+import { cn } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { BadgeAlert, BadgeCheck, CheckCheck, Copy, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
 import { GITHUB_OWNER, GITHUB_REPO, GITHUB_REPO_URL } from "@/lib/constants";
 
 export function Footer() {
@@ -160,7 +168,7 @@ export function Footer() {
                             <div
                               className="hover:text-primary/70 flex cursor-pointer items-center gap-1"
                               onClick={() => {
-                                navigator.clipboard.writeText(cid);
+                                void navigator.clipboard.writeText(cid);
                                 setRecentlyCopiedText(cid);
                               }}
                             >

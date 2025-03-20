@@ -1,23 +1,42 @@
-import { morphoAbi } from "@/assets/abis/morpho";
-import { getContractDeploymentInfo } from "@/lib/constants";
-import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
-import { useMemo } from "react";
-import { useAccount, useBlockNumber, useReadContracts } from "wagmi";
-import { Address, erc20Abi } from "viem";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
-import { blo } from "blo";
-import { formatBalanceWithSymbol, formatLtv, getTokenSymbolURI, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
-import { BorrowSheetContent } from "@/components/borrow-sheet-content";
-import { MarketId, MarketParams, MarketUtils } from "@morpho-org/blue-sdk";
-import { Eye, Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
-import { keepPreviousData } from "@tanstack/react-query";
-import { RequestChart } from "@/components/request-chart";
-import { Progress } from "@morpho-blue-offchain-public/uikit/components/shadcn/progress";
 import { Card, CardContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/card";
+import { Progress } from "@morpho-blue-offchain-public/uikit/components/shadcn/progress";
+import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
+import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
+import {
+  formatBalanceWithSymbol,
+  formatLtv,
+  getTokenSymbolURI,
+  Token,
+} from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { MarketId, MarketParams, MarketUtils } from "@morpho-org/blue-sdk";
+import { keepPreviousData } from "@tanstack/react-query";
+import { blo } from "blo";
+import { Eye, Info } from "lucide-react";
+import { useMemo } from "react";
+import { Address, erc20Abi } from "viem";
+import { useAccount, useBlockNumber, useReadContracts } from "wagmi";
+
+import { morphoAbi } from "@/assets/abis/morpho";
+import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { CtaCard } from "@/components/cta-card";
+import { RequestChart } from "@/components/request-chart";
+import { getContractDeploymentInfo } from "@/lib/constants";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -262,7 +281,7 @@ export function BorrowSubPage() {
                   key={args.id}
                   onOpenChange={(isOpen) => {
                     // Refetch positions on sidesheet close, since user may have sent txns to modify one
-                    if (!isOpen) refetchPositionsRaw();
+                    if (!isOpen) void refetchPositionsRaw();
                   }}
                 >
                   <SheetTrigger asChild>

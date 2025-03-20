@@ -5,6 +5,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import {
   type Abi,
   type BlockNumber,
@@ -18,15 +19,15 @@ import {
   type Log,
 } from "viem";
 import { deepEqual, usePublicClient } from "wagmi";
-import { useEffect, useMemo, useState } from "react";
-import { useEIP1193Transports } from "@/hooks/use-contract-events/use-transports";
+
 import { getRemainingSegments } from "@/hooks/use-contract-events/helpers";
+import { getQueryFn } from "@/hooks/use-contract-events/query";
 import { getStrategyBasedOn, RequestStats } from "@/hooks/use-contract-events/strategy";
 import { useBlockNumbers } from "@/hooks/use-contract-events/use-block-numbers";
-import { getQueryFn } from "@/hooks/use-contract-events/query";
-import { compareBigInts, max } from "@/lib/utils";
-import { useDeepMemo } from "@/hooks/use-deep-memo";
 import { usePing } from "@/hooks/use-contract-events/use-ping";
+import { useEIP1193Transports } from "@/hooks/use-contract-events/use-transports";
+import { useDeepMemo } from "@/hooks/use-deep-memo";
+import { compareBigInts, max } from "@/lib/utils";
 
 type FromBlockNumber = BlockNumber;
 type ToBlockNumber = BlockNumber;
@@ -197,7 +198,7 @@ export default function useContractEvents<
         // We can't use `setQueriesData` for this since some keys may not exist yet.
         coalesced.tentative.forEach(([queryKey, queryData]) => {
           queryClient.setQueryData<QueryData>(queryKey, queryData);
-          queryClient.invalidateQueries({ queryKey, exact: true });
+          void queryClient.invalidateQueries({ queryKey, exact: true });
         });
 
         // Remove old query keys to save space and speed up future coalescing

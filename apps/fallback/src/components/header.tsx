@@ -1,7 +1,8 @@
-import { cn } from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { useState } from "react";
 import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/button";
+import { cn } from "@morpho-blue-offchain-public/uikit/lib/utils";
 import { XIcon } from "lucide-react";
+import { useState } from "react";
+
 import { GITHUB_REPO_URL } from "@/lib/constants";
 
 export function Header({ className, children, ...props }: React.ComponentProps<"div">) {

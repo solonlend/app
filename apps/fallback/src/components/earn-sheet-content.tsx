@@ -7,14 +7,15 @@ import {
   SheetFooter,
   SheetClose,
 } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/tabs";
 import { formatBalance, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { keepPreviousData } from "@tanstack/react-query";
+import { CircleArrowLeft } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Toaster } from "sonner";
 import { Address, erc4626Abi, extractChain, parseUnits } from "viem";
 import { useAccount, useChainId, useChains, useReadContracts } from "wagmi";
-import { CircleArrowLeft } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/tabs";
-import { keepPreviousData } from "@tanstack/react-query";
-import { Toaster } from "sonner";
-import { useMemo, useState } from "react";
+
 import { TokenAmountInput } from "@/components/token-amount-input";
 import { TransactionButton } from "@/components/transaction-button";
 
@@ -140,7 +141,7 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
             disabled={!inputValue}
             onTxnReceipt={() => {
               setTextInputValue("");
-              refetchMaxes();
+              void refetchMaxes();
             }}
           >
             Withdraw

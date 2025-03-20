@@ -10,14 +10,21 @@ import {
   DialogTrigger,
 } from "@morpho-blue-offchain-public/uikit/components/shadcn/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/popover";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@morpho-blue-offchain-public/uikit/components/shadcn/select";
-
-import { useAccount, useConnect, useDisconnect, useEnsAvatar, useEnsName, useSwitchChain } from "wagmi";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@morpho-blue-offchain-public/uikit/components/shadcn/select";
+import { blo } from "blo";
 import { PowerOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Address } from "viem";
-import { blo } from "blo";
 import { mainnet } from "viem/chains";
+import { useAccount, useConnect, useDisconnect, useEnsAvatar, useEnsName, useSwitchChain } from "wagmi";
+
 import { ChainIcon } from "@/components/chain-icon";
 
 function ConnectWalletButton() {

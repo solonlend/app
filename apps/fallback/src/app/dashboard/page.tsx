@@ -1,13 +1,14 @@
-import { Header } from "@/components/header";
 import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/button";
 import { ExternalLink } from "lucide-react";
-import MorphoLogoSvg from "@/assets/morpho.svg?react";
-
 import { useState } from "react";
-import { WalletMenu } from "@/components/wallet-menu";
-import { EarnSubPage } from "./earn-subpage";
+
 import { BorrowSubPage } from "./borrow-subpage";
+import { EarnSubPage } from "./earn-subpage";
+
+import MorphoLogoSvg from "@/assets/morpho.svg?react";
 import { Footer } from "@/components/footer";
+import { Header } from "@/components/header";
+import { WalletMenu } from "@/components/wallet-menu";
 
 enum SubPage {
   Earn = "earn",

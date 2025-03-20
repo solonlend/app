@@ -7,20 +7,21 @@ import {
   SheetFooter,
   SheetClose,
 } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
-import { AccrualPosition, IMarket, Market, MarketId, MarketParams, Position } from "@morpho-org/blue-sdk";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/tabs";
 import { formatBalance, formatLtv, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { AccrualPosition, IMarket, Market, MarketId, MarketParams, Position } from "@morpho-org/blue-sdk";
+import { keepPreviousData } from "@tanstack/react-query";
+import { CircleArrowLeft } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Toaster } from "sonner";
 import { Address, erc20Abi, extractChain, parseUnits } from "viem";
 import { useAccount, useChainId, useChains, useReadContract, useReadContracts } from "wagmi";
-import { CircleArrowLeft } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/tabs";
-import { getContractDeploymentInfo } from "@/lib/constants";
+
 import { morphoAbi } from "@/assets/abis/morpho";
-import { keepPreviousData } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
 import { oracleAbi } from "@/assets/abis/oracle";
 import { TokenAmountInput } from "@/components/token-amount-input";
 import { TransactionButton } from "@/components/transaction-button";
-import { Toaster } from "sonner";
+import { getContractDeploymentInfo } from "@/lib/constants";
 
 enum Actions {
   SupplyCollateral = "Supply",
@@ -261,7 +262,7 @@ export function BorrowSheetContent({
               disabled={!inputValue}
               onTxnReceipt={() => {
                 setTextInputValue("");
-                refetchPosition();
+                void refetchPosition();
               }}
             >
               Supply Collateral
@@ -286,7 +287,7 @@ export function BorrowSheetContent({
             disabled={!inputValue}
             onTxnReceipt={() => {
               setTextInputValue("");
-              refetchPosition();
+              void refetchPosition();
             }}
           >
             Withdraw Collateral
@@ -319,7 +320,7 @@ export function BorrowSheetContent({
               disabled={!inputValue}
               onTxnReceipt={() => {
                 setTextInputValue("");
-                refetchPosition();
+                void refetchPosition();
               }}
             >
               Repay
