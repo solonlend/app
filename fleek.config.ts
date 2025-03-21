@@ -4,8 +4,8 @@ export default {
   sites: [
     {
       slug: "morpho-fallback-app",
-      distDir: "dist",
-      buildCommand: "pnpm run build",
+      distDir: "apps/fallback/dist",
+      buildCommand: "pnpm run fallback-app:build",
     },
   ],
 } satisfies FleekConfig;
