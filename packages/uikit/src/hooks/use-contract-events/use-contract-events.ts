@@ -27,7 +27,7 @@ import { useBlockNumbers } from "@/hooks/use-contract-events/use-block-numbers";
 import { usePing } from "@/hooks/use-contract-events/use-ping";
 import { useEIP1193Transports } from "@/hooks/use-contract-events/use-transports";
 import { useDeepMemo } from "@/hooks/use-deep-memo";
-import { compareBigInts, max } from "@/lib/utils";
+import { compareBigInts, max, min } from "@/lib/utils";
 
 type FromBlockNumber = BlockNumber;
 type ToBlockNumber = BlockNumber;
@@ -108,12 +108,13 @@ export default function useContractEvents<
   toBlock extends BlockNumber | BlockTag = "latest",
 >(
   args: Omit<GetContractEventsParameters<abi, eventName, strict, fromBlock, toBlock>, "blockHash"> & {
+    chainId: number;
     query?: { enabled?: boolean; debug?: boolean };
     returnInOrder?: boolean;
     reverseChronologicalOrder?: boolean;
   },
 ) {
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId: args.chainId });
 
   // MARK: Ephemeral state
 
@@ -363,6 +364,8 @@ export default function useContractEvents<
       const finalized = coalesced.finalized.map((x) => x[1]);
       const tentative = coalesced.tentative.map((x) => x[1]);
 
+      const finalizedBlock = finalized.at(-1)?.finalizedBlock;
+
       // Combine `finalized` and `tentative` ranges
       const all = [...finalized];
       const last = all.at(-1);
@@ -383,18 +386,35 @@ export default function useContractEvents<
           strict: args.strict,
         } as ParseEventLogsParameters<abi, eventName, strict>);
 
-      const logs = {
-        all: parse(args.returnInOrder ? (all.at(0)?.logs ?? []) : all.flatMap((x) => x.logs)),
-        finalized: parse(finalized.flatMap((x) => x.logs)),
+      let logs = {
+        all: <ReturnType<typeof parse>>[],
+        finalized: <ReturnType<typeof parse>>[],
       };
-      const finalizedBlock = finalized.at(-1)?.finalizedBlock;
-      const isFetching =
-        all.length !== 1 || all[0].fromBlock !== blockNumbers?.[0] || all[0].toBlock !== blockNumbers?.[1];
-      const numBlocksFetched = all.reduce((a, b) => a + (b.toBlock - b.fromBlock + 1n), 0n);
-      const fractionFetched =
-        blockNumbers === undefined
-          ? 0
-          : Number(numBlocksFetched) / (Number(blockNumbers[1]) - Number(blockNumbers[0]) + 1);
+      let isFetching = true;
+      let fractionFetched = 0;
+      if (blockNumbers !== undefined) {
+        const [fromBlock, toBlock] = blockNumbers;
+        const numBlocksFetched = all.reduce((a, b) => {
+          return b.toBlock < fromBlock || toBlock < b.fromBlock
+            ? a // Segment is entirely outside the requested block range, so it doesn't contribute anything
+            : a + (min(b.toBlock, toBlock) - max(b.fromBlock, fromBlock) + 1n);
+        }, 0n);
+
+        // Flatten and parse logs
+        logs = {
+          all: parse(args.returnInOrder ? (all.at(0)?.logs ?? []) : all.flatMap((x) => x.logs)),
+          finalized: parse(finalized.flatMap((x) => x.logs)),
+        };
+        // Filter out logs that are outside the requested block range
+        {
+          let key: keyof typeof logs;
+          for (key in logs) {
+            logs[key] = logs[key].filter((log) => fromBlock <= log.blockNumber && log.blockNumber <= toBlock);
+          }
+        }
+        isFetching = all.length !== 1 || all[0].fromBlock > fromBlock || all[0].toBlock < toBlock;
+        fractionFetched = Number(numBlocksFetched) / (Number(toBlock) - Number(fromBlock) + 1);
+      }
 
       const sort = (a: Log<bigint, number, false>, b: Log<bigint, number, false>) => {
         if (a.blockNumber !== b.blockNumber) return compareBigInts(a.blockNumber, b.blockNumber);
