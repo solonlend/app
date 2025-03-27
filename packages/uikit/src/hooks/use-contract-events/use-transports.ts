@@ -17,9 +17,9 @@ function isHttpTransport(transportish: Transportish): transportish is TransportC
 
 function idForTransport(transport: Transportish) {
   if (isHttpTransport(transport)) {
-    return String(transport.url ?? transport.key);
+    return `${transport.key}-${transport.url ?? ""}`;
   } else {
-    return String(transport.value?.url ?? transport.config.key);
+    return `${transport.config.key}-${transport.value?.url ?? ""}`;
   }
 }
 

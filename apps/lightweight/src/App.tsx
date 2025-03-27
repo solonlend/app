@@ -29,14 +29,30 @@ const httpConfig: HttpTransportConfig = {
   timeout: 30_000,
 };
 
-function createFallbackTransport(rpcs: { url: string; batch: HttpTransportConfig["batch"] }[]) {
+function createFallbackTransport(rpcs: ({ url: string } & HttpTransportConfig)[]) {
   return fallback(
-    rpcs.map((rpc) => http(rpc.url, { ...httpConfig, batch: rpc.batch })),
+    rpcs.map((rpc) => http(rpc.url, { ...httpConfig, ...(({ url, ...rest }) => rest)(rpc) })),
     {
       retryCount: 6,
       retryDelay: 100,
     },
   );
+}
+
+function createAlchemyHttp(slug: string): ({ url: string } & HttpTransportConfig)[] {
+  return [
+    {
+      url: `https://${slug}.g.alchemy.com/v2/${alchemyApiKey}`,
+      batch: { batchSize: 10, wait: 20 },
+      methods: { exclude: ["eth_getLogs"] },
+      key: "alchemy-no-events", // NOTE: Ensures `useContractEvents` won't try to use this
+    },
+    {
+      url: `https://${slug}.g.alchemy.com/v2/${alchemyApiKey}`,
+      batch: false,
+      methods: { include: ["eth_getLogs"] },
+    },
+  ];
 }
 
 const chains = [
@@ -59,57 +75,54 @@ const chains = [
 const alchemyApiKey = import.meta.env.VITE_ALCHEMY_API_KEY as string;
 const transports: Record<(typeof chains)[number]["id"], Transport> = {
   [mainnet.id]: createFallbackTransport([
-    { url: `https://eth-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("eth-mainnet"),
     { url: "https://rpc.mevblocker.io", batch: { batchSize: 10 } },
     { url: "https://rpc.ankr.com/eth", batch: { batchSize: 10 } },
     { url: "https://eth.drpc.org", batch: false },
     { url: "https://eth.merkle.io", batch: false },
   ]),
   [base.id]: createFallbackTransport([
-    { url: `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("base-mainnet"),
     { url: "https://base.gateway.tenderly.co", batch: { batchSize: 10 } },
     { url: "https://base.drpc.org", batch: false },
     { url: "https://mainnet.base.org", batch: { batchSize: 10 } },
     { url: "https://base.lava.build", batch: false },
   ]),
   [ink.id]: createFallbackTransport([
-    { url: `https://ink-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("ink-mainnet"),
     { url: "https://ink.drpc.org", batch: false },
   ]),
   [optimism.id]: createFallbackTransport([
-    { url: `https://opt-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("opt-mainnet"),
     { url: "https://op-pokt.nodies.app", batch: { batchSize: 10 } },
     { url: "https://optimism.drpc.org", batch: false },
     { url: "https://optimism.lava.build", batch: false },
   ]),
   [arbitrum.id]: createFallbackTransport([
-    { url: `https://arb-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("arb-mainnet"),
     { url: "https://arbitrum.gateway.tenderly.co", batch: { batchSize: 10 } },
     { url: "https://rpc.ankr.com/arbitrum", batch: { batchSize: 10 } },
     { url: "https://arbitrum.drpc.org", batch: false },
   ]),
   [polygon.id]: createFallbackTransport([
-    { url: `https://polygon-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("polygon-mainnet"),
     { url: "https://polygon.drpc.org", batch: false },
   ]),
   [unichain.id]: createFallbackTransport([
-    { url: `https://unichain-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("unichain-mainnet"),
     { url: "https://unichain.drpc.org", batch: false },
   ]),
   [worldchain.id]: createFallbackTransport([
-    { url: `https://worldchain-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("worldchain-mainnet"),
     { url: "https://worldchain.drpc.org", batch: false },
   ]),
   [scrollMainnet.id]: createFallbackTransport([
-    { url: `https://scroll-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("scroll-mainnet"),
     { url: "https://scroll.drpc.org", batch: false },
   ]),
-  [fraxtal.id]: createFallbackTransport([
-    { url: `https://frax-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
-    { url: "https://fraxtal.drpc.org", batch: false },
-  ]),
+  [fraxtal.id]: createFallbackTransport([{ url: "https://fraxtal.drpc.org", batch: false }]),
   [sonic.id]: createFallbackTransport([
-    { url: `https://sonic-mainnet.g.alchemy.com/v2/${alchemyApiKey}`, batch: false },
+    ...createAlchemyHttp("sonic-mainnet"),
     { url: "https://rpc.soniclabs.com", batch: false },
     { url: "https://rpc.ankr.com/sonic_mainnet", batch: false },
     { url: "https://sonic.drpc.org", batch: false },
@@ -133,8 +146,8 @@ const wagmiConfig = createConfig(
     appIcon: "", // TODO:
     batch: {
       multicall: {
-        batchSize: 2048,
-        wait: 100,
+        batchSize: 8192,
+        wait: 20,
       },
     },
     cacheTime: 250,
