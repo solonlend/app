@@ -92,17 +92,18 @@ export function BorrowSubPage() {
   const { data: vaultInfos } = useReadContracts({
     contracts: createMetaMorphoEvents
       .map((ev) => [
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
         {
+          chainId,
           address: ev.args.metaMorpho,
           abi: metaMorphoAbi,
           functionName: "maxWithdraw",
           args: [userAddress ?? zeroAddress],
         } as const,
-        readWithdrawQueue(ev.args.metaMorpho),
+        { chainId, ...readWithdrawQueue(ev.args.metaMorpho) },
       ])
       .flat(),
     allowFailure: false,
@@ -143,6 +144,7 @@ export function BorrowSubPage() {
     contracts: marketIds.map(
       (marketId) =>
         ({
+          chainId,
           address: morpho?.address ?? "0x",
           abi: morphoAbi,
           functionName: "idToMarketParams",
@@ -171,8 +173,8 @@ export function BorrowSubPage() {
   const { data: erc20Symbols } = useReadContracts({
     contracts: filteredCreateMarketArgs
       .map((args) => [
-        { address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
-        { address: args.marketParams.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
+        { chainId, address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
+        { chainId, address: args.marketParams.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -182,8 +184,8 @@ export function BorrowSubPage() {
   const { data: erc20Decimals } = useReadContracts({
     contracts: filteredCreateMarketArgs
       .map((args) => [
-        { address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
-        { address: args.marketParams.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
+        { chainId, address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
+        { chainId, address: args.marketParams.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -194,6 +196,7 @@ export function BorrowSubPage() {
     contracts: filteredCreateMarketArgs.map(
       (args) =>
         ({
+          chainId,
           address: morpho?.address ?? "0x",
           abi: morphoAbi,
           functionName: "market",
@@ -219,6 +222,7 @@ export function BorrowSubPage() {
 
   const { data: apss } = useReadContracts({
     contracts: filteredCreateMarketArgs.map((args, idx) => ({
+      chainId,
       address: args.marketParams.irm,
       abi: irmAbi,
       functionName: "borrowRateView",
@@ -237,6 +241,7 @@ export function BorrowSubPage() {
     contracts: filteredCreateMarketArgs.map(
       (args) =>
         ({
+          chainId,
           address: morpho?.address ?? "0x",
           abi: morphoAbi,
           functionName: "position",

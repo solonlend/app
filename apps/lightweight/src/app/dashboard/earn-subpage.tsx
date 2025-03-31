@@ -261,18 +261,19 @@ export function EarnSubPage() {
   const { data: vaultInfos } = useReadContracts({
     contracts: createMetaMorphoEvents
       .map((ev) => [
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "curator" } as const,
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
-        { address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "curator" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
+        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
         {
+          chainId,
           address: ev.args.metaMorpho,
           abi: metaMorphoAbi,
           functionName: "maxWithdraw",
           args: [userAddress ?? zeroAddress],
         } as const,
-        readWithdrawQueue(ev.args.metaMorpho),
+        { chainId, ...readWithdrawQueue(ev.args.metaMorpho) },
       ])
       .flat(),
     allowFailure: false,
@@ -324,8 +325,8 @@ export function EarnSubPage() {
   const { data: assetsInfo } = useReadContracts({
     contracts: assets
       .map((asset) => [
-        { address: asset, abi: erc20Abi, functionName: "symbol" } as const,
-        { address: asset, abi: erc20Abi, functionName: "decimals" } as const,
+        { chainId, address: asset, abi: erc20Abi, functionName: "symbol" } as const,
+        { chainId, address: asset, abi: erc20Abi, functionName: "decimals" } as const,
       ])
       .flat(),
     allowFailure: true,
