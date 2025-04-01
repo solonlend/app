@@ -1,4 +1,4 @@
-import { type Address, getContractAddress, Hex, type StateOverride, zeroAddress } from "viem";
+import { type Address, getContractAddress, type Hex, type StateOverride, zeroAddress } from "viem";
 
 import { Lens } from "@/lens/read-withdraw-queue.s.sol";
 
@@ -9,6 +9,8 @@ const address = getContractAddress({
   salt: `${zeroAddress}51A1E51A1E51A1E51A1E51A1`,
 });
 
+// NOTE: If type inference isn't working, ensure contract *does not* use named return values!
+
 /**
  * IMPORTANT: `deployless` mode is incompatible with multicall / `useReadContracts`. In `useReadContracts`,
  * it will cause an error and resend each `eth_call` individually to try to correct it, resulting in
@@ -18,36 +20,18 @@ const address = getContractAddress({
 export function readWithdrawQueue(
   metaMorpho: Address,
   deployless?: false,
-): {
-  readonly address: Address;
-  readonly abi: typeof Lens.abi;
-  readonly functionName: "withdrawQueue";
-  readonly args: readonly [Address];
-};
+): Omit<ReturnType<typeof Lens.read.withdrawQueue>, "humanReadableAbi"> & { address: Address };
 export function readWithdrawQueue(
   metaMorpho: Address,
   deployless: true,
-): {
-  readonly code: Hex;
-  readonly abi: typeof Lens.abi;
-  readonly functionName: "withdrawQueue";
-  readonly args: readonly [Address];
-};
+): Omit<ReturnType<typeof Lens.read.withdrawQueue>, "humanReadableAbi"> & { code: Hex };
 export function readWithdrawQueue(metaMorpho: Address, deployless: boolean = false) {
+  const { humanReadableAbi, ...action } = Lens.read.withdrawQueue(metaMorpho);
+
   if (deployless) {
-    return {
-      code: Lens.bytecode,
-      abi: Lens.abi,
-      functionName: "withdrawQueue",
-      args: [metaMorpho],
-    } as const;
+    return { ...action, code: Lens.bytecode } as const;
   } else {
-    return {
-      address,
-      abi: Lens.abi,
-      functionName: "withdrawQueue",
-      args: [metaMorpho],
-    } as const;
+    return { ...action, address } as const;
   }
 }
 
