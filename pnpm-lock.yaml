@@ -297,6 +297,9 @@ importers:
       next-themes:
         specifier: ^0.4.4
         version: 0.4.6(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      solady:
+        specifier: ^0.1.12
+        version: 0.1.12
       tailwind-merge:
         specifier: ^3.0.1
         version: 3.0.2
@@ -6962,6 +6965,10 @@ packages:
     resolution:
       { integrity: sha512-/GbIKmo8ioc+NIWIhwdecY0ge+qVBSMdgxGygevmdHj24bsfgtCmcUUcQ5ZzcylGFHsN3k4HB4Cgkl96KVnuew== }
     engines: { node: ">=10.0.0" }
+
+  solady@0.1.12:
+    resolution:
+      { integrity: sha512-wfgSFhxPKJzrd2jsxe9u7/XWIaiFzJcS8Jy8uc/9H2uSwGZ/XM7IxfVaZohJj/P9gTBdkFRJ7xzsyTFy7Hz7CA== }
 
   solc@0.8.28:
     resolution:
@@ -14658,6 +14665,8 @@ snapshots:
       debug: 4.3.7
     transitivePeerDependencies:
       - supports-color
+
+  solady@0.1.12: {}
 
   solc@0.8.28:
     dependencies:

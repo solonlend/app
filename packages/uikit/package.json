@@ -40,7 +40,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
-    "next-themes": "^0.4.4"
+    "next-themes": "^0.4.4",
+    "solady": "^0.1.12"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.66.0",
@@ -50,10 +51,10 @@
     "react-dom": "^19.0.0",
     "recharts": "^2.15.1",
     "sonner": "^2.0.0",
-    "tevm": "1.0.0-next.140",
+    "tailwind-merge": "^3.0.1",
     "tailwindcss": "^4.0.6",
     "tailwindcss-animate": "^1.0.7",
-    "tailwind-merge": "^3.0.1",
+    "tevm": "1.0.0-next.140",
     "viem": "~2.23.5",
     "wagmi": "2.14.15"
   },
@@ -75,8 +76,8 @@
     "react-dom": "^19.0.0",
     "recharts": "^2.15.1",
     "sonner": "^2.0.0",
-    "tevm": "1.0.0-next.140",
     "tailwindcss": "^4.0.6",
+    "tevm": "1.0.0-next.140",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "viem": "~2.23.5",
