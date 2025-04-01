@@ -1,5 +1,3 @@
-import { irmAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/irm";
-import { metaMorphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho";
 import { metaMorphoFactoryAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho-factory";
 import { morphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/morpho";
 import { Avatar, AvatarFallback, AvatarImage } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
@@ -19,10 +17,7 @@ import {
   TooltipTrigger,
 } from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
 import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
-import {
-  readWithdrawQueue,
-  readWithdrawQueueStateOverride,
-} from "@morpho-blue-offchain-public/uikit/lens/read-withdraw-queue";
+import { readAccrualVaults, readAccrualVaultsStateOverride } from "@morpho-blue-offchain-public/uikit/lens/read-vaults";
 import {
   formatBalanceWithSymbol,
   formatApy,
@@ -30,17 +25,17 @@ import {
   getTokenSymbolURI,
   Token,
 } from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { MarketId, MarketParams, MarketUtils } from "@morpho-org/blue-sdk";
 import { keepPreviousData } from "@tanstack/react-query";
 import { blo } from "blo";
 import { Eye, Info } from "lucide-react";
 import { useMemo } from "react";
 import { useOutletContext } from "react-router";
-import { Address, erc20Abi, isAddressEqual, Hex, Chain, zeroAddress } from "viem";
-import { useAccount, useReadContracts } from "wagmi";
+import { Address, erc20Abi, Chain } from "viem";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { CtaCard } from "@/components/cta-card";
+import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo } from "@/lib/constants";
 
@@ -59,6 +54,8 @@ function TokenTableCell({ address, symbol, imageSrc }: Token) {
   );
 }
 
+const STALE_TIME = 5 * 60 * 1000;
+
 export function BorrowSubPage() {
   const { status, address: userAddress } = useAccount();
   const { chain } = useOutletContext() as { chain?: Chain };
@@ -73,7 +70,7 @@ export function BorrowSubPage() {
     [chainId],
   );
 
-  // MARK: Fetch `MetaMorphoFactory.CreateMetaMorpho` on all factory versions so that we have all deployments
+  // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {
     logs: { all: createMetaMorphoEvents },
     isFetching: isFetchingCreateMetaMorphoEvents,
@@ -88,93 +85,33 @@ export function BorrowSubPage() {
     query: { enabled: chainId !== undefined },
   });
 
-  // MARK: Fetch metadata for every MetaMorpho vault
-  const { data: vaultInfos } = useReadContracts({
-    contracts: createMetaMorphoEvents
-      .map((ev) => [
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
-        {
-          chainId,
-          address: ev.args.metaMorpho,
-          abi: metaMorphoAbi,
-          functionName: "maxWithdraw",
-          args: [userAddress ?? zeroAddress],
-        } as const,
-        { chainId, ...readWithdrawQueue(ev.args.metaMorpho) },
-      ])
-      .flat(),
-    allowFailure: false,
-    stateOverride: [readWithdrawQueueStateOverride()],
-    query: {
-      refetchOnMount: "always",
-      enabled: !isFetchingCreateMetaMorphoEvents,
-    },
-  });
-
-  // MARK: Only include vaults owned by the top 5 curators from core deployments, or in which the user has deposits.
+  // MARK: Fetch additional data for vaults owned by the top 5 curators from core deployments
   const top5Curators = useTopNCurators({ n: 5, verifiedOnly: true, chainIds: [...CORE_DEPLOYMENTS] });
-  const marketIds = useMemo(() => {
-    const marketIdsSet = new Set<Hex>();
-
-    if (vaultInfos !== undefined) {
-      for (let i = 0; i < createMetaMorphoEvents.length; i += 1) {
-        const owner = vaultInfos[i * 6 + 0] as Address;
-        const withdrawQueue = vaultInfos[i * 6 + 5] as Hex[];
-
-        const curator = (top5Curators ?? []).find((curator) =>
-          (curator.addresses ?? []).find((v) => isAddressEqual(v.address as Address, owner)),
-        );
-
-        if (curator !== undefined) {
-          withdrawQueue.forEach((market) => marketIdsSet.add(market));
-        }
-      }
-    }
-
-    const marketIds = Array.from(marketIdsSet);
-    // Sort them so that queryKey is consistent in the `useReadContracts` hooks below
-    marketIds.sort();
-    return marketIds;
-  }, [createMetaMorphoEvents, vaultInfos, top5Curators]);
-
-  const { data: marketParamsRaw } = useReadContracts({
-    contracts: marketIds.map(
-      (marketId) =>
-        ({
-          chainId,
-          address: morpho?.address ?? "0x",
-          abi: morphoAbi,
-          functionName: "idToMarketParams",
-          args: [marketId],
-        }) as const,
+  const { data: vaultsData } = useReadContract({
+    chainId,
+    ...readAccrualVaults(
+      morpho?.address ?? "0x",
+      createMetaMorphoEvents.map((ev) => ev.args.metaMorpho),
+      // NOTE: This assumes that if a curator controls an address on one chain, they control it across all chains.
+      top5Curators.flatMap((curator) => curator.addresses?.map((entry) => entry.address as Address) ?? []),
     ),
-    allowFailure: false,
-    query: { staleTime: Infinity, gcTime: Infinity, enabled: !!morpho },
+    stateOverride: [readAccrualVaultsStateOverride()],
+    query: { enabled: chainId !== undefined && !isFetchingCreateMetaMorphoEvents && !!morpho?.address },
   });
 
-  const filteredCreateMarketArgs = useMemo(
-    () =>
-      marketParamsRaw?.map((raw, idx) => ({
-        id: marketIds[idx],
-        marketParams: {
-          loanToken: raw[0],
-          collateralToken: raw[1],
-          oracle: raw[2],
-          irm: raw[3],
-          lltv: raw[4],
-        },
-      })) ?? [],
-    [marketIds, marketParamsRaw],
-  );
+  const marketIds = useMemo(() => [...new Set(vaultsData?.flatMap((d) => d.vault.withdrawQueue) ?? [])], [vaultsData]);
+  const markets = useMarkets({ chainId, marketIds, staleTime: STALE_TIME });
+  const marketsArr = useMemo(() => {
+    const marketsArr = Object.values(markets);
+    marketsArr.sort((a, b) => (a.borrowApy > b.borrowApy ? -1 : 1));
+    return marketsArr;
+  }, [markets]);
 
   const { data: erc20Symbols } = useReadContracts({
-    contracts: filteredCreateMarketArgs
-      .map((args) => [
-        { chainId, address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
-        { chainId, address: args.marketParams.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
+    contracts: marketsArr
+      .map((market) => [
+        { chainId, address: market.params.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
+        { chainId, address: market.params.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -182,70 +119,25 @@ export function BorrowSubPage() {
   });
 
   const { data: erc20Decimals } = useReadContracts({
-    contracts: filteredCreateMarketArgs
-      .map((args) => [
-        { chainId, address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
-        { chainId, address: args.marketParams.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
+    contracts: marketsArr
+      .map((market) => [
+        { chainId, address: market.params.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
+        { chainId, address: market.params.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
       ])
       .flat(),
     allowFailure: true,
     query: { staleTime: Infinity, gcTime: Infinity },
   });
 
-  const { data: marketsRaw } = useReadContracts({
-    contracts: filteredCreateMarketArgs.map(
-      (args) =>
-        ({
-          chainId,
-          address: morpho?.address ?? "0x",
-          abi: morphoAbi,
-          functionName: "market",
-          args: [args.id],
-        }) as const,
-    ),
-    allowFailure: false,
-    query: { staleTime: 10 * 60 * 1000, gcTime: Infinity, placeholderData: keepPreviousData, enabled: !!morpho },
-  });
-
-  const markets = useMemo(
-    () =>
-      marketsRaw?.map((market) => ({
-        totalSupplyAssets: market[0],
-        totalSupplyShares: market[1],
-        totalBorrowAssets: market[2],
-        totalBorrowShares: market[3],
-        lastUpdate: market[4],
-        fee: market[5],
-      })),
-    [marketsRaw],
-  );
-
-  const { data: apss } = useReadContracts({
-    contracts: filteredCreateMarketArgs.map((args, idx) => ({
-      chainId,
-      address: args.marketParams.irm,
-      abi: irmAbi,
-      functionName: "borrowRateView",
-      args: markets ? [args.marketParams, markets[idx]] : undefined,
-    })),
-    allowFailure: true,
-    query: {
-      staleTime: 10 * 60 * 1000,
-      gcTime: Infinity,
-      placeholderData: keepPreviousData,
-      enabled: !!morpho && !!markets,
-    },
-  });
-
   const { data: positionsRaw, refetch: refetchPositionsRaw } = useReadContracts({
-    contracts: filteredCreateMarketArgs.map(
-      (args) =>
+    contracts: marketsArr.map(
+      (market) =>
         ({
           chainId,
           address: morpho?.address ?? "0x",
           abi: morphoAbi,
           functionName: "position",
-          args: userAddress ? [args.id, userAddress] : undefined,
+          args: userAddress ? [market.id, userAddress] : undefined,
         }) as const,
     ),
     allowFailure: false,
@@ -254,24 +146,24 @@ export function BorrowSubPage() {
 
   const tokens = useMemo(() => {
     const map = new Map<Address, Token>();
-    filteredCreateMarketArgs.forEach((args, idx) => {
+    marketsArr.forEach((market, idx) => {
       const collateralTokenSymbol = erc20Symbols?.[idx * 2].result;
       const loanTokenSymbol = erc20Symbols?.[idx * 2 + 1].result;
-      map.set(args.marketParams.collateralToken, {
-        address: args.marketParams.collateralToken,
+      map.set(market.params.collateralToken, {
+        address: market.params.collateralToken,
         symbol: collateralTokenSymbol,
         decimals: erc20Decimals?.[idx * 2].result,
         imageSrc: getTokenSymbolURI(collateralTokenSymbol),
       });
-      map.set(args.marketParams.loanToken, {
-        address: args.marketParams.loanToken,
+      map.set(market.params.loanToken, {
+        address: market.params.loanToken,
         symbol: loanTokenSymbol,
         decimals: erc20Decimals?.[idx * 2 + 1].result,
         imageSrc: getTokenSymbolURI(loanTokenSymbol),
       });
     });
     return map;
-  }, [filteredCreateMarketArgs, erc20Symbols, erc20Decimals]);
+  }, [marketsArr, erc20Symbols, erc20Decimals]);
 
   if (status === "connecting") return undefined;
 
@@ -319,9 +211,9 @@ export function BorrowSubPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCreateMarketArgs.map((args, idx) => (
+              {marketsArr.map((market, idx) => (
                 <Sheet
-                  key={args.id}
+                  key={market.id}
                   onOpenChange={(isOpen) => {
                     // Refetch positions on sidesheet close, since user may have sent txns to modify one
                     if (!isOpen) void refetchPositionsRaw();
@@ -330,12 +222,12 @@ export function BorrowSubPage() {
                   <SheetTrigger asChild>
                     <TableRow className="bg-secondary">
                       <TableCell className="rounded-l-lg p-5">
-                        <TokenTableCell {...tokens.get(args.marketParams.collateralToken)!} />
+                        <TokenTableCell {...tokens.get(market.params.collateralToken)!} />
                       </TableCell>
                       <TableCell>
-                        <TokenTableCell {...tokens.get(args.marketParams.loanToken)!} />
+                        <TokenTableCell {...tokens.get(market.params.loanToken)!} />
                       </TableCell>
-                      <TableCell>{formatLtv(args.marketParams.lltv)}</TableCell>
+                      <TableCell>{formatLtv(market.params.lltv)}</TableCell>
                       <TableCell>
                         {
                           <TooltipProvider>
@@ -346,11 +238,11 @@ export function BorrowSubPage() {
                               <TooltipContent className="text-primary max-w-56 rounded-3xl p-4 font-mono shadow-2xl">
                                 <h3>Collateral</h3>
                                 <p>
-                                  {positionsRaw && tokens.get(args.marketParams.collateralToken)?.decimals !== undefined
+                                  {positionsRaw && tokens.get(market.params.collateralToken)?.decimals !== undefined
                                     ? formatBalanceWithSymbol(
                                         positionsRaw[idx][2],
-                                        tokens.get(args.marketParams.collateralToken)!.decimals!,
-                                        tokens.get(args.marketParams.collateralToken)!.symbol,
+                                        tokens.get(market.params.collateralToken)!.decimals!,
+                                        tokens.get(market.params.collateralToken)!.symbol,
                                         5,
                                         true,
                                       )
@@ -360,14 +252,11 @@ export function BorrowSubPage() {
                                 <p>
                                   {markets &&
                                   positionsRaw &&
-                                  tokens.get(args.marketParams.loanToken)?.decimals !== undefined
+                                  tokens.get(market.params.loanToken)?.decimals !== undefined
                                     ? formatBalanceWithSymbol(
-                                        MarketUtils.toBorrowAssets(positionsRaw[idx][1], {
-                                          totalBorrowAssets: markets[idx].totalBorrowAssets,
-                                          totalBorrowShares: markets[idx].totalBorrowShares,
-                                        }),
-                                        tokens.get(args.marketParams.loanToken)!.decimals!,
-                                        tokens.get(args.marketParams.loanToken)!.symbol,
+                                        market.toBorrowAssets(positionsRaw[idx][1]),
+                                        tokens.get(market.params.loanToken)!.decimals!,
+                                        tokens.get(market.params.loanToken)!.symbol,
                                         5,
                                         true,
                                       )
@@ -379,34 +268,25 @@ export function BorrowSubPage() {
                         }
                       </TableCell>
                       <TableCell>
-                        {markets && tokens.get(args.marketParams.loanToken)?.decimals !== undefined
+                        {markets && tokens.get(market.params.loanToken)?.decimals !== undefined
                           ? formatBalanceWithSymbol(
-                              markets[idx].totalSupplyAssets - markets[idx].totalBorrowAssets,
-                              tokens.get(args.marketParams.loanToken)!.decimals!,
-                              tokens.get(args.marketParams.loanToken)!.symbol,
+                              market.liquidity,
+                              tokens.get(market.params.loanToken)!.decimals!,
+                              tokens.get(market.params.loanToken)!.symbol,
                               5,
                               true,
                             )
                           : "－"}
                       </TableCell>
                       <TableCell className="rounded-r-lg">
-                        {apss?.[idx].status === "success"
-                          ? `${formatApy(MarketUtils.compoundRate(apss[idx].result))}`
-                          : "－"}
+                        {market.borrowApy ? `${formatApy(market.borrowApy)}` : "－"}
                       </TableCell>
                     </TableRow>
                   </SheetTrigger>
                   <BorrowSheetContent
-                    marketId={args.id as MarketId}
-                    marketParams={new MarketParams(args.marketParams)}
-                    imarket={
-                      markets
-                        ? {
-                            params: new MarketParams(args.marketParams),
-                            ...markets[idx],
-                          }
-                        : undefined
-                    }
+                    marketId={market.id}
+                    marketParams={market.params}
+                    imarket={market}
                     tokens={tokens}
                   />
                 </Sheet>

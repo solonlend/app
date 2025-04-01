@@ -17,11 +17,22 @@ import {
   TooltipTrigger,
 } from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
 import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
+import { readAccrualVaults, readAccrualVaultsStateOverride } from "@morpho-blue-offchain-public/uikit/lens/read-vaults";
 import {
-  readWithdrawQueue,
-  readWithdrawQueueStateOverride,
-} from "@morpho-blue-offchain-public/uikit/lens/read-withdraw-queue";
-import { formatBalanceWithSymbol, getTokenSymbolURI, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
+  formatApy,
+  formatBalanceWithSymbol,
+  getTokenSymbolURI,
+  Token,
+} from "@morpho-blue-offchain-public/uikit/lib/utils";
+import {
+  AccrualPosition,
+  AccrualVault,
+  MarketId,
+  Vault,
+  VaultMarketAllocation,
+  VaultMarketConfig,
+  VaultMarketPublicAllocatorConfig,
+} from "@morpho-org/blue-sdk";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
@@ -29,26 +40,16 @@ import { ExternalLink } from "lucide-react";
 import { useMemo } from "react";
 import { useOutletContext } from "react-router";
 import { Address, Chain, erc20Abi, hashMessage, isAddressEqual, zeroAddress } from "viem";
-import { useAccount, useReadContracts } from "wagmi";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
 import { CtaCard } from "@/components/cta-card";
 import { EarnSheetContent } from "@/components/earn-sheet-content";
+import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo } from "@/lib/constants";
 
-type Vault = {
-  address: `0x${string}`;
-  imageSrc: string;
-  info:
-    | {
-        owner: Address;
-        curator: Address;
-        timelock: bigint;
-        name: string;
-        totalAssets: bigint;
-        maxWithdraw: bigint;
-      }
-    | undefined;
+type Row = {
+  vault: AccrualVault;
   asset: Token;
   curators: {
     [name: string]: {
@@ -58,6 +59,8 @@ type Vault = {
       imageSrc: string | null;
     };
   };
+  maxWithdraw: bigint | undefined;
+  imageSrc: string;
 };
 
 function VaultTableCell({
@@ -66,7 +69,7 @@ function VaultTableCell({
   imageSrc,
   chain,
   timelock,
-}: Token & { chain: Chain | undefined; timelock: bigint | undefined }) {
+}: Token & { chain: Chain | undefined; timelock: bigint }) {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -83,7 +86,7 @@ function VaultTableCell({
         </TooltipTrigger>
         <TooltipContent className="text-primary rounded-3xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <p className="underline">Properties</p>
-          <p>Timelock: {timelock ? humanizeDuration(Number(timelock) * 1000) : "－"}</p>
+          <p>Timelock: {humanizeDuration(Number(timelock) * 1000)}</p>
           <br />
           <div className="flex items-center gap-1">
             <p>
@@ -114,7 +117,7 @@ function CuratorTableCell({
   url,
   imageSrc,
   chain,
-}: Vault["curators"][string] & { chain: Chain | undefined }) {
+}: Row["curators"][string] & { chain: Chain | undefined }) {
   return (
     <TooltipProvider>
       <Tooltip delayDuration={0}>
@@ -164,11 +167,11 @@ function CuratorTableCell({
 
 function VaultTable({
   chain,
-  vaults,
+  rows,
   depositsMode,
 }: {
   chain: Chain | undefined;
-  vaults: Vault[];
+  rows: Row[];
   depositsMode: "totalAssets" | "maxWithdraw";
 }) {
   return (
@@ -177,49 +180,44 @@ function VaultTable({
         <TableHeader className="bg-secondary">
           <TableRow>
             <TableHead className="text-primary rounded-l-lg pl-4 text-xs font-light">Vault</TableHead>
-            <TableHead className="text-primary text-nowrap text-xs font-light">Deposits</TableHead>
-            <TableHead className="text-primary rounded-r-lg text-xs font-light">Curator</TableHead>
+            <TableHead className="text-primary text-xs font-light">Deposits</TableHead>
+            <TableHead className="text-primary text-xs font-light">Curator</TableHead>
+            <TableHead className="text-primary rounded-r-lg text-xs font-light">APY</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {vaults.map((vault) => {
-            const ownerText = vault.info?.owner
-              ? `${vault.info.owner.slice(0, 6)}...${vault.info.owner.slice(-4)}`
-              : "－";
+          {rows.map((row) => {
+            const ownerText = `${row.vault.owner.slice(0, 6)}...${row.vault.owner.slice(-4)}`;
+            const deposits = depositsMode === "maxWithdraw" ? row.maxWithdraw : row.vault.totalAssets;
             return (
-              <Sheet key={vault.address}>
+              <Sheet key={row.vault.address}>
                 <SheetTrigger asChild>
                   <TableRow className="bg-secondary hover:bg-accent">
                     <TableCell className="rounded-l-lg py-3">
                       <VaultTableCell
-                        address={vault.address}
-                        symbol={vault.info?.name}
-                        imageSrc={vault.imageSrc}
+                        address={row.vault.address}
+                        symbol={row.vault.name}
+                        imageSrc={row.imageSrc}
                         chain={chain}
-                        timelock={vault.info?.timelock}
+                        timelock={row.vault.timelock}
                       />
                     </TableCell>
                     <TableCell>
-                      {vault.info?.[depositsMode] && vault.asset.decimals
-                        ? formatBalanceWithSymbol(
-                            vault.info[depositsMode],
-                            vault.asset.decimals,
-                            vault.asset.symbol,
-                            5,
-                            true,
-                          )
+                      {deposits !== undefined && row.asset.decimals !== undefined
+                        ? formatBalanceWithSymbol(deposits, row.asset.decimals, row.asset.symbol, 5, true)
                         : "－"}
                     </TableCell>
-                    <TableCell className="flex w-min gap-2 rounded-r-lg">
-                      {Object.keys(vault.curators).length > 0
-                        ? Object.values(vault.curators).map((curator) => (
+                    <TableCell className="flex w-min gap-2">
+                      {Object.keys(row.curators).length > 0
+                        ? Object.values(row.curators).map((curator) => (
                             <CuratorTableCell key={curator.name} {...curator} chain={chain} />
                           ))
                         : ownerText}
                     </TableCell>
+                    <TableCell className="rounded-r-lg">{formatApy(row.vault.netApy)}</TableCell>
                   </TableRow>
                 </SheetTrigger>
-                <EarnSheetContent vaultAddress={vault.address} asset={vault.asset} />
+                <EarnSheetContent vaultAddress={row.vault.address} asset={row.asset} />
               </Sheet>
             );
           })}
@@ -229,20 +227,23 @@ function VaultTable({
   );
 }
 
+const STALE_TIME = 5 * 60 * 1000;
+
 export function EarnSubPage() {
   const { status, address: userAddress } = useAccount();
   const { chain } = useOutletContext() as { chain?: Chain };
   const chainId = chain?.id;
 
-  const [factory, factoryV1_1] = useMemo(
+  const [morpho, factory, factoryV1_1] = useMemo(
     () => [
+      getContractDeploymentInfo(chainId, "Morpho"),
       getContractDeploymentInfo(chainId, "MetaMorphoFactory"),
       getContractDeploymentInfo(chainId, "MetaMorphoV1_1Factory"),
     ],
     [chainId],
   );
 
-  // MARK: Fetch `MetaMorphoFactory.CreateMetaMorpho` on all factory versions so that we have all deployments
+  // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {
     logs: { all: createMetaMorphoEvents },
     isFetching: isFetchingCreateMetaMorphoEvents,
@@ -257,72 +258,83 @@ export function EarnSubPage() {
     query: { enabled: chainId !== undefined },
   });
 
-  // MARK: Fetch metadata for every MetaMorpho vault
-  const { data: vaultInfos } = useReadContracts({
-    contracts: createMetaMorphoEvents
-      .map((ev) => [
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "curator" } as const,
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
-        { chainId, address: ev.args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
-        {
-          chainId,
-          address: ev.args.metaMorpho,
-          abi: metaMorphoAbi,
-          functionName: "maxWithdraw",
-          args: [userAddress ?? zeroAddress],
-        } as const,
-        { chainId, ...readWithdrawQueue(ev.args.metaMorpho) },
-      ])
-      .flat(),
-    allowFailure: false,
-    stateOverride: [readWithdrawQueueStateOverride()],
-    query: {
-      refetchOnMount: "always",
-      enabled: !isFetchingCreateMetaMorphoEvents,
-    },
+  // MARK: Fetch additional data for vaults owned by the top 5 curators from core deployments
+  const top5Curators = useTopNCurators({ n: 5, verifiedOnly: true, chainIds: [...CORE_DEPLOYMENTS] });
+  const { data: vaultsData } = useReadContract({
+    chainId,
+    ...readAccrualVaults(
+      morpho?.address ?? "0x",
+      createMetaMorphoEvents.map((ev) => ev.args.metaMorpho),
+      // NOTE: This assumes that if a curator controls an address on one chain, they control it across all chains.
+      top5Curators.flatMap((curator) => curator.addresses?.map((entry) => entry.address as Address) ?? []),
+    ),
+    stateOverride: [readAccrualVaultsStateOverride()],
+    query: { enabled: chainId !== undefined && !isFetchingCreateMetaMorphoEvents && !!morpho?.address },
   });
 
-  // MARK: Only include vaults owned by the top 5 curators from core deployments, or in which the user has deposits.
-  const top5Curators = useTopNCurators({ n: 5, verifiedOnly: true, chainIds: [...CORE_DEPLOYMENTS] });
-  const [filteredCreateMetaMorphoArgs, filteredVaultInfos, vaultCurators, assets] = useMemo(() => {
-    const args: (typeof createMetaMorphoEvents)[number]["args"][] = [];
-    const infos: NonNullable<typeof vaultInfos> = [];
-    const curators: Record<"owner" | "curator", NonNullable<typeof top5Curators>[number] | undefined>[] = [];
+  const marketIds = useMemo(() => [...new Set(vaultsData?.flatMap((d) => d.vault.withdrawQueue) ?? [])], [vaultsData]);
+  const markets = useMarkets({ chainId, marketIds, staleTime: STALE_TIME });
+  const vaults = useMemo(() => {
+    const vaults: AccrualVault[] = [];
+    vaultsData?.forEach((vaultData) => {
+      const { vault: address, supplyQueue, withdrawQueue, ...iVault } = vaultData.vault;
+      // NOTE: pending values are placeholders
+      const vault = new Vault({
+        ...iVault,
+        address,
+        supplyQueue: supplyQueue as MarketId[],
+        withdrawQueue: withdrawQueue as MarketId[],
+        pendingOwner: zeroAddress,
+        pendingGuardian: { value: zeroAddress, validAt: 0n },
+        pendingTimelock: { value: 0n, validAt: 0n },
+      });
 
-    if (vaultInfos !== undefined) {
-      for (let i = 0; i < createMetaMorphoEvents.length; i += 1) {
-        const owner = vaultInfos[i * 7 + 0] as Address;
-        const curator = vaultInfos[i * 7 + 1] as Address;
-        const maxWithdraw = vaultInfos[i * 7 + 5] as bigint;
-
-        const ownerInfo = (top5Curators ?? []).find((top5Curator) =>
-          (top5Curator.addresses ?? []).find((v) => isAddressEqual(v.address as Address, owner)),
-        );
-        const curatorInfo = (top5Curators ?? []).find((top5Curator) =>
-          (top5Curator.addresses ?? []).find((v) => isAddressEqual(v.address as Address, curator)),
-        );
-
-        // NOTE: `curatorInfo` being undefined is NOT a sufficient condition to be included, as it can be
-        // assigned instantly by scammers
-        if (ownerInfo !== undefined || maxWithdraw > 0n) {
-          args.push(createMetaMorphoEvents[i].args);
-          infos.push(...vaultInfos.slice(i * 7, (i + 1) * 7));
-          curators.push({
-            owner: ownerInfo,
-            curator: curatorInfo,
-          });
-        }
+      if (
+        vault.name === "" ||
+        vault.totalAssets === 0n ||
+        markets === undefined ||
+        vaultData.allocations.some((allocation) => markets[allocation.id] === undefined)
+      ) {
+        return;
       }
-    }
 
-    const assets = Array.from(new Set(args.map((x) => x.asset)));
-    return [args, infos, curators, assets];
-  }, [createMetaMorphoEvents, vaultInfos, top5Curators]);
+      // NOTE: pending values and `publicAllocatorConfig` are placeholders
+      const allocations = vaultData.allocations.map((allocation) => {
+        const market = markets[allocation.id];
+
+        return new VaultMarketAllocation({
+          config: new VaultMarketConfig({
+            vault: address,
+            marketId: allocation.id as MarketId,
+            cap: allocation.config.cap,
+            pendingCap: { value: 0n, validAt: 0n },
+            removableAt: allocation.config.removableAt,
+            enabled: allocation.config.enabled,
+            publicAllocatorConfig: new VaultMarketPublicAllocatorConfig({
+              vault: address,
+              marketId: allocation.id as MarketId,
+              maxIn: 0n,
+              maxOut: 0n,
+            }),
+          }),
+          position: new AccrualPosition({ user: address, ...allocation.position }, market),
+        });
+      });
+
+      vaults.push(new AccrualVault(vault, allocations));
+    });
+    vaults.sort((a, b) => (a.netApy > b.netApy ? -1 : 1));
+    return vaults;
+  }, [vaultsData, markets]);
 
   // MARK: Fetch metadata for every ERC20 asset
-  const { data: assetsInfo } = useReadContracts({
+  const assets = useMemo(() => {
+    const assets = [...new Set(vaultsData?.map((vaultData) => vaultData.vault.asset) ?? [])];
+    assets.sort(); // sort so that any query keys derived from this don't change
+    return assets;
+  }, [vaultsData]);
+
+  const { data: assetsData } = useReadContracts({
     contracts: assets
       .map((asset) => [
         { chainId, address: asset, abi: erc20Abi, functionName: "symbol" } as const,
@@ -333,73 +345,76 @@ export function EarnSubPage() {
     query: { staleTime: Infinity, gcTime: Infinity },
   });
 
-  const vaults = useMemo(() => {
-    const arr = filteredCreateMetaMorphoArgs.map((args, idx) => {
-      const assetIdx = assets.indexOf(args.asset);
-      const symbol = assetIdx > -1 ? (assetsInfo?.[assetIdx * 2 + 0].result as string) : undefined;
-      const decimals = assetIdx > -1 ? (assetsInfo?.[assetIdx * 2 + 1].result as number) : undefined;
+  // MARK: Fetch user's balance in each vault
+  const { data: maxWithdrawsData } = useReadContracts({
+    contracts: vaultsData?.map(
+      (vaultData) =>
+        ({
+          chainId,
+          address: vaultData.vault.vault,
+          abi: metaMorphoAbi,
+          functionName: "maxWithdraw",
+          args: userAddress && [userAddress],
+        }) as const,
+    ),
+    allowFailure: false,
+    query: {
+      enabled: chainId !== undefined && !!userAddress,
+      staleTime: STALE_TIME,
+      gcTime: Infinity,
+    },
+  });
 
-      const curators: Vault["curators"] = {};
-      Object.entries(vaultCurators[idx]).forEach(([roleName, curator]) => {
-        if (!curator) return;
+  const maxWithdraws = useMemo(
+    () =>
+      Object.fromEntries(vaultsData?.map((vaultData, idx) => [vaultData.vault.vault, maxWithdrawsData?.[idx]]) ?? []),
+    [vaultsData, maxWithdrawsData],
+  ) as { [vault: Address]: bigint | undefined };
 
-        let address: Address = "0x";
-        switch (roleName) {
-          case "owner":
-            address = filteredVaultInfos[idx * 7 + 0] as Address;
-            break;
-          case "curator":
-            address = filteredVaultInfos[idx * 7 + 1] as Address;
-            break;
+  const rows = useMemo(() => {
+    return vaults.map((vault) => {
+      const assetIdx = assets.indexOf(vault.asset);
+      const symbol = assetIdx > -1 ? (assetsData?.[assetIdx * 2 + 0].result as string) : undefined;
+      const decimals = assetIdx > -1 ? (assetsData?.[assetIdx * 2 + 1].result as number) : undefined;
+
+      const curators: Row["curators"] = {};
+      for (const curator of top5Curators) {
+        for (const roleName of ["owner", "curator", "guardian"] as const) {
+          const address = curator.addresses
+            ?.map((entry) => entry.address as Address)
+            .find((a) => isAddressEqual(a, vault[roleName]));
+          if (!address) continue;
+
+          const roleNameCapitalized = `${roleName.charAt(0).toUpperCase()}${roleName.slice(1)}`;
+          if (curators[curator.name]) {
+            curators[curator.name].roles.push({ name: roleNameCapitalized, address });
+          } else {
+            curators[curator.name] = {
+              name: curator.name,
+              roles: [{ name: roleNameCapitalized, address }],
+              url: curator.url,
+              imageSrc: curator.image,
+            };
+          }
         }
-
-        const roleNameCapitalized = `${roleName.charAt(0).toUpperCase()}${roleName.slice(1)}`;
-        if (curators[curator.name]) {
-          curators[curator.name].roles.push({ name: roleNameCapitalized, address });
-        } else {
-          curators[curator.name] = {
-            name: curator.name,
-            roles: [{ name: roleNameCapitalized, address }],
-            url: curator.url,
-            imageSrc: curator.image,
-          };
-        }
-      });
+      }
 
       return {
-        address: args.metaMorpho,
-        imageSrc: getTokenSymbolURI(symbol),
-        info: filteredVaultInfos
-          ? {
-              owner: filteredVaultInfos[idx * 7 + 0] as Address,
-              curator: filteredVaultInfos[idx * 7 + 1] as Address,
-              timelock: filteredVaultInfos[idx * 7 + 2] as bigint,
-              name: filteredVaultInfos[idx * 7 + 3] as string,
-              totalAssets: filteredVaultInfos[idx * 7 + 4] as bigint,
-              maxWithdraw: userAddress ? (filteredVaultInfos[idx * 7 + 5] as bigint) : 0n,
-            }
-          : undefined,
+        vault,
         asset: {
-          address: args.asset,
+          address: vault.asset,
           imageSrc: getTokenSymbolURI(symbol),
           symbol,
           decimals,
         } as Token,
         curators,
+        maxWithdraw: maxWithdraws[vault.address],
+        imageSrc: getTokenSymbolURI(symbol),
       };
     });
-    // Sort vaults so that ones with an open balance appear first
-    arr.sort((a, b) => {
-      if (!a.info?.maxWithdraw && !b.info?.maxWithdraw) return 0;
-      if (!a.info?.maxWithdraw) return 1;
-      if (!b.info?.maxWithdraw) return -1;
-      return 0;
-    });
-    // Filter out unnamed vaults and vaults with 0 deposits
-    return arr.filter((vault) => vault.info?.name !== "" && !!vault.info?.totalAssets);
-  }, [filteredCreateMetaMorphoArgs, assets, assetsInfo, filteredVaultInfos, userAddress, vaultCurators]);
+  }, [vaults, assets, assetsData, maxWithdraws, top5Curators]);
 
-  const userVaults = vaults.filter((v) => !!v.info?.maxWithdraw);
+  const userRows = rows.filter((row) => !!row.maxWithdraw);
 
   if (status === "connecting") return undefined;
 
@@ -416,14 +431,14 @@ export function EarnSubPage() {
           }}
         />
       ) : (
-        userVaults.length > 0 && (
+        userRows.length > 0 && (
           <div className="flex h-fit w-full max-w-5xl flex-col gap-4 px-8 pb-14 pt-8 md:m-auto md:px-0 dark:bg-neutral-900">
-            <VaultTable chain={chain} vaults={userVaults} depositsMode="maxWithdraw" />
+            <VaultTable chain={chain} rows={userRows} depositsMode="maxWithdraw" />
           </div>
         )
       )}
       <div className="bg-background dark:bg-background/30 flex grow justify-center rounded-t-xl pb-32">
-        <VaultTable chain={chain} vaults={vaults} depositsMode="totalAssets" />
+        <VaultTable chain={chain} rows={rows} depositsMode="totalAssets" />
       </div>
     </div>
   );
