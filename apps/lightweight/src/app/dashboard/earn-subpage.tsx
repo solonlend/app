@@ -1,29 +1,8 @@
 import { metaMorphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho";
 import { metaMorphoFactoryAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho-factory";
-import { Avatar, AvatarFallback, AvatarImage } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
-import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
 import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
 import { readAccrualVaults, readAccrualVaultsStateOverride } from "@morpho-blue-offchain-public/uikit/lens/read-vaults";
-import {
-  formatApy,
-  formatBalanceWithSymbol,
-  getTokenSymbolURI,
-  Token,
-} from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { getTokenSymbolURI, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
 import {
   AccrualPosition,
   AccrualVault,
@@ -33,199 +12,16 @@ import {
   VaultMarketConfig,
   VaultMarketPublicAllocatorConfig,
 } from "@morpho-org/blue-sdk";
-import { blo } from "blo";
-// @ts-expect-error: this package lacks types
-import humanizeDuration from "humanize-duration";
-import { ExternalLink } from "lucide-react";
 import { useMemo } from "react";
 import { useOutletContext } from "react-router";
-import { Address, Chain, erc20Abi, hashMessage, isAddressEqual, zeroAddress } from "viem";
+import { Address, Chain, erc20Abi, isAddressEqual, zeroAddress } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
 import { CtaCard } from "@/components/cta-card";
-import { EarnSheetContent } from "@/components/earn-sheet-content";
+import { EarnTable, Row } from "@/components/earn-table";
 import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo } from "@/lib/constants";
-
-type Row = {
-  vault: AccrualVault;
-  asset: Token;
-  curators: {
-    [name: string]: {
-      name: string;
-      roles: { name: string; address: Address }[];
-      url: string | null;
-      imageSrc: string | null;
-    };
-  };
-  maxWithdraw: bigint | undefined;
-  imageSrc: string;
-};
-
-function VaultTableCell({
-  address,
-  symbol,
-  imageSrc,
-  chain,
-  timelock,
-}: Token & { chain: Chain | undefined; timelock: bigint }) {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="hover:bg-tertiary/15 flex w-min items-center gap-2 rounded-sm p-2">
-            <Avatar className="h-4 w-4 rounded-sm">
-              <AvatarImage src={imageSrc} alt="Avatar" />
-              <AvatarFallback delayMs={500}>
-                <img src={blo(address)} />
-              </AvatarFallback>
-            </Avatar>
-            {symbol ?? "－"}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="text-primary rounded-3xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <p className="underline">Properties</p>
-          <p>Timelock: {humanizeDuration(Number(timelock) * 1000)}</p>
-          <br />
-          <div className="flex items-center gap-1">
-            <p>
-              Vault:{" "}
-              <code>
-                {address.slice(0, 6)}...{address.slice(-4)}
-              </code>
-            </p>
-            {chain?.blockExplorers?.default.url && (
-              <a
-                href={`${chain.blockExplorers.default.url}/address/${address}`}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-function CuratorTableCell({
-  name,
-  roles,
-  url,
-  imageSrc,
-  chain,
-}: Row["curators"][string] & { chain: Chain | undefined }) {
-  return (
-    <TooltipProvider>
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>
-          <div className="hover:bg-tertiary/15 ml-[-8px] flex w-min items-center gap-2 rounded-sm p-2">
-            <Avatar className="h-4 w-4 rounded-sm">
-              <AvatarImage src={imageSrc ?? ""} alt="Avatar" />
-              <AvatarFallback delayMs={500}>
-                <img src={blo(hashMessage(name).padEnd(42, "0").slice(0, 42) as Address)} />
-              </AvatarFallback>
-            </Avatar>
-            {name}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="text-primary rounded-3xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <p className="underline">Roles</p>
-          {roles.map((role) => (
-            <div className="flex items-center gap-1" key={role.name}>
-              <p>
-                {role.name}:{" "}
-                <code>
-                  {role.address.slice(0, 6)}...{role.address.slice(-4)}
-                </code>
-              </p>
-              {chain?.blockExplorers?.default.url && (
-                <a
-                  href={`${chain.blockExplorers.default.url}/address/${role.address}`}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
-            </div>
-          ))}
-          <br />
-          {url != null && (
-            <a className="text-blue-200 underline" href={url} rel="noopener noreferrer" target="_blank">
-              {url}
-            </a>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-function VaultTable({
-  chain,
-  rows,
-  depositsMode,
-}: {
-  chain: Chain | undefined;
-  rows: Row[];
-  depositsMode: "totalAssets" | "maxWithdraw";
-}) {
-  return (
-    <div className="text-primary w-full max-w-5xl px-8 pt-8">
-      <Table className="border-separate border-spacing-y-3">
-        <TableHeader className="bg-secondary">
-          <TableRow>
-            <TableHead className="text-primary rounded-l-lg pl-4 text-xs font-light">Vault</TableHead>
-            <TableHead className="text-primary text-xs font-light">Deposits</TableHead>
-            <TableHead className="text-primary text-xs font-light">Curator</TableHead>
-            <TableHead className="text-primary rounded-r-lg text-xs font-light">APY</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => {
-            const ownerText = `${row.vault.owner.slice(0, 6)}...${row.vault.owner.slice(-4)}`;
-            const deposits = depositsMode === "maxWithdraw" ? row.maxWithdraw : row.vault.totalAssets;
-            return (
-              <Sheet key={row.vault.address}>
-                <SheetTrigger asChild>
-                  <TableRow className="bg-secondary hover:bg-accent">
-                    <TableCell className="rounded-l-lg py-3">
-                      <VaultTableCell
-                        address={row.vault.address}
-                        symbol={row.vault.name}
-                        imageSrc={row.imageSrc}
-                        chain={chain}
-                        timelock={row.vault.timelock}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {deposits !== undefined && row.asset.decimals !== undefined
-                        ? formatBalanceWithSymbol(deposits, row.asset.decimals, row.asset.symbol, 5, true)
-                        : "－"}
-                    </TableCell>
-                    <TableCell className="flex w-min gap-2">
-                      {Object.keys(row.curators).length > 0
-                        ? Object.values(row.curators).map((curator) => (
-                            <CuratorTableCell key={curator.name} {...curator} chain={chain} />
-                          ))
-                        : ownerText}
-                    </TableCell>
-                    <TableCell className="rounded-r-lg">{formatApy(row.vault.netApy)}</TableCell>
-                  </TableRow>
-                </SheetTrigger>
-                <EarnSheetContent vaultAddress={row.vault.address} asset={row.asset} />
-              </Sheet>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
 
 const STALE_TIME = 5 * 60 * 1000;
 
@@ -433,12 +229,12 @@ export function EarnSubPage() {
       ) : (
         userRows.length > 0 && (
           <div className="flex h-fit w-full max-w-5xl flex-col gap-4 px-8 pb-14 pt-8 md:m-auto md:px-0 dark:bg-neutral-900">
-            <VaultTable chain={chain} rows={userRows} depositsMode="maxWithdraw" />
+            <EarnTable chain={chain} rows={userRows} depositsMode="maxWithdraw" />
           </div>
         )
       )}
       <div className="bg-background dark:bg-background/30 flex grow justify-center rounded-t-xl pb-32">
-        <VaultTable chain={chain} rows={rows} depositsMode="totalAssets" />
+        <EarnTable chain={chain} rows={rows} depositsMode="totalAssets" />
       </div>
     </div>
   );
