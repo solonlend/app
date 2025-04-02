@@ -34,27 +34,6 @@ struct MarketConfig {
     uint64 removableAt;
 }
 
-
-/**
-name
-symbol
-owner
-curator
-guardian
-skimRecipient
-feeRecipient
-timelock
-fee
-pendingOwner
-pendingGuardian
-pendingTimelock
-supplyQueue
-withdrawQueue
-lastTotalAssets
-lostAssets
-publicAllocatorConfig
-*/
-
 interface IMorpho {
     function position(Id id, address user) external view returns (Position memory p);
     function market(Id id) external view returns (Market memory m);
