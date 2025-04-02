@@ -21,7 +21,7 @@ import { CtaCard } from "@/components/cta-card";
 import { EarnTable, Row } from "@/components/earn-table";
 import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
-import { CORE_DEPLOYMENTS, getContractDeploymentInfo } from "@/lib/constants";
+import { CORE_DEPLOYMENTS, getContractDeploymentInfo, MIN_TIMELOCK } from "@/lib/constants";
 
 const STALE_TIME = 5 * 60 * 1000;
 
@@ -88,6 +88,7 @@ export function EarnSubPage() {
       if (
         vault.name === "" ||
         vault.totalAssets === 0n ||
+        vault.timelock < MIN_TIMELOCK ||
         markets === undefined ||
         vaultData.allocations.some((allocation) => markets[allocation.id] === undefined)
       ) {

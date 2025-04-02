@@ -96,6 +96,8 @@ export const DEPLOYMENTS: Deployments = {
 
 export const DEFAULT_CHAIN = polygon;
 
+export const MIN_TIMELOCK = 3 * 24 * 60 * 60;
+
 export const CORE_DEPLOYMENTS = new Set<keyof Deployments>([mainnet.id, base.id]);
 
 export const BATCH1_DEPLOYMENTS = new Set<keyof Deployments>([
