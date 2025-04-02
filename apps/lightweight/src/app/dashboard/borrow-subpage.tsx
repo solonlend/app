@@ -35,7 +35,7 @@ export function BorrowSubPage() {
   // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {
     logs: { all: createMetaMorphoEvents },
-    isFetching: isFetchingCreateMetaMorphoEvents,
+    fractionFetched,
   } = useContractEvents({
     chainId,
     abi: metaMorphoFactoryAbi,
@@ -58,7 +58,12 @@ export function BorrowSubPage() {
       top5Curators.flatMap((curator) => curator.addresses?.map((entry) => entry.address as Address) ?? []),
     ),
     stateOverride: [readAccrualVaultsStateOverride()],
-    query: { enabled: chainId !== undefined && !isFetchingCreateMetaMorphoEvents && !!morpho?.address },
+    query: {
+      enabled: chainId !== undefined && fractionFetched > 0.99 && !!morpho?.address,
+      staleTime: STALE_TIME,
+      gcTime: Infinity,
+      notifyOnChangeProps: ["data"],
+    },
   });
 
   const marketIds = useMemo(() => [...new Set(vaultsData?.flatMap((d) => d.vault.withdrawQueue) ?? [])], [vaultsData]);
@@ -153,7 +158,7 @@ export function BorrowSubPage() {
     return map;
   }, [marketsArr, erc20Symbols, erc20Decimals]);
 
-  if (status === "connecting") return undefined;
+  if (status === "reconnecting") return undefined;
 
   const userMarkets = marketsArr.filter((market) => positions?.get(market.id)?.collateral ?? 0n >= 0n);
 
