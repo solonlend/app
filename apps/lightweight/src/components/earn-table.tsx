@@ -19,7 +19,7 @@ import { AccrualVault } from "@morpho-org/blue-sdk";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
-import { ExternalLink } from "lucide-react";
+import { DollarSign, ExternalLink, SignalHigh } from "lucide-react";
 import { Chain, hashMessage, Address } from "viem";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
@@ -141,6 +141,39 @@ function CuratorTableCell({
   );
 }
 
+function ApyTableCell({ vault }: Pick<Row, "vault">) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="hover:bg-tertiary/15 ml-[-8px] flex w-min items-center gap-2 rounded-sm p-2">
+            {formatApy(vault.netApy)}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="text-primary rounded-3xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex w-[240px] flex-col gap-3">
+            <div className="flex justify-between">
+              <div className="flex items-end font-light">
+                <SignalHigh size={18} />
+                Native APY
+              </div>
+              {formatApy(vault.apy)}
+            </div>
+            <div className="flex justify-between">
+              <div className="flex items-end font-light">
+                <DollarSign size={18} />
+                Performance Fee
+                <div className="bg-foreground/25 mx-1 rounded-sm px-0.5">{formatApy(vault.fee)}</div>
+              </div>
+              {formatApy((vault.fee * vault.apy) / 1_000_000_000_000_000_000n)}
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 export function EarnTable({
   chain,
   rows,
@@ -190,7 +223,9 @@ export function EarnTable({
                           ))
                         : ownerText}
                     </TableCell>
-                    <TableCell className="rounded-r-lg">{formatApy(row.vault.netApy)}</TableCell>
+                    <TableCell className="rounded-r-lg">
+                      <ApyTableCell vault={row.vault} />
+                    </TableCell>
                   </TableRow>
                 </SheetTrigger>
                 <EarnSheetContent vaultAddress={row.vault.address} asset={row.asset} />
