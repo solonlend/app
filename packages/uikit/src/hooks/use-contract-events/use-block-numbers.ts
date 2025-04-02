@@ -49,6 +49,9 @@ export function useBlockNumbers<T extends Tuple<BlockNumber | BlockTag>, U = Map
           }
           const publicClient = meta.publicClient as NonNullable<UsePublicClientReturnType>;
           const blockTag = queryKey[2] as BlockTag;
+          if (blockTag === "latest") {
+            return publicClient.getBlockNumber(); // This results in smaller response size than fetching whole block
+          }
           return (await publicClient.getBlock({ blockTag, includeTransactions: false })).number!;
         },
         enabled: publicClient !== undefined && (query?.enabled ?? true),
