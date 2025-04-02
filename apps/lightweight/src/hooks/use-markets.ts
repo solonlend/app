@@ -1,5 +1,6 @@
 import { adaptiveCurveIrmAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/adaptive-curve-irm";
 import { morphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/morpho";
+import { oracleAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/oracle";
 import { restructure } from "@morpho-blue-offchain-public/uikit/lib/restructure";
 import { Market, MarketParams } from "@morpho-org/blue-sdk";
 import { useMemo } from "react";
@@ -11,10 +12,12 @@ import { getContractDeploymentInfo } from "@/lib/constants";
 export function useMarkets({
   chainId,
   marketIds,
+  fetchPrices,
   staleTime = 5 * 60 * 1000,
 }: {
   chainId: number | undefined;
   marketIds: Hex[];
+  fetchPrices?: boolean;
   staleTime?: number;
 }) {
   const morpho = useMemo(() => getContractDeploymentInfo(chainId, "Morpho"), [chainId]);
@@ -82,12 +85,25 @@ export function useMarkets({
     },
   });
 
+  const { data: prices } = useReadContracts({
+    contracts: marketParamsData?.map(
+      (params) => ({ chainId, address: params.oracle, abi: oracleAbi, functionName: "price" }) as const,
+    ),
+    allowFailure: true,
+    query: {
+      enabled: chainId !== undefined && marketParamsData !== undefined && fetchPrices,
+      staleTime,
+      gcTime: Infinity,
+    },
+  });
+
   const markets = useMemo(() => {
     const markets: Record<Hex, Market> = {};
     for (let i = 0; i < marketIds.length; i += 1) {
       const marketParams = marketParamsData?.at(i);
       const market = marketsData?.at(i);
       const rateAtTarget = rateAtTargets?.at(i);
+      const price = prices?.at(i);
       if (marketParams === undefined || market === undefined) continue;
 
       markets[marketIds[i]] = new Market({
@@ -95,10 +111,12 @@ export function useMarkets({
         params: new MarketParams(marketParams),
         // NOTE: undefined here implies it's still fetching, NOT that it's a different IRM
         rateAtTarget: rateAtTarget?.result,
+        // NOTE: only fetched if `fetchPrices` is set to `true`
+        price: price?.result,
       });
     }
     return markets;
-  }, [marketIds, marketParamsData, marketsData, rateAtTargets]);
+  }, [marketIds, marketParamsData, marketsData, rateAtTargets, prices]);
 
   return markets;
 }

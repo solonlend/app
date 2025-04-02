@@ -4,13 +4,13 @@ import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-cont
 import { readAccrualVaults, readAccrualVaultsStateOverride } from "@morpho-blue-offchain-public/uikit/lens/read-vaults";
 import { restructure } from "@morpho-blue-offchain-public/uikit/lib/restructure";
 import { getTokenSymbolURI, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { keepPreviousData } from "@tanstack/react-query";
+import { AccrualPosition } from "@morpho-org/blue-sdk";
 import { useMemo } from "react";
 import { useOutletContext } from "react-router";
-import { Address, erc20Abi, Chain } from "viem";
+import { type Address, erc20Abi, type Chain, zeroAddress, type Hex } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
-import { BorrowTable } from "@/components/borrow-table";
+import { BorrowPositionTable, BorrowTable } from "@/components/borrow-table";
 import { CtaCard } from "@/components/cta-card";
 import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
@@ -62,9 +62,15 @@ export function BorrowSubPage() {
   });
 
   const marketIds = useMemo(() => [...new Set(vaultsData?.flatMap((d) => d.vault.withdrawQueue) ?? [])], [vaultsData]);
-  const markets = useMarkets({ chainId, marketIds, staleTime: STALE_TIME });
+  const markets = useMarkets({ chainId, marketIds, staleTime: STALE_TIME, fetchPrices: true });
   const marketsArr = useMemo(() => {
-    const marketsArr = Object.values(markets);
+    const marketsArr = Object.values(markets).filter(
+      (market) =>
+        market.liquidity > 0n &&
+        ![market.params.collateralToken, market.params.loanToken, market.params.irm, market.params.oracle].includes(
+          zeroAddress,
+        ),
+    );
     marketsArr.sort((a, b) => (a.borrowApy > b.borrowApy ? -1 : 1));
     return marketsArr;
   }, [markets]);
@@ -91,7 +97,7 @@ export function BorrowSubPage() {
     query: { staleTime: Infinity, gcTime: Infinity },
   });
 
-  const { data: positions, refetch: refetchPositions } = useReadContracts({
+  const { data: positionsRaw, refetch: refetchPositionsRaw } = useReadContracts({
     contracts: marketsArr.map(
       (market) =>
         ({
@@ -106,13 +112,25 @@ export function BorrowSubPage() {
     query: {
       staleTime: 1 * 60 * 1000,
       gcTime: Infinity,
-      placeholderData: keepPreviousData,
       enabled: !!morpho,
       select(data) {
         return data.map((x) => restructure(x, { abi: morphoAbi, name: "position", args: ["0x", "0x"] }));
       },
     },
   });
+
+  const positions = useMemo(() => {
+    if (marketsArr.length === 0 || positionsRaw === undefined || userAddress === undefined) {
+      return undefined;
+    }
+
+    const map = new Map<Hex, AccrualPosition>();
+    positionsRaw?.forEach((positionRaw, idx) => {
+      const market = marketsArr[idx];
+      map.set(market.id, new AccrualPosition({ user: userAddress, ...positionRaw }, market));
+    });
+    return map;
+  }, [marketsArr, positionsRaw, userAddress]);
 
   const tokens = useMemo(() => {
     const map = new Map<Address, Token>();
@@ -137,6 +155,8 @@ export function BorrowSubPage() {
 
   if (status === "connecting") return undefined;
 
+  const userMarkets = marketsArr.filter((market) => positions?.get(market.id)?.collateral ?? 0n >= 0n);
+
   return (
     <div className="flex min-h-screen flex-col px-2.5 pt-16">
       {status === "disconnected" ? (
@@ -150,11 +170,22 @@ export function BorrowSubPage() {
           }}
         />
       ) : (
-        <div className="flex h-fit w-full max-w-5xl flex-col gap-4 px-8 pb-14 pt-8 md:m-auto md:px-0 dark:bg-neutral-900"></div>
+        userMarkets.length > 0 && (
+          <div className="flex h-fit w-full max-w-5xl flex-col gap-4 px-8 pb-14 pt-8 md:m-auto md:px-0 dark:bg-neutral-900">
+            <div className="text-primary w-full max-w-5xl px-8 pt-8">
+              <BorrowPositionTable
+                markets={userMarkets}
+                tokens={tokens}
+                positions={positions}
+                refetchPositions={refetchPositionsRaw}
+              />
+            </div>
+          </div>
+        )
       )}
       <div className="bg-background dark:bg-background/30 flex grow justify-center rounded-t-xl pb-32">
-        <div className="text-primary w-full max-w-5xl px-8 pb-32 pt-8">
-          <BorrowTable markets={marketsArr} tokens={tokens} positions={positions} refetchPositions={refetchPositions} />
+        <div className="text-primary w-full max-w-5xl px-8 pt-8">
+          <BorrowTable markets={marketsArr} tokens={tokens} refetchPositions={refetchPositionsRaw} />
         </div>
       </div>
     </div>

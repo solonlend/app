@@ -146,11 +146,11 @@ const wagmiConfig = createConfig(
     appIcon: "", // TODO:
     batch: {
       multicall: {
-        batchSize: 8192,
-        wait: 100,
+        batchSize: 2 ** 16,
+        wait: 250,
       },
     },
-    cacheTime: 250,
+    cacheTime: 500,
     pollingInterval: 4000,
     ssr: import.meta.env.SSR,
   }),
