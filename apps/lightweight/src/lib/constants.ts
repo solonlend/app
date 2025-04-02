@@ -35,6 +35,7 @@ export const GITHUB_REPO_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO
 
 export const TERMS_OF_USE = "https://cdn.morpho.org/documents/Morpho_Terms_of_Use.pdf";
 export const RISKS_DOCUMENTATION = "https://docs.morpho.org/overview/resources/risks/";
+export const ADDRESSES_DOCUMENTATION = "https://docs.morpho.org/overview/resources/addresses/";
 
 export const DEPLOYMENTS: Deployments = {
   [mainnet.id]: {

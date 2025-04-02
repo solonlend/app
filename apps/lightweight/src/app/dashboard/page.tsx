@@ -3,12 +3,14 @@ import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/but
 import { WalletMenu } from "@morpho-blue-offchain-public/uikit/components/wallet-menu";
 import { getChainSlug } from "@morpho-blue-offchain-public/uikit/lib/utils";
 import { ConnectKitButton } from "connectkit";
+import { ExternalLink } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router";
 import { useChains } from "wagmi";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { ADDRESSES_DOCUMENTATION } from "@/lib/constants";
 
 enum SubPage {
   Earn = "earn",
@@ -78,6 +80,14 @@ export default function Page() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="tertiary"
+            size="lg"
+            className="rounded-full font-light"
+            onClick={() => window.open(ADDRESSES_DOCUMENTATION, "_blank", "noopener,noreferrer")}
+          >
+            Docs <ExternalLink />
+          </Button>
           <WalletMenu
             selectedChainSlug={selectedChainSlug!}
             setSelectedChainSlug={setSelectedChainSlug}
