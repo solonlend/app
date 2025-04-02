@@ -1,21 +1,51 @@
-import { type Address, getContractAddress, type Hex, hexToBigInt, type StateOverride, zeroAddress } from "viem";
+import { type Address, getContractAddress, type Hex, hexToBigInt, type StateOverride } from "viem";
 
+import { CREATE2_FACTORY, CREATE2_SALT } from "@/lens/constants";
 import { Lens } from "@/lens/read-vaults.s.sol";
 
 const address = getContractAddress({
   bytecode: Lens.bytecode,
-  from: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+  from: CREATE2_FACTORY,
   opcode: "CREATE2",
-  salt: `${zeroAddress}51A1E51A1E51A1E51A1E51A1`,
+  salt: CREATE2_SALT,
 });
 
 // NOTE: If type inference isn't working, ensure contract *does not* use named return values!
 
 /**
- * IMPORTANT: `deployless` mode is incompatible with multicall / `useReadContracts`. In `useReadContracts`,
- * it will cause an error and resend each `eth_call` individually to try to correct it, resulting in
- * (potentially many) extra RPC calls. Instead, you should use an ordinary call with a `StateOverride` for
- * the entire multicall call. See `readAccrualVaultsStateOverride()`.
+ * Reads vault data for each `IMetaMorpho` entry that has an owner in `includedOwners`. For non-included ones,
+ * only the `owner` field is read to save gas.
+ *
+ * @param metaMorphos Array of `IMetaMorpho`s to search through and (possibly) read as a vault.
+ * @param includedOwners Array of owners whose vaults should be included in the returned array.
+ * This helper function will make sure it's unique and sorted before passing to contract.
+ *
+ * @example
+ * // Use with viem's deployless option (special bytecode `data` for `eth_call`; `to` is left undefined)
+ * const { data } = useReadContract({
+ *   chainId,
+ *   ...readAccrualVaults(morphoAddress, metaMorphoAddresses, includedOwnersList, true),
+ * });
+ *
+ * @example
+ * // Use with `stateOverride`
+ * const { data } = useReadContract({
+ *   chainId,
+ *   ...readAccrualVaults(morphoAddress, metaMorphoAddresses, includedOwnersList),
+ *   stateOverride: [readAccrualVaultsStateOverride()],
+ * });
+ *
+ * @example
+ * // Use with multicall -- MUST use `stateOverride` rather than viem's deployless option
+ * const { data } = useReadContracts({
+ *   contracts: includedOwnersLists
+ *     .map((includedOwnersList) => [
+ *       { chainId, ...readAccrualVaults(morphoAddress, metaMorphoAddresses, includedOwnersList) },
+ *     ])
+ *     .flat(),
+ *   allowFailure: false,
+ *   stateOverride: [readAccrualVaultsStateOverride()],
+ * });
  */
 export function readAccrualVaults(
   morpho: Address,

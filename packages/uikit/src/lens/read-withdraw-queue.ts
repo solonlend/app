@@ -1,21 +1,49 @@
-import { type Address, getContractAddress, type Hex, type StateOverride, zeroAddress } from "viem";
+import { type Address, getContractAddress, type Hex, type StateOverride } from "viem";
 
+import { CREATE2_FACTORY, CREATE2_SALT } from "@/lens/constants";
 import { Lens } from "@/lens/read-withdraw-queue.s.sol";
 
 const address = getContractAddress({
   bytecode: Lens.bytecode,
-  from: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+  from: CREATE2_FACTORY,
   opcode: "CREATE2",
-  salt: `${zeroAddress}51A1E51A1E51A1E51A1E51A1`,
+  salt: CREATE2_SALT,
 });
 
 // NOTE: If type inference isn't working, ensure contract *does not* use named return values!
 
 /**
- * IMPORTANT: `deployless` mode is incompatible with multicall / `useReadContracts`. In `useReadContracts`,
- * it will cause an error and resend each `eth_call` individually to try to correct it, resulting in
- * (potentially many) extra RPC calls. Instead, you should use an ordinary call with a `StateOverride` for
- * the entire multicall call. See `readWithdrawQueueStateOverride()`.
+ * Reads a vault's entire `withdrawQueue` with a single call
+ *
+ * @param metaMorpho The address of the vault to read from.
+ *
+ * @example
+ * // Use with viem's deployless option (special bytecode `data` for `eth_call`; `to` is left undefined)
+ * const { data } = useReadContract({
+ *   chainId,
+ *   ...readWithdrawQueue(metaMorphoAddress, true),
+ * });
+ *
+ * @example
+ * // Use with `stateOverride`
+ * const { data } = useReadContract({
+ *   chainId,
+ *   ...readWithdrawQueue(metaMorphoAddress),
+ *   stateOverride: [readWithdrawQueueStateOverride()],
+ * });
+ *
+ * @example
+ * // Use with multicall -- MUST use `stateOverride` rather than viem's deployless option
+ * const { data } = useReadContracts({
+ *   contracts: metaMorphoAddresses
+ *     .map((address) => [
+ *       { chainId, address, abi: metaMorphoAbi, functionName: "maxWithdraw", args: [userAddress] },
+ *       { chainId, ...readWithdrawQueue(address) },
+ *     ])
+ *     .flat(),
+ *   allowFailure: false,
+ *   stateOverride: [readWithdrawQueueStateOverride()],
+ * });
  */
 export function readWithdrawQueue(
   metaMorpho: Address,
