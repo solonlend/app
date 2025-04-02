@@ -53,7 +53,7 @@ function VaultTableCell({
           <div className="hover:bg-tertiary/15 flex w-min items-center gap-2 rounded-sm p-2">
             <Avatar className="h-4 w-4 rounded-sm">
               <AvatarImage src={imageSrc} alt="Avatar" />
-              <AvatarFallback delayMs={500}>
+              <AvatarFallback delayMs={1000}>
                 <img src={blo(address)} />
               </AvatarFallback>
             </Avatar>

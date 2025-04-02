@@ -1,58 +1,20 @@
 import { metaMorphoFactoryAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho-factory";
 import { morphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/morpho";
-import { Avatar, AvatarFallback, AvatarImage } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
-import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
 import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
 import { readAccrualVaults, readAccrualVaultsStateOverride } from "@morpho-blue-offchain-public/uikit/lens/read-vaults";
-import {
-  formatBalanceWithSymbol,
-  formatApy,
-  formatLtv,
-  getTokenSymbolURI,
-  Token,
-} from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { restructure } from "@morpho-blue-offchain-public/uikit/lib/restructure";
+import { getTokenSymbolURI, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
 import { keepPreviousData } from "@tanstack/react-query";
-import { blo } from "blo";
-import { Eye, Info } from "lucide-react";
 import { useMemo } from "react";
 import { useOutletContext } from "react-router";
 import { Address, erc20Abi, Chain } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
-import { BorrowSheetContent } from "@/components/borrow-sheet-content";
+import { BorrowTable } from "@/components/borrow-table";
 import { CtaCard } from "@/components/cta-card";
 import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo } from "@/lib/constants";
-
-function TokenTableCell({ address, symbol, imageSrc }: Token) {
-  return (
-    <div className="flex items-center gap-2">
-      <Avatar className="h-4 w-4 rounded-sm">
-        <AvatarImage src={imageSrc} alt="Avatar" />
-        <AvatarFallback delayMs={500}>
-          <img src={blo(address)} />
-        </AvatarFallback>
-      </Avatar>
-      {symbol ?? "－"}
-      <span className="text-primary/30 font-mono">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
-    </div>
-  );
-}
 
 const STALE_TIME = 5 * 60 * 1000;
 
@@ -129,7 +91,7 @@ export function BorrowSubPage() {
     query: { staleTime: Infinity, gcTime: Infinity },
   });
 
-  const { data: positionsRaw, refetch: refetchPositionsRaw } = useReadContracts({
+  const { data: positions, refetch: refetchPositions } = useReadContracts({
     contracts: marketsArr.map(
       (market) =>
         ({
@@ -141,7 +103,15 @@ export function BorrowSubPage() {
         }) as const,
     ),
     allowFailure: false,
-    query: { staleTime: 1 * 60 * 1000, gcTime: Infinity, placeholderData: keepPreviousData, enabled: !!morpho },
+    query: {
+      staleTime: 1 * 60 * 1000,
+      gcTime: Infinity,
+      placeholderData: keepPreviousData,
+      enabled: !!morpho,
+      select(data) {
+        return data.map((x) => restructure(x, { abi: morphoAbi, name: "position", args: ["0x", "0x"] }));
+      },
+    },
   });
 
   const tokens = useMemo(() => {
@@ -184,115 +154,7 @@ export function BorrowSubPage() {
       )}
       <div className="bg-background dark:bg-background/30 flex grow justify-center rounded-t-xl pb-32">
         <div className="text-primary w-full max-w-5xl px-8 pb-32 pt-8">
-          <Table className="border-separate border-spacing-y-3">
-            <TableHeader className="bg-secondary">
-              <TableRow>
-                <TableHead className="text-primary rounded-l-lg pl-4 text-xs font-light">Collateral</TableHead>
-                <TableHead className="text-primary text-xs font-light">Loan</TableHead>
-                <TableHead className="text-primary text-xs font-light">LLTV</TableHead>
-                <TableHead className="text-primary text-xs font-light">Position</TableHead>
-                <TableHead className="text-primary text-xs font-light">
-                  <div className="flex items-center gap-1">
-                    Liquidity
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-4 w-4" />
-                        </TooltipTrigger>
-                        <TooltipContent className="text-primary max-w-56 rounded-3xl p-4 font-mono shadow-2xl">
-                          This value will be smaller than that of the full app. It doesn't include shared market
-                          liquidity which could be reallocated upon borrow.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </TableHead>
-                <TableHead className="text-primary rounded-r-lg text-xs font-light">Rate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {marketsArr.map((market, idx) => (
-                <Sheet
-                  key={market.id}
-                  onOpenChange={(isOpen) => {
-                    // Refetch positions on sidesheet close, since user may have sent txns to modify one
-                    if (!isOpen) void refetchPositionsRaw();
-                  }}
-                >
-                  <SheetTrigger asChild>
-                    <TableRow className="bg-secondary">
-                      <TableCell className="rounded-l-lg p-5">
-                        <TokenTableCell {...tokens.get(market.params.collateralToken)!} />
-                      </TableCell>
-                      <TableCell>
-                        <TokenTableCell {...tokens.get(market.params.loanToken)!} />
-                      </TableCell>
-                      <TableCell>{formatLtv(market.params.lltv)}</TableCell>
-                      <TableCell>
-                        {
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Eye className="h-4 w-4" />
-                              </TooltipTrigger>
-                              <TooltipContent className="text-primary max-w-56 rounded-3xl p-4 font-mono shadow-2xl">
-                                <h3>Collateral</h3>
-                                <p>
-                                  {positionsRaw && tokens.get(market.params.collateralToken)?.decimals !== undefined
-                                    ? formatBalanceWithSymbol(
-                                        positionsRaw[idx][2],
-                                        tokens.get(market.params.collateralToken)!.decimals!,
-                                        tokens.get(market.params.collateralToken)!.symbol,
-                                        5,
-                                        true,
-                                      )
-                                    : "－"}
-                                </p>
-                                <h3 className="pt-3">Borrows</h3>
-                                <p>
-                                  {markets &&
-                                  positionsRaw &&
-                                  tokens.get(market.params.loanToken)?.decimals !== undefined
-                                    ? formatBalanceWithSymbol(
-                                        market.toBorrowAssets(positionsRaw[idx][1]),
-                                        tokens.get(market.params.loanToken)!.decimals!,
-                                        tokens.get(market.params.loanToken)!.symbol,
-                                        5,
-                                        true,
-                                      )
-                                    : "－"}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        }
-                      </TableCell>
-                      <TableCell>
-                        {markets && tokens.get(market.params.loanToken)?.decimals !== undefined
-                          ? formatBalanceWithSymbol(
-                              market.liquidity,
-                              tokens.get(market.params.loanToken)!.decimals!,
-                              tokens.get(market.params.loanToken)!.symbol,
-                              5,
-                              true,
-                            )
-                          : "－"}
-                      </TableCell>
-                      <TableCell className="rounded-r-lg">
-                        {market.borrowApy ? `${formatApy(market.borrowApy)}` : "－"}
-                      </TableCell>
-                    </TableRow>
-                  </SheetTrigger>
-                  <BorrowSheetContent
-                    marketId={market.id}
-                    marketParams={market.params}
-                    imarket={market}
-                    tokens={tokens}
-                  />
-                </Sheet>
-              ))}
-            </TableBody>
-          </Table>
+          <BorrowTable markets={marketsArr} tokens={tokens} positions={positions} refetchPositions={refetchPositions} />
         </div>
       </div>
     </div>
