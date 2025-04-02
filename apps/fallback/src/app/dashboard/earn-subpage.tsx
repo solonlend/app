@@ -63,6 +63,7 @@ export function EarnSubPage() {
     isFetching: isFetchingCreateMetaMorphoEvents,
     fractionFetched: ffCreateMetaMorphoEvents,
   } = useContractEvents({
+    chainId,
     abi: metaMorphoFactoryAbi,
     address: factoryV1_1 ? [factoryV1_1.address].concat(factory ? [factory.address] : []) : [],
     fromBlock: factory?.fromBlock ?? factoryV1_1?.fromBlock,
@@ -78,6 +79,7 @@ export function EarnSubPage() {
     isFetching: isFetchingDepositEvents,
     fractionFetched: ffDepositEvents,
   } = useContractEvents({
+    chainId,
     abi: erc4626Abi,
     fromBlock: factory?.fromBlock ?? factoryV1_1?.fromBlock,
     reverseChronologicalOrder: true,
@@ -106,8 +108,8 @@ export function EarnSubPage() {
   const { data: assetsInfo, isFetching: isFetchingAssetsInfo } = useReadContracts({
     contracts: assets
       .map((asset) => [
-        { address: asset, abi: erc20Abi, functionName: "symbol" } as const,
-        { address: asset, abi: erc20Abi, functionName: "decimals" } as const,
+        { chainId, address: asset, abi: erc20Abi, functionName: "symbol" } as const,
+        { chainId, address: asset, abi: erc20Abi, functionName: "decimals" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -118,13 +120,14 @@ export function EarnSubPage() {
   const { data: vaultsInfo, isFetching: isFetchingVaultsInfo } = useReadContracts({
     contracts: filteredCreateMetaMorphoArgs
       .map((args) => [
-        { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
-        { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "curator" } as const,
-        { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "guardian" } as const,
-        { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
-        { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
-        { address: args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
+        { chainId, address: args.metaMorpho, abi: metaMorphoAbi, functionName: "owner" } as const,
+        { chainId, address: args.metaMorpho, abi: metaMorphoAbi, functionName: "curator" } as const,
+        { chainId, address: args.metaMorpho, abi: metaMorphoAbi, functionName: "guardian" } as const,
+        { chainId, address: args.metaMorpho, abi: metaMorphoAbi, functionName: "timelock" } as const,
+        { chainId, address: args.metaMorpho, abi: metaMorphoAbi, functionName: "name" } as const,
+        { chainId, address: args.metaMorpho, abi: metaMorphoAbi, functionName: "totalAssets" } as const,
         {
+          chainId,
           address: args.metaMorpho,
           abi: metaMorphoAbi,
           functionName: "maxWithdraw",

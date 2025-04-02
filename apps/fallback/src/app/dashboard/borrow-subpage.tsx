@@ -66,6 +66,7 @@ export function BorrowSubPage() {
     isFetching: isFetchingSupplyCollateralEvents,
     fractionFetched: ffSupplyCollateralEvents,
   } = useContractEvents({
+    chainId,
     abi: morphoAbi,
     address: morpho?.address,
     fromBlock: morpho?.fromBlock,
@@ -90,6 +91,7 @@ export function BorrowSubPage() {
     contracts: marketIds.map(
       (marketId) =>
         ({
+          chainId,
           address: morpho?.address ?? "0x",
           abi: morphoAbi,
           functionName: "idToMarketParams",
@@ -118,8 +120,8 @@ export function BorrowSubPage() {
   const { data: erc20Symbols, isFetching: isFetchingErc20Symbols } = useReadContracts({
     contracts: filteredCreateMarketArgs
       .map((args) => [
-        { address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
-        { address: args.marketParams.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
+        { chainId, address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "symbol" } as const,
+        { chainId, address: args.marketParams.loanToken, abi: erc20Abi, functionName: "symbol" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -129,8 +131,8 @@ export function BorrowSubPage() {
   const { data: erc20Decimals, isFetching: isFetchingErc20Decimals } = useReadContracts({
     contracts: filteredCreateMarketArgs
       .map((args) => [
-        { address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
-        { address: args.marketParams.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
+        { chainId, address: args.marketParams.collateralToken, abi: erc20Abi, functionName: "decimals" } as const,
+        { chainId, address: args.marketParams.loanToken, abi: erc20Abi, functionName: "decimals" } as const,
       ])
       .flat(),
     allowFailure: true,
@@ -141,6 +143,7 @@ export function BorrowSubPage() {
     contracts: filteredCreateMarketArgs.map(
       (args) =>
         ({
+          chainId,
           address: morpho?.address ?? "0x",
           abi: morphoAbi,
           functionName: "market",
@@ -155,6 +158,7 @@ export function BorrowSubPage() {
     contracts: filteredCreateMarketArgs.map(
       (args) =>
         ({
+          chainId,
           address: morpho?.address ?? "0x",
           abi: morphoAbi,
           functionName: "position",

@@ -62,7 +62,7 @@ export function useGhDeployments({
     },
     staleTime: 10 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchOnMount: "always",
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
