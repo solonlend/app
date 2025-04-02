@@ -18,10 +18,10 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { CircleArrowLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Toaster } from "sonner";
-import { Address, erc20Abi, extractChain, parseUnits } from "viem";
-import { useAccount, useChainId, useChains, useReadContract, useReadContracts } from "wagmi";
+import { Address, erc20Abi, parseUnits } from "viem";
+import { useAccount, useChainId, useReadContract, useReadContracts } from "wagmi";
 
-import { getContractDeploymentInfo } from "@/lib/constants";
+import { getContractDeploymentInfo, RISKS_DOCUMENTATION } from "@/lib/constants";
 
 enum Actions {
   SupplyCollateral = "Supply",
@@ -42,8 +42,6 @@ export function BorrowSheetContent({
   tokens: Map<Address, Token>;
 }) {
   const chainId = useChainId();
-  const chains = useChains();
-  const chain = extractChain({ chains, id: chainId });
   const { address: userAddress } = useAccount();
 
   const [selectedTab, setSelectedTab] = useState(Actions.SupplyCollateral);
@@ -191,20 +189,14 @@ export function BorrowSheetContent({
   const repayMax = accrualPosition?.borrowAssets;
 
   return (
-    <SheetContent className="z-[9999] gap-3 overflow-y-scroll dark:bg-neutral-900">
+    <SheetContent className="z-[9999] gap-3 overflow-y-scroll sm:min-w-[500px] dark:bg-neutral-900">
       <Toaster theme="dark" position="bottom-left" richColors />
       <SheetHeader>
         <SheetTitle>Your Position</SheetTitle>
         <SheetDescription>
-          You can view your position here, and take actions that increase its health. To access all features (including
-          borrowing) open this market in the{" "}
-          <a
-            className="underline"
-            href={`https://app.morpho.org/${chain.name.toLowerCase()}/market/${marketId}`}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            full app.
+          You can view and edit your position here. To understand more about risks, please visit our{" "}
+          <a className="underline" href={RISKS_DOCUMENTATION} rel="noopener noreferrer" target="_blank">
+            docs.
           </a>
         </SheetDescription>
       </SheetHeader>

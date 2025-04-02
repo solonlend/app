@@ -15,8 +15,10 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { CircleArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Toaster } from "sonner";
-import { Address, erc20Abi, erc4626Abi, extractChain, parseUnits } from "viem";
-import { useAccount, useChainId, useChains, useReadContract, useReadContracts } from "wagmi";
+import { Address, erc20Abi, erc4626Abi, parseUnits } from "viem";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
+
+import { RISKS_DOCUMENTATION } from "@/lib/constants";
 
 enum Actions {
   Deposit = "Deposit",
@@ -24,9 +26,6 @@ enum Actions {
 }
 
 export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Address; asset: Token }) {
-  const chainId = useChainId();
-  const chains = useChains();
-  const chain = extractChain({ chains, id: chainId });
   const { address: userAddress } = useAccount();
 
   const [selectedTab, setSelectedTab] = useState(Actions.Deposit);
@@ -91,20 +90,14 @@ export function EarnSheetContent({ vaultAddress, asset }: { vaultAddress: Addres
       : undefined;
 
   return (
-    <SheetContent className="z-[9999] gap-3 overflow-y-scroll dark:bg-neutral-900">
+    <SheetContent className="z-[9999] gap-3 overflow-y-scroll sm:min-w-[500px] dark:bg-neutral-900">
       <Toaster theme="dark" position="bottom-left" richColors />
       <SheetHeader>
         <SheetTitle>Your Position</SheetTitle>
         <SheetDescription>
-          You can view and edit your position here. To access all features and understand more about risks open this
-          market in the{" "}
-          <a
-            className="underline"
-            href={`https://app.morpho.org/${chain.name.toLowerCase()}/vault/${vaultAddress}`}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            full app.
+          You can view and edit your position here. To understand more about risks, please visit our{" "}
+          <a className="underline" href={RISKS_DOCUMENTATION} rel="noopener noreferrer" target="_blank">
+            docs.
           </a>
         </SheetDescription>
       </SheetHeader>
