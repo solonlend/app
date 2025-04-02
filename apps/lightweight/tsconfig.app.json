@@ -32,8 +32,7 @@
         "schema": "https://blue-api.morpho.org/graphql",
         "tadaOutputLocation": "./src/graphql/graphql-env.d.ts",
         "tadaTurboLocation": "./src/graphql/graphql-cache.d.ts"
-      },
-      { "name": "@tevm/ts-plugin" }
+      }
     ]
   },
   "include": ["src"]

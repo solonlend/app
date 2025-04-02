@@ -6,7 +6,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "plugins": [{ "name": "@tevm/ts-plugin" }]
+    }
   }
 }

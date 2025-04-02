@@ -19,7 +19,6 @@
       "prettier --write --ignore-unknown"
     ]
   },
-  "dependencies": {},
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@types/node": "^22.13.1",

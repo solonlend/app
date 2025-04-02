@@ -161,9 +161,6 @@ importers:
       "@tanstack/react-query-persist-client":
         specifier: ^5.66.0
         version: 5.69.0(@tanstack/react-query@5.69.0(react@19.0.0))(react@19.0.0)
-      "@tevm/ts-plugin":
-        specifier: 1.0.0-next.140
-        version: 1.0.0-next.140(typescript@5.7.3)
       blo:
         specifier: ^1.2.0
         version: 1.2.0
@@ -203,9 +200,6 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.0.17)
-      tevm:
-        specifier: 1.0.0-next.140
-        version: 1.0.0-next.140(@tevm/ts-plugin@1.0.0-next.140(typescript@5.7.3))(@types/debug@4.1.12)(@types/node@22.13.14)(@types/react@19.0.12)(bufferutil@4.0.9)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(tsx@4.19.3)(typescript@5.7.3)(use-sync-external-store@1.4.0(react@19.0.0))(utf-8-validate@5.0.10)(viem@2.23.15(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.2))(webpack@5.98.0)(yaml@2.7.0)(zod@3.24.2)
       urql:
         specifier: ^4.2.2
         version: 4.2.2(@urql/core@5.1.1(graphql@16.10.0))(react@19.0.0)
@@ -313,6 +307,9 @@ importers:
       "@tanstack/react-query":
         specifier: ^5.66.0
         version: 5.69.0(react@19.0.0)
+      "@tevm/bundler-cache":
+        specifier: 1.0.0-next.140
+        version: 1.0.0-next.140
       "@tevm/ts-plugin":
         specifier: 1.0.0-next.140
         version: 1.0.0-next.140(typescript@5.7.3)
@@ -331,6 +328,9 @@ importers:
       connectkit:
         specifier: ^1.8.2
         version: 1.8.2(@babel/core@7.26.10)(@tanstack/react-query@5.69.0(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react-is@18.3.1)(react@19.0.0)(viem@2.23.15(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.2))(wagmi@2.14.15(@tanstack/query-core@5.69.0)(@tanstack/react-query@5.69.0(react@19.0.0))(@types/react@19.0.12)(bufferutil@4.0.9)(react@19.0.0)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.23.15(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.2))(zod@3.24.2))
+      effect:
+        specifier: 3.13.2
+        version: 3.13.2
       eslint:
         specifier: ^9.21.0
         version: 9.23.0(jiti@2.4.2)
@@ -355,6 +355,9 @@ importers:
       recharts:
         specifier: ^2.15.1
         version: 2.15.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      solc:
+        specifier: ^0.8.29
+        version: 0.8.29
       sonner:
         specifier: ^2.0.0
         version: 2.0.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)

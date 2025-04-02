@@ -7,27 +7,31 @@ import { vitePluginTevm } from "tevm/bundler/vite-plugin";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 import { externalizeDeps } from "vite-plugin-externalize-deps";
-import { viteStaticCopy } from "vite-plugin-static-copy";
+// import { viteStaticCopy } from "vite-plugin-static-copy";
 import svgr from "vite-plugin-svgr";
+
+import vitePluginTevmTypes from "./vite-plugin-tevm-types.ts";
 
 // https://vite.dev/config/
 export default defineConfig({
   // NOTE: Can use `svgr({ include: "**/*.svg" })` and add `,svg` to the rollup glob pattern to transpile _all_
   // SVGs to JS rather than only those which are used in components
   plugins: [
-    viteStaticCopy({
-      structured: false,
-      targets: [
-        {
-          src: "src/**/*.sol",
-          dest: "",
-          rename: (_fileName, _fileExtension, fullPath) => relative("src", fullPath),
-        },
-      ],
-    }),
+    vitePluginTevm(),
+    vitePluginTevmTypes(),
+    // NOTE: The following can be used to include raw `.sol` files in the bundle
+    // viteStaticCopy({
+    //   structured: false,
+    //   targets: [
+    //     {
+    //       src: "src/**/*.sol",
+    //       dest: "",
+    //       rename: (_fileName, _fileExtension, fullPath) => relative("src", fullPath),
+    //     },
+    //   ],
+    // }),
     svgr(),
     react(),
-    vitePluginTevm(),
     dts({ tsconfigPath: "./tsconfig.package.json" }),
     /* NOTE: The following works too, but results in a slightly larger bundle since it doesn't externalize
     Node built-ins (the plugin does).
@@ -52,13 +56,13 @@ export default defineConfig({
     rollupOptions: {
       input: Object.fromEntries(
         glob
-          .sync("src/**/*.{ts,tsx}", {
+          .sync("src/**/*.{ts,tsx,sol}", {
             ignore: ["src/**/*.d.ts"],
           })
           .map((file) => [
             // The name of the entry point
             // lib/nested/foo.ts becomes nested/foo
-            relative("src", file.slice(0, file.length - extname(file).length)),
+            relative("src", extname(file) === ".sol" ? file : file.slice(0, file.length - extname(file).length)),
             // The absolute path to the entry file
             // lib/nested/foo.ts becomes /project/lib/nested/foo.ts
             fileURLToPath(new URL(file, import.meta.url)),
