@@ -24,6 +24,8 @@ import {
   worldchain,
 } from "wagmi/chains";
 
+import { TERMS_OF_USE } from "@/lib/constants";
+
 const httpConfig: HttpTransportConfig = {
   retryDelay: 0,
   timeout: 30_000,
@@ -183,7 +185,21 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, buster: "v1" }}>
-        <ConnectKitProvider theme="auto" mode="dark">
+        <ConnectKitProvider
+          theme="auto"
+          mode="dark"
+          options={{
+            disclaimer: (
+              <span>
+                By connecting, you agree you have read the{" "}
+                <a href={TERMS_OF_USE} rel="noopener noreferrer" target="_blank">
+                  Morpho Terms of Use
+                </a>{" "}
+                and understand the associated risks.
+              </span>
+            ),
+          }}
+        >
           <UrqlProvider value={urqlClient}>
             <Outlet />
           </UrqlProvider>
