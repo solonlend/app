@@ -21,6 +21,7 @@ import { Info } from "lucide-react";
 import { Hex, type Address } from "viem";
 
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
+import { SHARED_LIQUIDITY_DOCUMENTATION } from "@/lib/constants";
 
 function TokenTableCell({ address, symbol, imageSrc }: Token) {
   return (
@@ -112,9 +113,17 @@ export function BorrowTable({
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4" />
                   </TooltipTrigger>
-                  <TooltipContent className="text-primary max-w-56 rounded-3xl p-4 font-mono shadow-2xl">
-                    This value will be smaller than that of the full app. It doesn't include shared market liquidity
-                    which could be reallocated upon borrow.
+                  <TooltipContent className="text-primary max-w-56 rounded-3xl p-4 text-xs shadow-2xl">
+                    This value will be smaller than that of the full app. It doesn't include{" "}
+                    <a
+                      className="underline"
+                      href={SHARED_LIQUIDITY_DOCUMENTATION}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      shared liquidity
+                    </a>{" "}
+                    which could be reallocated to this market after you borrow.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
