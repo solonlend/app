@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b --noEmit && vite build",
+    "build": "cd ../.. && pnpm run lightweight-app:build",
+    "build-this": "tsc -b --noEmit && vite build",
     "lint": "eslint . --fix",
     "format": "prettier --write --ignore-unknown .",
     "format:check": "prettier --check --ignore-unknown .",
     "preview": "vite preview",
+    "deploy": "vercel build --prod && vercel deploy --prebuilt --prod",
     "tada:doctor": "gql-tada doctor",
     "tada:gen": "gql-tada generate-output",
     "tada:cache": "gql-tada turbo"

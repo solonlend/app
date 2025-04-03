@@ -19,7 +19,7 @@
     "build": "vite build",
     "example": "vite",
     "lint": "eslint . --fix",
-    "typecheck": "tsc -b ./tsconfig.package.json"
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@octokit/plugin-retry": "^7.1.4",

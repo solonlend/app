@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "cd ../.. && pnpm run fallback-app:build",
+    "build-this": "tsc -b --noEmit && vite build",
     "lint": "eslint . --fix",
     "format": "prettier --write --ignore-unknown .",
     "format:check": "prettier --check --ignore-unknown .",
