@@ -130,14 +130,18 @@ export function EarnSubPage() {
   }, [vaultsData, markets]);
 
   // MARK: Fetch metadata for every ERC20 asset
-  const assets = useMemo(() => {
-    const assets = [...new Set(vaultsData?.map((vaultData) => vaultData.vault.asset) ?? [])];
-    assets.sort(); // sort so that any query keys derived from this don't change
-    return assets;
-  }, [vaultsData]);
+  const tokenAddresses = useMemo(() => {
+    const tokenAddressesSet = new Set(
+      vaults.map((vault) => [vault.asset, ...vault.collateralAllocations.keys()]).flat(),
+    );
+    tokenAddressesSet.delete(zeroAddress);
+    const tokenAddresses = [...tokenAddressesSet];
+    tokenAddresses.sort(); // sort so that any query keys derived from this don't change
+    return tokenAddresses;
+  }, [vaults]);
 
-  const { data: assetsData } = useReadContracts({
-    contracts: assets
+  const { data: tokenData } = useReadContracts({
+    contracts: tokenAddresses
       .map((asset) => [
         { chainId, address: asset, abi: erc20Abi, functionName: "symbol" } as const,
         { chainId, address: asset, abi: erc20Abi, functionName: "decimals" } as const,
@@ -146,6 +150,16 @@ export function EarnSubPage() {
     allowFailure: true,
     query: { staleTime: Infinity, gcTime: Infinity },
   });
+
+  const tokens = useMemo(() => {
+    const tokens = new Map<Address, { decimals?: number; symbol?: string }>();
+    tokenAddresses.forEach((tokenAddress, idx) => {
+      const symbol = tokenData?.[idx * 2 + 0].result as string | undefined;
+      const decimals = tokenData?.[idx * 2 + 1].result as number | undefined;
+      tokens.set(tokenAddress, { decimals, symbol });
+    });
+    return tokens;
+  }, [tokenAddresses, tokenData]);
 
   // MARK: Fetch user's balance in each vault
   const { data: maxWithdrawsData } = useReadContracts({
@@ -175,9 +189,7 @@ export function EarnSubPage() {
 
   const rows = useMemo(() => {
     return vaults.map((vault) => {
-      const assetIdx = assets.indexOf(vault.asset);
-      const symbol = assetIdx > -1 ? (assetsData?.[assetIdx * 2 + 0].result as string) : undefined;
-      const decimals = assetIdx > -1 ? (assetsData?.[assetIdx * 2 + 1].result as number) : undefined;
+      const { decimals, symbol } = tokens.get(vault.asset) ?? { decimals: undefined, symbol: undefined };
 
       const curators: Row["curators"] = {};
       for (const curator of top5Curators) {
@@ -214,7 +226,7 @@ export function EarnSubPage() {
         imageSrc: getTokenSymbolURI(symbol),
       };
     });
-  }, [vaults, assets, assetsData, maxWithdraws, top5Curators]);
+  }, [vaults, tokens, maxWithdraws, top5Curators]);
 
   const userRows = rows.filter((row) => !!row.maxWithdraw);
 
@@ -235,12 +247,12 @@ export function EarnSubPage() {
       ) : (
         userRows.length > 0 && (
           <div className="flex h-fit w-full max-w-5xl flex-col gap-4 px-8 pb-14 pt-8 md:m-auto md:px-0 dark:bg-neutral-900">
-            <EarnTable chain={chain} rows={userRows} depositsMode="maxWithdraw" />
+            <EarnTable chain={chain} rows={userRows} depositsMode="maxWithdraw" tokens={tokens} />
           </div>
         )
       )}
       <div className="bg-background dark:bg-background/30 flex grow justify-center rounded-t-xl pb-32">
-        <EarnTable chain={chain} rows={rows} depositsMode="totalAssets" />
+        <EarnTable chain={chain} rows={rows} depositsMode="totalAssets" tokens={tokens} />
       </div>
     </div>
   );

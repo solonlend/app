@@ -1,3 +1,4 @@
+import { AvatarStack } from "@morpho-blue-offchain-public/uikit/components/avatar-stack";
 import { AvatarImage, AvatarFallback, Avatar } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
 import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
 import {
@@ -14,13 +15,19 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
-import { formatBalanceWithSymbol, formatApy, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import {
+  formatBalanceWithSymbol,
+  formatApy,
+  Token,
+  getTokenSymbolURI,
+  formatLtv,
+} from "@morpho-blue-offchain-public/uikit/lib/utils";
 import { AccrualVault } from "@morpho-org/blue-sdk";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
 import { DollarSign, ExternalLink, SignalHigh } from "lucide-react";
-import { Chain, hashMessage, Address } from "viem";
+import { Chain, hashMessage, Address, zeroAddress } from "viem";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
 
@@ -174,14 +181,86 @@ function ApyTableCell({ vault }: Pick<Row, "vault">) {
   );
 }
 
+function CollateralsTableCell({
+  vault,
+  chain,
+  tokens,
+}: Pick<Row, "vault"> & { chain: Chain | undefined; tokens: Map<Address, { symbol?: string }> }) {
+  const allocations = [...vault.collateralAllocations.entries()].filter(([collateral]) => collateral !== zeroAddress);
+  // Sort allocations largest to smallest
+  allocations.sort((a, b) => (a[1].proportion > b[1].proportion ? -1 : 1));
+  return (
+    <AvatarStack
+      items={allocations.map(([collateral, allocation]) => {
+        const token = tokens.get(collateral);
+        const logoUrl = [getTokenSymbolURI(token?.symbol), blo(collateral)];
+        const lltvs = [...allocation.lltvs.values()];
+        const oracles = [...allocation.oracles];
+
+        // Sort LLTVs smallest to largest
+        lltvs.sort((a, b) => (a > b ? 1 : -1));
+
+        const hoverCardContent = (
+          <TooltipContent className="text-primary rounded-3xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex w-[240px] flex-col gap-3">
+              <div className="flex justify-between font-light">
+                Collateral
+                <div className="flex items-end gap-1">
+                  <Avatar className="h-4 w-4 rounded-full">
+                    <AvatarImage src={logoUrl[0]} alt="Avatar" />
+                    <AvatarFallback delayMs={500}>
+                      <img src={logoUrl[1]} />
+                    </AvatarFallback>
+                  </Avatar>
+                  {token?.symbol ?? ""}
+                </div>
+              </div>
+              <div className="flex justify-between font-light">
+                <span>LLTV</span>
+                {lltvs.map((lltv) => formatLtv(lltv)).join(", ")}
+              </div>
+              <div className="flex justify-between font-light">
+                <span>Allocation</span>
+                {formatLtv(allocation.proportion)}
+              </div>
+              <div className="flex justify-between font-light">
+                <span>Oracle</span>
+                <div className="flex flex-col font-mono">
+                  {oracles.map((oracle) => (
+                    <a
+                      className="flex gap-1"
+                      href={chain?.blockExplorers?.default.url.concat(`/address/${oracle}`)}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {`${oracle.slice(0, 6)}...${oracle.slice(-4)}`}
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </TooltipContent>
+        );
+
+        return { logoUrl, hoverCardContent };
+      })}
+      align="left"
+      maxItems={5}
+    />
+  );
+}
+
 export function EarnTable({
   chain,
   rows,
   depositsMode,
+  tokens,
 }: {
   chain: Chain | undefined;
   rows: Row[];
   depositsMode: "totalAssets" | "maxWithdraw";
+  tokens: Map<Address, { decimals?: number; symbol?: string }>;
 }) {
   return (
     <div className="text-primary w-full max-w-5xl px-8 pt-8">
@@ -191,6 +270,7 @@ export function EarnTable({
             <TableHead className="text-primary rounded-l-lg pl-4 text-xs font-light">Vault</TableHead>
             <TableHead className="text-primary text-xs font-light">Deposits</TableHead>
             <TableHead className="text-primary text-xs font-light">Curator</TableHead>
+            <TableHead className="text-primary text-xs font-light">Collateral</TableHead>
             <TableHead className="text-primary rounded-r-lg text-xs font-light">APY</TableHead>
           </TableRow>
         </TableHeader>
@@ -222,6 +302,9 @@ export function EarnTable({
                             <CuratorTableCell key={curator.name} {...curator} chain={chain} />
                           ))
                         : ownerText}
+                    </TableCell>
+                    <TableCell className="min-w-[120px]">
+                      <CollateralsTableCell vault={row.vault} chain={chain} tokens={tokens} />
                     </TableCell>
                     <TableCell className="rounded-r-lg">
                       <ApyTableCell vault={row.vault} />
