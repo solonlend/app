@@ -160,7 +160,7 @@ export function BorrowSubPage() {
 
   if (status === "reconnecting") return undefined;
 
-  const userMarkets = marketsArr.filter((market) => positions?.get(market.id)?.collateral ?? 0n >= 0n);
+  const userMarkets = marketsArr.filter((market) => positions?.get(market.id)?.collateral ?? 0n > 0n);
 
   return (
     <div className="flex min-h-screen flex-col px-2.5 pt-16">
