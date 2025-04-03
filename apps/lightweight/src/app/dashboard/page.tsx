@@ -6,11 +6,12 @@ import { ConnectKitButton } from "connectkit";
 import { ExternalLink } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router";
+import { extractChain } from "viem";
 import { useChains } from "wagmi";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
-import { ADDRESSES_DOCUMENTATION } from "@/lib/constants";
+import { ADDRESSES_DOCUMENTATION, CORE_DEPLOYMENTS } from "@/lib/constants";
 
 enum SubPage {
   Earn = "earn",
@@ -39,15 +40,22 @@ export default function Page() {
   const locationSegments = location.pathname.toLowerCase().split("/").slice(1);
   const selectedSubPage = locationSegments.at(1) === SubPage.Borrow ? SubPage.Borrow : SubPage.Earn;
 
-  const setSelectedChainSlug = useCallback(
-    (value: string) => navigate(`../${value}/${selectedSubPage}`, { replace: true, relative: "path" }),
-    [navigate, selectedSubPage],
-  );
-
   const chains = useChains();
   const chain = useMemo(
     () => chains.find((chain) => getChainSlug(chain) === selectedChainSlug),
     [chains, selectedChainSlug],
+  );
+
+  const setSelectedChainSlug = useCallback(
+    (value: string) => {
+      void navigate(`../${value}/${selectedSubPage}`, { replace: true, relative: "path" });
+      // If selected chain is a core deployment, open main app in a new tab (we don't navigate away in
+      // case they're using this because the main app is down).
+      if ([...CORE_DEPLOYMENTS].map((id) => getChainSlug(extractChain({ chains, id }))).includes(value)) {
+        window.open(`https://app.morpho.org/${value}/${selectedSubPage}`, "_blank", "noopener,noreferrer");
+      }
+    },
+    [navigate, selectedSubPage, chains],
   );
 
   return (

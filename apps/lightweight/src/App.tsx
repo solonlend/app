@@ -60,22 +60,22 @@ function createAlchemyHttp(slug: string): ({ url: string } & HttpTransportConfig
 const chains = [
   mainnet,
   base,
-  ink,
+  // ink,
   optimism,
-  arbitrum,
+  // arbitrum,
   polygon,
-  unichain,
-  worldchain,
-  scrollMainnet,
-  fraxtal,
-  sonic,
-  corn,
-  modeMainnet,
-  hemi,
+  // unichain,
+  // worldchain,
+  // scrollMainnet,
+  // fraxtal,
+  // sonic,
+  // corn,
+  // modeMainnet,
+  // hemi,
 ] as const;
 
 const alchemyApiKey = import.meta.env.VITE_ALCHEMY_API_KEY as string;
-const transports: Record<(typeof chains)[number]["id"], Transport> = {
+const transports: { [K in (typeof chains)[number]["id"]]: Transport } & { [k: number]: Transport } = {
   [mainnet.id]: createFallbackTransport([
     ...createAlchemyHttp("eth-mainnet"),
     { url: "https://rpc.mevblocker.io", batch: { batchSize: 10 } },
