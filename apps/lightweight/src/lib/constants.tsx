@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Address } from "viem";
 import {
   arbitrum,
@@ -116,6 +117,33 @@ export const BATCH1_DEPLOYMENTS = new Set<keyof Deployments>([
 ]);
 
 export const BATCH2_DEPLOYMENTS = new Set<keyof Deployments>([unichain.id, corn.id, modeMainnet.id, hemi.id, sonic.id]);
+
+export const BANNERS: Record<keyof Deployments, { color: string; text: ReactNode }> = {
+  [polygon.id]: {
+    color: "bg-purple-500",
+    text: (
+      <span className="grow py-2 text-center">
+        Use the external{" "}
+        <a className="underline" href="https://compound.blue" rel="noopener noreferrer" target="_blank">
+          Compound Blue
+        </a>{" "}
+        interface to view and claim POL and COMP rewards.
+      </span>
+    ),
+  },
+  [optimism.id]: {
+    color: "bg-red-500",
+    text: (
+      <span className="grow py-2 text-center">
+        The most popular OP Mainnet markets are also accessible on{" "}
+        <a className="underline" href="https://moonwell.fi" rel="noopener noreferrer" target="_blank">
+          Moonwell
+        </a>
+        .
+      </span>
+    ),
+  },
+};
 
 export function getContractDeploymentInfo(chainId: number, name: OptionalContracts): DeploymentDetails | undefined;
 export function getContractDeploymentInfo(chainId: number, name: RequiredContracts): DeploymentDetails;
