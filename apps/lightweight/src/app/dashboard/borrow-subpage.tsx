@@ -76,7 +76,11 @@ export function BorrowSubPage() {
           zeroAddress,
         ),
     );
-    marketsArr.sort((a, b) => (a.borrowApy > b.borrowApy ? -1 : 1));
+    marketsArr.sort((a, b) => {
+      const primary = a.params.loanToken.localeCompare(b.params.loanToken);
+      const secondary = a.liquidity > b.liquidity ? -1 : 1;
+      return primary === 0 ? secondary : primary;
+    });
     return marketsArr;
   }, [markets]);
 
