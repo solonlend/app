@@ -17,23 +17,48 @@ import {
 import { formatLtv, formatBalanceWithSymbol, formatApy, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
 import { AccrualPosition, Market } from "@morpho-org/blue-sdk";
 import { blo } from "blo";
-import { Info } from "lucide-react";
-import { Hex, type Address } from "viem";
+import { ExternalLink, Info } from "lucide-react";
+import { Chain, Hex, type Address } from "viem";
 
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { SHARED_LIQUIDITY_DOCUMENTATION } from "@/lib/constants";
 
-function TokenTableCell({ address, symbol, imageSrc }: Token) {
+function TokenTableCell({ address, symbol, imageSrc, chain }: Token & { chain: Chain | undefined }) {
   return (
-    <div className="flex items-center gap-2 p-2">
-      <Avatar className="h-4 w-4 rounded-sm">
-        <AvatarImage src={imageSrc} alt="Avatar" />
-        <AvatarFallback delayMs={1000}>
-          <img src={blo(address)} />
-        </AvatarFallback>
-      </Avatar>
-      {symbol ?? "－"}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="hover:bg-tertiary/15 flex w-min items-center gap-2 rounded-sm p-2">
+            <Avatar className="h-4 w-4 rounded-sm">
+              <AvatarImage src={imageSrc} alt="Avatar" />
+              <AvatarFallback delayMs={1000}>
+                <img src={blo(address)} />
+              </AvatarFallback>
+            </Avatar>
+            {symbol ?? "－"}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="text-primary rounded-3xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1">
+            <p>
+              Address:{" "}
+              <code>
+                {address.slice(0, 6)}...{address.slice(-4)}
+              </code>
+            </p>
+            {chain?.blockExplorers?.default.url && (
+              <a
+                href={`${chain.blockExplorers.default.url}/address/${address}`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -90,10 +115,12 @@ function HealthTableCell({
 }
 
 export function BorrowTable({
+  chain,
   markets,
   tokens,
   refetchPositions,
 }: {
+  chain: Chain | undefined;
   markets: Market[];
   tokens: Map<Address, Token>;
   refetchPositions: () => void;
@@ -144,10 +171,10 @@ export function BorrowTable({
             <SheetTrigger asChild>
               <TableRow className="bg-secondary hover:bg-accent">
                 <TableCell className="rounded-l-lg py-3">
-                  <TokenTableCell {...tokens.get(market.params.collateralToken)!} />
+                  <TokenTableCell {...tokens.get(market.params.collateralToken)!} chain={chain} />
                 </TableCell>
                 <TableCell>
-                  <TokenTableCell {...tokens.get(market.params.loanToken)!} />
+                  <TokenTableCell {...tokens.get(market.params.loanToken)!} chain={chain} />
                 </TableCell>
                 <TableCell>{formatLtv(market.params.lltv)}</TableCell>
                 <TableCell>
@@ -175,11 +202,13 @@ export function BorrowTable({
 }
 
 export function BorrowPositionTable({
+  chain,
   markets,
   tokens,
   positions,
   refetchPositions,
 }: {
+  chain: Chain | undefined;
   markets: Market[];
   tokens: Map<Address, Token>;
   positions: Map<Hex, AccrualPosition> | undefined;
@@ -226,10 +255,10 @@ export function BorrowPositionTable({
               <SheetTrigger asChild>
                 <TableRow className="bg-secondary hover:bg-accent">
                   <TableCell className="rounded-l-lg py-3">
-                    <TokenTableCell {...collateralToken} symbol={collateralText} />
+                    <TokenTableCell {...collateralToken} symbol={collateralText} chain={chain} />
                   </TableCell>
                   <TableCell>
-                    <TokenTableCell {...loanToken} symbol={loanText} />
+                    <TokenTableCell {...loanToken} symbol={loanText} chain={chain} />
                   </TableCell>
                   <TableCell>{market.borrowApy ? `${formatApy(market.borrowApy)}` : "－"}</TableCell>
                   <TableCell className="rounded-r-lg">

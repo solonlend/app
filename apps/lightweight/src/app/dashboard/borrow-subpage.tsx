@@ -179,6 +179,7 @@ export function BorrowSubPage() {
           <div className="flex h-fit w-full max-w-5xl flex-col gap-4 px-8 pb-14 pt-8 md:m-auto md:px-0 dark:bg-neutral-900">
             <div className="text-primary w-full max-w-5xl px-8 pt-8">
               <BorrowPositionTable
+                chain={chain}
                 markets={userMarkets}
                 tokens={tokens}
                 positions={positions}
@@ -190,7 +191,7 @@ export function BorrowSubPage() {
       )}
       <div className="bg-background dark:bg-background/30 flex grow justify-center rounded-t-xl pb-32">
         <div className="text-primary w-full max-w-5xl px-8 pt-8">
-          <BorrowTable markets={marketsArr} tokens={tokens} refetchPositions={refetchPositionsRaw} />
+          <BorrowTable chain={chain} markets={marketsArr} tokens={tokens} refetchPositions={refetchPositionsRaw} />
         </div>
       </div>
     </div>
