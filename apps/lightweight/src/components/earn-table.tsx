@@ -296,12 +296,14 @@ export function EarnTable({
                         ? formatBalanceWithSymbol(deposits, row.asset.decimals, row.asset.symbol, 5, true)
                         : "－"}
                     </TableCell>
-                    <TableCell className="flex w-min gap-2">
-                      {Object.keys(row.curators).length > 0
-                        ? Object.values(row.curators).map((curator) => (
-                            <CuratorTableCell key={curator.name} {...curator} chain={chain} />
-                          ))
-                        : ownerText}
+                    <TableCell>
+                      <div className="flex w-min gap-2">
+                        {Object.keys(row.curators).length > 0
+                          ? Object.values(row.curators).map((curator) => (
+                              <CuratorTableCell key={curator.name} {...curator} chain={chain} />
+                            ))
+                          : ownerText}
+                      </div>
                     </TableCell>
                     <TableCell className="min-w-[120px]">
                       <CollateralsTableCell vault={row.vault} chain={chain} tokens={tokens} />
