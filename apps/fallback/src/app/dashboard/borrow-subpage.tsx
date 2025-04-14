@@ -278,7 +278,7 @@ export function BorrowSubPage() {
             <TableBody>
               {filteredCreateMarketArgs.map((args, idx) => (
                 <Sheet
-                  key={args.id}
+                  key={`${chainId}:${args.id}`}
                   onOpenChange={(isOpen) => {
                     // Refetch positions on sidesheet close, since user may have sent txns to modify one
                     if (!isOpen) void refetchPositionsRaw();
@@ -315,7 +315,7 @@ export function BorrowSubPage() {
                                 </p>
                                 <h3 className="pt-3">Borrows</h3>
                                 <p>
-                                  {markets &&
+                                  {markets?.at(idx) &&
                                   positionsRaw &&
                                   tokens.get(args.marketParams.loanToken)?.decimals !== undefined
                                     ? formatBalanceWithSymbol(
@@ -336,7 +336,7 @@ export function BorrowSubPage() {
                         }
                       </TableCell>
                       <TableCell className="rounded-r-lg">
-                        {markets && tokens.get(args.marketParams.loanToken)?.decimals !== undefined
+                        {markets?.at(idx) && tokens.get(args.marketParams.loanToken)?.decimals !== undefined
                           ? formatBalanceWithSymbol(
                               markets[idx][0] - markets[idx][2],
                               tokens.get(args.marketParams.loanToken)!.decimals!,
@@ -352,7 +352,7 @@ export function BorrowSubPage() {
                     marketId={args.id as MarketId}
                     marketParams={new MarketParams(args.marketParams)}
                     imarket={
-                      markets
+                      markets?.at(idx)
                         ? {
                             params: new MarketParams(args.marketParams),
                             totalSupplyAssets: markets[idx][0],
