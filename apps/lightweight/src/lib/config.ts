@@ -141,7 +141,7 @@ export function createConfig(args: {
       chains: args.chains ?? chains,
       transports: args.transports ?? transports,
       connectors: args.connectors,
-      walletConnectProjectId: import.meta.env.VITE_WALLET_KIT_PROJECT_ID!,
+      walletConnectProjectId: import.meta.env.VITE_WALLET_KIT_PROJECT_ID,
       appName: APP_DETAILS.name,
       appDescription: APP_DETAILS.description,
       appUrl: APP_DETAILS.url,
