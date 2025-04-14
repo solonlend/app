@@ -1,4 +1,4 @@
-import { createElement, CSSProperties, HTMLElementType, ReactNode, useEffect, useState } from "react";
+import { createElement, CSSProperties, HTMLElementType, ReactNode, useEffect, useState, ReactElement } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ export function AnimateIn({
   className?: string;
   style?: CSSProperties;
   as?: HTMLElementType;
-}) {
+}): ReactElement {
   const [animate, setAnimate] = useState(from);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
