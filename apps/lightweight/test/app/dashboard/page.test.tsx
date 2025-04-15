@@ -10,7 +10,7 @@ import { testWithMainnetFork, rpcUrls } from "../../config";
 import { render, screen, waitFor, waitForElementToBeRemoved } from "../../providers";
 
 import Page from "@/app/dashboard/page";
-import { createConfig } from "@/lib/config";
+import { createConfig } from "@/lib/wagmi-config";
 
 describe("connect wallet flow", () => {
   testWithMainnetFork("handles user rejection gracefully", async ({ client }) => {

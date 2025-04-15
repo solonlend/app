@@ -23,7 +23,7 @@ import { testWithPolygonFork } from "../config";
 import { render, screen, waitFor } from "../providers";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
-import { createConfig } from "@/lib/config";
+import { createConfig } from "@/lib/wagmi-config";
 
 function TestableEarnSheetContent(params: Parameters<typeof EarnSheetContent>[0]) {
   const { status, connect, connectors } = useConnect();

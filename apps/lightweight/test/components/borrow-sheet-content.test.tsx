@@ -14,7 +14,7 @@ import { testWithPolygonFork } from "../config";
 import { render, screen, waitFor } from "../providers";
 
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
-import { createConfig } from "@/lib/config";
+import { createConfig } from "@/lib/wagmi-config";
 
 type ApprovalLog = Log<bigint, number, false, ExtractAbiItem<typeof erc20Abi, "Approval">, true>;
 type SupplyLog = Log<bigint, number, false, ExtractAbiItem<typeof morphoAbi, "SupplyCollateral">, true>;

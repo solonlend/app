@@ -9,8 +9,8 @@ import { type Config, deserialize, serialize, WagmiProvider } from "wagmi";
 
 import { AddressScreeningModal } from "@/components/address-screening-modal";
 import { AddressScreeningProvider } from "@/hooks/use-address-screening";
-import { createConfig } from "@/lib/config";
 import { TERMS_OF_USE } from "@/lib/constants";
+import { createConfig } from "@/lib/wagmi-config";
 
 const defaultWagmiConfig = createConfig({});
 
