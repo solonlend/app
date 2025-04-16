@@ -3,6 +3,10 @@ on:
   pull_request:
     branches:
       - "main"
+      - "release"
+  push:
+    branches:
+      - "main"
 jobs:
   vitest:
     runs-on: ubuntu-22.04
