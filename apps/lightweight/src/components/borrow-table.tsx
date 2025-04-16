@@ -76,11 +76,13 @@ function HealthTableCell({
   collateralToken: Token;
   loanToken: Token;
 }) {
-  const ltvText = typeof position?.accrueInterest().ltv === "bigint" ? formatLtv(position.accrueInterest().ltv!) : "－";
+  const ltvText = position?.accrueInterest().ltv !== undefined ? formatLtv(position.accrueInterest().ltv ?? 0n) : "－";
   const lltvText = formatLtv(market.params.lltv);
   const lPriceText =
-    typeof position?.liquidationPrice === "bigint"
-      ? formatBalanceWithSymbol(position.liquidationPrice, 36, "", 5)
+    typeof position?.liquidationPrice === "bigint" &&
+    loanToken.decimals !== undefined &&
+    collateralToken.decimals !== undefined
+      ? formatBalanceWithSymbol(position.liquidationPrice, 36 + loanToken.decimals - collateralToken.decimals, "", 5)
       : "－";
   const priceDropText =
     typeof position?.priceVariationToLiquidationPrice === "bigint"
