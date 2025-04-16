@@ -54,15 +54,15 @@ export function EarnSubPage() {
     query: { enabled: chainId !== undefined },
   });
 
-  // MARK: Fetch additional data for vaults owned by the top 5 curators from core deployments
-  const top5Curators = useTopNCurators({ n: 5, verifiedOnly: true, chainIds: [...CORE_DEPLOYMENTS] });
+  // MARK: Fetch additional data for vaults owned by the top 1000 curators from core deployments
+  const topCurators = useTopNCurators({ n: 1000, verifiedOnly: true, chainIds: [...CORE_DEPLOYMENTS] });
   const { data: vaultsData } = useReadContract({
     chainId,
     ...readAccrualVaults(
       morpho?.address ?? "0x",
       createMetaMorphoEvents.map((ev) => ev.args.metaMorpho),
       // NOTE: This assumes that if a curator controls an address on one chain, they control it across all chains.
-      top5Curators.flatMap((curator) => curator.addresses?.map((entry) => entry.address as Address) ?? []),
+      topCurators.flatMap((curator) => curator.addresses?.map((entry) => entry.address as Address) ?? []),
     ),
     stateOverride: [readAccrualVaultsStateOverride()],
     query: {
@@ -192,7 +192,7 @@ export function EarnSubPage() {
       const { decimals, symbol } = tokens.get(vault.asset) ?? { decimals: undefined, symbol: undefined };
 
       const curators: Row["curators"] = {};
-      for (const curator of top5Curators) {
+      for (const curator of topCurators) {
         for (const roleName of ["owner", "curator", "guardian"] as const) {
           const address = curator.addresses
             ?.map((entry) => entry.address as Address)
@@ -226,7 +226,7 @@ export function EarnSubPage() {
         imageSrc: getTokenSymbolURI(symbol),
       };
     });
-  }, [vaults, tokens, maxWithdraws, top5Curators]);
+  }, [vaults, tokens, maxWithdraws, topCurators]);
 
   const userRows = rows.filter((row) => (row.maxWithdraw ?? 0n) > 0n);
 

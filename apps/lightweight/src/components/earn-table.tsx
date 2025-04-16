@@ -223,6 +223,7 @@ function CollateralsTableCell({
                 <div className="flex flex-col font-mono">
                   {oracles.map((oracle) => (
                     <a
+                      key={oracle}
                       className="flex gap-1"
                       href={chain?.blockExplorers?.default.url.concat(`/address/${oracle}`)}
                       rel="noopener noreferrer"
