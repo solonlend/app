@@ -1,4 +1,5 @@
-import MorphoLogoSvg from "@morpho-blue-offchain-public/uikit/assets/morpho.svg?react";
+import WordmarkSvg from "@morpho-blue-offchain-public/uikit/assets/morpho-horizontal-lite.svg?react";
+import WatermarkSvg from "@morpho-blue-offchain-public/uikit/assets/powered-by-morpho.svg?react";
 import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/button";
 import { WalletMenu } from "@morpho-blue-offchain-public/uikit/components/wallet-menu";
 import { getChainSlug } from "@morpho-blue-offchain-public/uikit/lib/utils";
@@ -11,7 +12,7 @@ import { useChains } from "wagmi";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
-import { ADDRESSES_DOCUMENTATION, APP_DETAILS, CORE_DEPLOYMENTS } from "@/lib/constants";
+import { ADDRESSES_DOCUMENTATION, APP_DETAILS, CORE_DEPLOYMENTS, WORDMARK } from "@/lib/constants";
 
 enum SubPage {
   Earn = "earn",
@@ -65,11 +66,15 @@ export default function Page() {
   return (
     <div className="bg-gray-200 dark:bg-neutral-900">
       <Header className="flex items-center justify-between px-5 py-3" chainId={chain?.id}>
-        <div className="flex gap-4">
-          <div className="text-primary flex items-center gap-2 text-xl">
-            <MorphoLogoSvg width={24} height={24} />
-            Morpho
-          </div>
+        <div className="text-primary flex items-center gap-4">
+          {WORDMARK.length > 0 ? (
+            <>
+              <img className="max-h-[24px]" src={WORDMARK} />
+              <WatermarkSvg height={24} className="text-primary/50 w-[170px] min-w-[170px]" />
+            </>
+          ) : (
+            <WordmarkSvg height={24} />
+          )}
           <div className="flex items-center gap-2 rounded-full bg-transparent p-1">
             <Link to={SubPage.Earn} relative="path">
               <Button

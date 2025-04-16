@@ -1,32 +1,29 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { useClient as useUrqlClient } from "urql";
-import { optimism, polygon } from "wagmi/chains";
 
-import { graphql, ResultOf } from "@/graphql/graphql";
+import { graphql } from "@/graphql/graphql";
+import { CuratorFragment, MANUALLY_WHITELISTED_CURATORS } from "@/lib/curators";
 
 // NOTE: `state` is currently null; it's a work in progress on API side.
 // Once that's done we can use this (with an orderBy) to get top N by AUM.
-const curatorsQuery = graphql(`
-  query CuratorsQuery($first: Int, $verified: Boolean) {
-    curators(first: $first, where: { verified: $verified }) {
-      items {
-        addresses {
-          address
-          chainId
+const curatorsQuery = graphql(
+  `
+    query CuratorsQuery($first: Int, $verified: Boolean) {
+      curators(first: $first, where: { verified: $verified }) {
+        items {
+          ...Curator
+          id
+          state {
+            aum
+            curatorId
+          }
         }
-        id
-        image
-        name
-        state {
-          aum
-          curatorId
-        }
-        url
       }
     }
-  }
-`);
+  `,
+  [CuratorFragment],
+);
 
 // NOTE: `curators` is marked as work in progress, but `state` seems to actually populate correctly,
 // so we're using this for now.
@@ -52,29 +49,9 @@ const vaultsQuery = graphql(`
   }
 `);
 
-// NOTE: These curators are always returned _in addition to_ the top N
-const manualCurators: NonNullable<ResultOf<typeof curatorsQuery>["curators"]["items"]> = [
-  {
-    addresses: [{ address: "0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02", chainId: polygon.id }],
-    id: "",
-    image: "https://cdn.morpho.org/v2/assets/images/compound.svg",
-    name: "Compound",
-    state: null,
-    url: "https://compound.finance/",
-  },
-  {
-    addresses: [{ address: "0x17C9ba3fDa7EC71CcfD75f978Ef31E21927aFF3d", chainId: optimism.id }],
-    id: "",
-    image: "https://cdn.morpho.org/v2/assets/images/moonwell.svg",
-    name: "Moonwell",
-    state: null,
-    url: "https://moonwell.fi/",
-  },
-];
-
 export function useTopNCurators({
   n,
-  verifiedOnly,
+  verifiedOnly = true,
   chainIds,
   staleTime = 1 * 60 * 60 * 1_000,
 }: {
@@ -140,6 +117,8 @@ export function useTopNCurators({
 
   return useMemo(() => {
     if (topNCuratorIds === undefined || curators === undefined) return [];
-    return curators.filter((curator) => topNCuratorIds.has(curator.id)).concat(manualCurators);
+    return curators
+      .filter((curator) => topNCuratorIds.has(curator.id))
+      .concat(MANUALLY_WHITELISTED_CURATORS.map((curator) => ({ ...curator, id: "", state: null })));
   }, [topNCuratorIds, curators]);
 }
