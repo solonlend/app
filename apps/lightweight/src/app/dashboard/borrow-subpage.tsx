@@ -48,7 +48,7 @@ export function BorrowSubPage() {
   });
 
   // MARK: Fetch additional data for vaults owned by the top 1000 curators from core deployments
-  const topCurators = useTopNCurators({ n: 1000, verifiedOnly: true, chainIds: [...CORE_DEPLOYMENTS] });
+  const topCurators = useTopNCurators({ n: "all", verifiedOnly: true, chainIds: [...CORE_DEPLOYMENTS] });
   const { data: vaultsData } = useReadContract({
     chainId,
     ...readAccrualVaults(

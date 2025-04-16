@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { useClient as useUrqlClient } from "urql";
 
@@ -55,7 +55,7 @@ export function useTopNCurators({
   chainIds,
   staleTime = 1 * 60 * 60 * 1_000,
 }: {
-  n: number;
+  n: number | "all";
   verifiedOnly?: boolean;
   chainIds: number[];
   staleTime?: number;
@@ -65,7 +65,7 @@ export function useTopNCurators({
   const { data: topNCuratorIds } = useQuery({
     queryKey: ["useTopNCurators", "vaultsQuery", chainIds, verifiedOnly],
     queryFn: async () => {
-      const { data, error } = await urqlClient.query(vaultsQuery, { first: 30, chainIds });
+      const { data, error } = await urqlClient.query(vaultsQuery, { first: 1000, chainIds });
       if (error || data === undefined || data.vaults.items == null) {
         throw error ?? new Error("vaultsQuery GraphQL data was undefined or null.");
       }
@@ -89,20 +89,20 @@ export function useTopNCurators({
     },
     select: useCallback(
       (data: { id: string }[]) => {
-        return new Set(data.slice(0, n).map((curator) => curator.id));
+        return new Set(data.slice(0, Number(n)).map((curator) => curator.id));
       },
       [n],
     ),
     staleTime,
     gcTime: Infinity,
-    placeholderData: keepPreviousData,
     notifyOnChangeProps: ["data"],
+    enabled: n !== "all",
   });
 
   const { data: curators } = useQuery({
     queryKey: ["useTopNCurators", "curatorsQuery", verifiedOnly],
     queryFn: async () => {
-      const { data, error } = await urqlClient.query(curatorsQuery, { first: 100, verified: verifiedOnly });
+      const { data, error } = await urqlClient.query(curatorsQuery, { first: 1000, verified: verifiedOnly });
       if (error || data === undefined || data.curators.items == null) {
         throw error ?? new Error("curatorsQuery GraphQL data was undefined or null.");
       }
@@ -111,14 +111,12 @@ export function useTopNCurators({
     },
     staleTime,
     gcTime: Infinity,
-    placeholderData: keepPreviousData,
     notifyOnChangeProps: ["data"],
   });
 
   return useMemo(() => {
-    if (topNCuratorIds === undefined || curators === undefined) return [];
-    return curators
-      .filter((curator) => topNCuratorIds.has(curator.id))
-      .concat(MANUALLY_WHITELISTED_CURATORS.map((curator) => ({ ...curator, id: "", state: null })));
-  }, [topNCuratorIds, curators]);
+    if (curators === undefined || (n !== "all" && topNCuratorIds === undefined)) return [];
+    const filtered = n === "all" ? curators : curators.filter((curator) => topNCuratorIds?.has(curator.id));
+    return filtered.concat(MANUALLY_WHITELISTED_CURATORS.map((curator) => ({ ...curator, id: "", state: null })));
+  }, [topNCuratorIds, curators, n]);
 }
