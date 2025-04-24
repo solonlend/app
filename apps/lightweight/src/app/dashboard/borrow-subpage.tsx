@@ -169,15 +169,17 @@ export function BorrowSubPage() {
   return (
     <div className="flex min-h-screen flex-col px-2.5 pt-16">
       {status === "disconnected" ? (
-        <CtaCard
-          className="bg-linear-to-b flex w-full max-w-7xl flex-col gap-4 from-transparent to-white/[0.03] px-8 pb-20 pt-8 md:flex-row md:items-center md:justify-between"
-          bigText="Provide collateral to borrow any asset"
-          littleText="Connect wallet to get started"
-          videoSrc={{
-            mov: "https://cdn.morpho.org/v2/assets/videos/borrow-animation.mov",
-            webm: "https://cdn.morpho.org/v2/assets/videos/borrow-animation.webm",
-          }}
-        />
+        <div className="bg-linear-to-b flex w-full flex-col from-transparent to-white/[0.03] px-8 pb-20 pt-8">
+          <CtaCard
+            className="md:w-7xl flex flex-col gap-4 md:mx-auto md:max-w-full md:flex-row md:items-center md:justify-between"
+            bigText="Provide collateral to borrow any asset"
+            littleText="Connect wallet to get started"
+            videoSrc={{
+              mov: "https://cdn.morpho.org/v2/assets/videos/borrow-animation.mov",
+              webm: "https://cdn.morpho.org/v2/assets/videos/borrow-animation.webm",
+            }}
+          />
+        </div>
       ) : (
         userMarkets.length > 0 && (
           <div className="bg-linear-to-b lg:pt-22 flex h-fit w-full flex-col items-center from-transparent to-white/[0.03] pb-20">
