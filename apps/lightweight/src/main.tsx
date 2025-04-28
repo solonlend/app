@@ -1,4 +1,4 @@
-import { getChainSlug } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { getChainSlug } from "@morpho-org/uikit/lib/utils";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";

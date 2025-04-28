@@ -1,8 +1,3 @@
-import { metaMorphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho";
-import { metaMorphoFactoryAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho-factory";
-import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
-import { readAccrualVaults, readAccrualVaultsStateOverride } from "@morpho-blue-offchain-public/uikit/lens/read-vaults";
-import { getTokenSymbolURI, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
 import {
   AccrualPosition,
   AccrualVault,
@@ -12,6 +7,11 @@ import {
   VaultMarketConfig,
   VaultMarketPublicAllocatorConfig,
 } from "@morpho-org/blue-sdk";
+import { metaMorphoAbi } from "@morpho-org/uikit/assets/abis/meta-morpho";
+import { metaMorphoFactoryAbi } from "@morpho-org/uikit/assets/abis/meta-morpho-factory";
+import useContractEvents from "@morpho-org/uikit/hooks/use-contract-events/use-contract-events";
+import { readAccrualVaults, readAccrualVaultsStateOverride } from "@morpho-org/uikit/lens/read-vaults";
+import { getTokenSymbolURI, Token } from "@morpho-org/uikit/lib/utils";
 import { useMemo } from "react";
 import { useOutletContext } from "react-router";
 import { Address, Chain, erc20Abi, zeroAddress } from "viem";

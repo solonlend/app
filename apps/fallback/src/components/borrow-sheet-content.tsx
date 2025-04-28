@@ -1,6 +1,7 @@
-import { morphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/morpho";
-import { oracleAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/oracle";
-import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/button";
+import { AccrualPosition, IMarket, Market, MarketId, MarketParams, Position } from "@morpho-org/blue-sdk";
+import { morphoAbi } from "@morpho-org/uikit/assets/abis/morpho";
+import { oracleAbi } from "@morpho-org/uikit/assets/abis/oracle";
+import { Button } from "@morpho-org/uikit/components/shadcn/button";
 import {
   SheetContent,
   SheetHeader,
@@ -8,12 +9,11 @@ import {
   SheetDescription,
   SheetFooter,
   SheetClose,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/tabs";
-import { TokenAmountInput } from "@morpho-blue-offchain-public/uikit/components/token-amount-input";
-import { TransactionButton } from "@morpho-blue-offchain-public/uikit/components/transaction-button";
-import { formatBalance, formatLtv, Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { AccrualPosition, IMarket, Market, MarketId, MarketParams, Position } from "@morpho-org/blue-sdk";
+} from "@morpho-org/uikit/components/shadcn/sheet";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@morpho-org/uikit/components/shadcn/tabs";
+import { TokenAmountInput } from "@morpho-org/uikit/components/token-amount-input";
+import { TransactionButton } from "@morpho-org/uikit/components/transaction-button";
+import { formatBalance, formatLtv, Token } from "@morpho-org/uikit/lib/utils";
 import { keepPreviousData } from "@tanstack/react-query";
 import { CircleArrowLeft } from "lucide-react";
 import { useMemo, useState } from "react";

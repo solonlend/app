@@ -1,6 +1,6 @@
-import MorphoLogoSvg from "@morpho-blue-offchain-public/uikit/assets/morpho.svg?react";
-import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/button";
-import { WalletMenu } from "@morpho-blue-offchain-public/uikit/components/wallet-menu";
+import MorphoLogoSvg from "@morpho-org/uikit/assets/morpho.svg?react";
+import { Button } from "@morpho-org/uikit/components/shadcn/button";
+import { WalletMenu } from "@morpho-org/uikit/components/wallet-menu";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 

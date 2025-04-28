@@ -1,9 +1,9 @@
-import { metaMorphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho";
-import { metaMorphoFactoryAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/meta-morpho-factory";
-import { Avatar, AvatarFallback, AvatarImage } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
-import { Card, CardContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/card";
-import { Progress } from "@morpho-blue-offchain-public/uikit/components/shadcn/progress";
-import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
+import { metaMorphoAbi } from "@morpho-org/uikit/assets/abis/meta-morpho";
+import { metaMorphoFactoryAbi } from "@morpho-org/uikit/assets/abis/meta-morpho-factory";
+import { Avatar, AvatarFallback, AvatarImage } from "@morpho-org/uikit/components/shadcn/avatar";
+import { Card, CardContent } from "@morpho-org/uikit/components/shadcn/card";
+import { Progress } from "@morpho-org/uikit/components/shadcn/progress";
+import { Sheet, SheetTrigger } from "@morpho-org/uikit/components/shadcn/sheet";
 import {
   Table,
   TableBody,
@@ -12,14 +12,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
-import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
-import {
-  abbreviateAddress,
-  formatBalanceWithSymbol,
-  getTokenSymbolURI,
-  Token,
-} from "@morpho-blue-offchain-public/uikit/lib/utils";
+} from "@morpho-org/uikit/components/shadcn/table";
+import useContractEvents from "@morpho-org/uikit/hooks/use-contract-events/use-contract-events";
+import { abbreviateAddress, formatBalanceWithSymbol, getTokenSymbolURI, Token } from "@morpho-org/uikit/lib/utils";
 import { keepPreviousData } from "@tanstack/react-query";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types

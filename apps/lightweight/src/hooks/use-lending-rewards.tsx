@@ -1,4 +1,4 @@
-import { type Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { type Token } from "@morpho-org/uikit/lib/utils";
 import { useMemo } from "react";
 import { type Address } from "viem";
 

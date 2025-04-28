@@ -1,8 +1,9 @@
-import { morphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/morpho";
-import { Avatar, AvatarFallback, AvatarImage } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
-import { Card, CardContent } from "@morpho-blue-offchain-public/uikit/components/shadcn/card";
-import { Progress } from "@morpho-blue-offchain-public/uikit/components/shadcn/progress";
-import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
+import { MarketId, MarketParams, MarketUtils } from "@morpho-org/blue-sdk";
+import { morphoAbi } from "@morpho-org/uikit/assets/abis/morpho";
+import { Avatar, AvatarFallback, AvatarImage } from "@morpho-org/uikit/components/shadcn/avatar";
+import { Card, CardContent } from "@morpho-org/uikit/components/shadcn/card";
+import { Progress } from "@morpho-org/uikit/components/shadcn/progress";
+import { Sheet, SheetTrigger } from "@morpho-org/uikit/components/shadcn/sheet";
 import {
   Table,
   TableBody,
@@ -11,22 +12,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
-import useContractEvents from "@morpho-blue-offchain-public/uikit/hooks/use-contract-events/use-contract-events";
+} from "@morpho-org/uikit/components/shadcn/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@morpho-org/uikit/components/shadcn/tooltip";
+import useContractEvents from "@morpho-org/uikit/hooks/use-contract-events/use-contract-events";
 import {
   abbreviateAddress,
   formatBalanceWithSymbol,
   formatLtv,
   getTokenSymbolURI,
   Token,
-} from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { MarketId, MarketParams, MarketUtils } from "@morpho-org/blue-sdk";
+} from "@morpho-org/uikit/lib/utils";
 import { keepPreviousData } from "@tanstack/react-query";
 import { blo } from "blo";
 import { Eye, Info } from "lucide-react";

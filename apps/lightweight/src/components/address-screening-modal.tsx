@@ -4,7 +4,7 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/alert-dialog";
+} from "@morpho-org/uikit/components/shadcn/alert-dialog";
 import { useContext } from "react";
 import { useAccountEffect, useDisconnect } from "wagmi";
 

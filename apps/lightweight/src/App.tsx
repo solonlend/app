@@ -1,4 +1,4 @@
-import { cyrb64Hash } from "@morpho-blue-offchain-public/uikit/lib/cyrb64";
+import { cyrb64Hash } from "@morpho-org/uikit/lib/cyrb64";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";

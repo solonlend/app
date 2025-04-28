@@ -1,7 +1,7 @@
-import WatermarkSvg from "@morpho-blue-offchain-public/uikit/assets/powered-by-morpho.svg?react";
-import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/button";
-import { WalletMenu } from "@morpho-blue-offchain-public/uikit/components/wallet-menu";
-import { getChainSlug } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import WatermarkSvg from "@morpho-org/uikit/assets/powered-by-morpho.svg?react";
+import { Button } from "@morpho-org/uikit/components/shadcn/button";
+import { WalletMenu } from "@morpho-org/uikit/components/wallet-menu";
+import { getChainSlug } from "@morpho-org/uikit/lib/utils";
 import { ConnectKitButton } from "connectkit";
 import { useCallback, useEffect, useMemo } from "react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router";

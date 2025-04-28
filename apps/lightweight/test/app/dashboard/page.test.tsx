@@ -1,4 +1,4 @@
-import { abbreviateAddress } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { abbreviateAddress } from "@morpho-org/uikit/lib/utils";
 import userEvent from "@testing-library/user-event";
 import { http, UserRejectedRequestError } from "viem";
 import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";

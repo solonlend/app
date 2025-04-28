@@ -91,7 +91,7 @@ importers:
 
   apps/fallback:
     dependencies:
-      "@morpho-blue-offchain-public/uikit":
+      "@morpho-org/uikit":
         specifier: workspace:*
         version: link:../../packages/uikit
       "@morpho-org/blue-sdk":
@@ -170,7 +170,7 @@ importers:
       "@merkl/api":
         specifier: ^0.20.171
         version: 0.20.171(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(bufferutil@4.0.9)(graphql@16.10.0)(openapi-types@12.1.3)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.24.2)
-      "@morpho-blue-offchain-public/uikit":
+      "@morpho-org/uikit":
         specifier: workspace:*
         version: link:../../packages/uikit
       "@morpho-org/blue-sdk":

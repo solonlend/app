@@ -9,8 +9,8 @@ React web app for Morpho Blue and MetaMorpho contracts that's designed to work u
 To get started:
 
 ```shell
-git clone https://github.com/morpho-org/morpho-blue-offchain-public.git
-cd morpho-blue-offchain-public
+git clone https://github.com/morpho-org/morpho-lite-apps.git
+cd morpho-lite-apps
 # Install packages and run
 pnpm install
 pnpm run dev

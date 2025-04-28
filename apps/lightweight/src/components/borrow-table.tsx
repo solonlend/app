@@ -1,6 +1,7 @@
-import { AvatarStack } from "@morpho-blue-offchain-public/uikit/components/avatar-stack";
-import { Avatar, AvatarFallback, AvatarImage } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
-import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
+import { AccrualPosition, Market } from "@morpho-org/blue-sdk";
+import { AvatarStack } from "@morpho-org/uikit/components/avatar-stack";
+import { Avatar, AvatarFallback, AvatarImage } from "@morpho-org/uikit/components/shadcn/avatar";
+import { Sheet, SheetTrigger } from "@morpho-org/uikit/components/shadcn/sheet";
 import {
   Table,
   TableBody,
@@ -8,21 +9,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
-import {
-  formatLtv,
-  formatBalanceWithSymbol,
-  formatApy,
-  Token,
-  abbreviateAddress,
-} from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { AccrualPosition, Market } from "@morpho-org/blue-sdk";
+} from "@morpho-org/uikit/components/shadcn/table";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
+import { formatLtv, formatBalanceWithSymbol, formatApy, Token, abbreviateAddress } from "@morpho-org/uikit/lib/utils";
 import { blo } from "blo";
 import { ExternalLink, Info } from "lucide-react";
 import { type Chain, type Hex, type Address } from "viem";

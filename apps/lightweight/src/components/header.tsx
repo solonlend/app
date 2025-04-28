@@ -1,5 +1,5 @@
-import { useKeyedState } from "@morpho-blue-offchain-public/uikit/hooks/use-keyed-state";
-import { cn } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { useKeyedState } from "@morpho-org/uikit/hooks/use-keyed-state";
+import { cn } from "@morpho-org/uikit/lib/utils";
 import { XIcon } from "lucide-react";
 
 import { BANNERS } from "@/lib/constants";

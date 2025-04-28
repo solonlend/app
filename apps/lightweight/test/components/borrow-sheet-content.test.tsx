@@ -1,7 +1,7 @@
-import { morphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/morpho";
-import { Dialog } from "@morpho-blue-offchain-public/uikit/components/shadcn/dialog";
-import { Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
 import { IMarket, MarketId, MarketParams } from "@morpho-org/blue-sdk";
+import { morphoAbi } from "@morpho-org/uikit/assets/abis/morpho";
+import { Dialog } from "@morpho-org/uikit/components/shadcn/dialog";
+import { Token } from "@morpho-org/uikit/lib/utils";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { defineChain, erc20Abi, ExtractAbiItem, Hex, http, Log, parseEther, parseUnits, PublicClient } from "viem";

@@ -1,5 +1,5 @@
-import { Dialog } from "@morpho-blue-offchain-public/uikit/components/shadcn/dialog";
-import { Token } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { Dialog } from "@morpho-org/uikit/components/shadcn/dialog";
+import { Token } from "@morpho-org/uikit/lib/utils";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import {

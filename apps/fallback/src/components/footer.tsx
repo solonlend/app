@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/dialog";
+} from "@morpho-org/uikit/components/shadcn/dialog";
 import {
   Table,
   TableHeader,
@@ -13,9 +13,9 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
-import { useGhDeployments } from "@morpho-blue-offchain-public/uikit/hooks/use-gh-deployments";
-import { cn } from "@morpho-blue-offchain-public/uikit/lib/utils";
+} from "@morpho-org/uikit/components/shadcn/table";
+import { useGhDeployments } from "@morpho-org/uikit/hooks/use-gh-deployments";
+import { cn } from "@morpho-org/uikit/lib/utils";
 import { BadgeAlert, BadgeCheck, CheckCheck, Copy, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -100,7 +100,7 @@ export function Footer() {
                   className="underline"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href="https://github.com/morpho-org/morpho-blue-offchain-public/wiki/IPFS#access-with-rabby-desktop"
+                  href="https://github.com/morpho-org/morpho-lite-apps/wiki/IPFS#access-with-rabby-desktop"
                 >
                   here.
                 </a>

@@ -1,5 +1,5 @@
 {
-  "name": "@morpho-blue-offchain-public/lightweight-app",
+  "name": "@morpho-org/lite-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@merkl/api": "^0.20.171",
-    "@morpho-blue-offchain-public/uikit": "workspace:*",
+    "@morpho-org/uikit": "workspace:*",
     "@morpho-org/blue-sdk": "^2.3.1",
     "@tanstack/query-sync-storage-persister": "^5.66.0",
     "@tanstack/react-query": "^5.66.0",

@@ -1,5 +1,5 @@
-import WordmarkSvg from "@morpho-blue-offchain-public/uikit/assets/morpho-horizontal-lite.svg?react";
-import MorphoSvg from "@morpho-blue-offchain-public/uikit/assets/morpho.svg?react";
+import WordmarkSvg from "@morpho-org/uikit/assets/morpho-horizontal-lite.svg?react";
+import MorphoSvg from "@morpho-org/uikit/assets/morpho.svg?react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/dropdown-menu";
+} from "@morpho-org/uikit/components/shadcn/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { ReactNode } from "react";
 

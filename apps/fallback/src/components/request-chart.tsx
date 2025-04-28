@@ -1,18 +1,12 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@morpho-org/uikit/components/shadcn/card";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/chart";
-import { useDebouncedMemo } from "@morpho-blue-offchain-public/uikit/hooks/use-debounced-memo";
-import { RequestTrackingContext } from "@morpho-blue-offchain-public/uikit/lib/request-tracking-context";
+} from "@morpho-org/uikit/components/shadcn/chart";
+import { useDebouncedMemo } from "@morpho-org/uikit/hooks/use-debounced-memo";
+import { RequestTrackingContext } from "@morpho-org/uikit/lib/request-tracking-context";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
 import { useContext, useEffect, useState } from "react";

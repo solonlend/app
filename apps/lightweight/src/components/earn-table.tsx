@@ -1,6 +1,7 @@
-import { AvatarStack } from "@morpho-blue-offchain-public/uikit/components/avatar-stack";
-import { AvatarImage, AvatarFallback, Avatar } from "@morpho-blue-offchain-public/uikit/components/shadcn/avatar";
-import { Sheet, SheetTrigger } from "@morpho-blue-offchain-public/uikit/components/shadcn/sheet";
+import { AccrualVault } from "@morpho-org/blue-sdk";
+import { AvatarStack } from "@morpho-org/uikit/components/avatar-stack";
+import { AvatarImage, AvatarFallback, Avatar } from "@morpho-org/uikit/components/shadcn/avatar";
+import { Sheet, SheetTrigger } from "@morpho-org/uikit/components/shadcn/sheet";
 import {
   TableHeader,
   TableRow,
@@ -8,13 +9,8 @@ import {
   TableBody,
   TableCell,
   Table,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/table";
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@morpho-blue-offchain-public/uikit/components/shadcn/tooltip";
+} from "@morpho-org/uikit/components/shadcn/table";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
 import {
   formatBalanceWithSymbol,
   formatApy,
@@ -22,8 +18,7 @@ import {
   getTokenSymbolURI,
   formatLtv,
   abbreviateAddress,
-} from "@morpho-blue-offchain-public/uikit/lib/utils";
-import { AccrualVault } from "@morpho-org/blue-sdk";
+} from "@morpho-org/uikit/lib/utils";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";

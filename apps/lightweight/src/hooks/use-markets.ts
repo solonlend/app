@@ -1,8 +1,8 @@
-import { adaptiveCurveIrmAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/adaptive-curve-irm";
-import { morphoAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/morpho";
-import { oracleAbi } from "@morpho-blue-offchain-public/uikit/assets/abis/oracle";
-import { restructure } from "@morpho-blue-offchain-public/uikit/lib/restructure";
 import { Market, MarketParams } from "@morpho-org/blue-sdk";
+import { adaptiveCurveIrmAbi } from "@morpho-org/uikit/assets/abis/adaptive-curve-irm";
+import { morphoAbi } from "@morpho-org/uikit/assets/abis/morpho";
+import { oracleAbi } from "@morpho-org/uikit/assets/abis/oracle";
+import { restructure } from "@morpho-org/uikit/lib/restructure";
 import { useMemo } from "react";
 import { Hex } from "viem";
 import { useReadContracts } from "wagmi";

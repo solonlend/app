@@ -1,5 +1,5 @@
-import { Button } from "@morpho-blue-offchain-public/uikit/components/shadcn/button";
-import { cn } from "@morpho-blue-offchain-public/uikit/lib/utils";
+import { Button } from "@morpho-org/uikit/components/shadcn/button";
+import { cn } from "@morpho-org/uikit/lib/utils";
 import { XIcon } from "lucide-react";
 import { useState } from "react";
 
