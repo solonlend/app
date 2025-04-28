@@ -11,20 +11,14 @@ import {
   TableRow,
 } from "@morpho-org/uikit/components/shadcn/table";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
-import {
-  formatLtv,
-  formatBalanceWithSymbol,
-  formatApy,
-  Token,
-  abbreviateAddress,
-  getDomain,
-} from "@morpho-org/uikit/lib/utils";
+import { formatLtv, formatBalanceWithSymbol, Token, abbreviateAddress } from "@morpho-org/uikit/lib/utils";
 import { blo } from "blo";
-import { ExternalLink, Info, SignalHigh, Sparkles } from "lucide-react";
-import { type Chain, type Hex, type Address, parseUnits } from "viem";
+import { ExternalLink, Info } from "lucide-react";
+import { type Chain, type Hex, type Address } from "viem";
 
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
-import { type MerklRewards, type useMerklRewards } from "@/hooks/use-merkl-rewards";
+import { ApyTableCell } from "@/components/table-cells/apy-table-cell";
+import { type useMerklRewards } from "@/hooks/use-merkl-rewards";
 import { SHARED_LIQUIDITY_DOCUMENTATION } from "@/lib/constants";
 import { type DisplayableCurators } from "@/lib/curators";
 
@@ -117,59 +111,6 @@ function HealthTableCell({
               Price Drop To Liq.
               <span>{priceDropText}</span>
             </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-function ApyTableCell({ market, rewards }: { market: Market; rewards: MerklRewards }) {
-  // NOTE: To lower-bound, we assume rewards do not compound, so APR=APY.
-  const rewardsApy = rewards.reduce((acc, x) => acc + x.apr, 0);
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="hover:bg-secondary ml-[-8px] flex w-min items-center gap-2 rounded-sm p-2">
-            {formatApy(market.borrowApy - parseUnits(rewardsApy.toString(), 16))}
-            {rewards.length > 0 && <Sparkles className="text-morpho-brand h-4 w-4" />}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent
-          className="text-primary-foreground rounded-3xl p-4 shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex w-[240px] flex-col gap-3">
-            <div className="flex justify-between">
-              <div className="flex items-end font-light">
-                <SignalHigh size={18} />
-                Native APY
-              </div>
-              {formatApy(market.borrowApy)}
-            </div>
-            {rewards.map((reward) => (
-              <div className="flex justify-between" key={reward.opportunityId}>
-                <div className="flex items-end gap-1 font-light">
-                  <img height={16} width={16} src={reward.rewardToken.imageSrc} />
-                  {reward.rewardToken.symbol}
-                  {reward.depositUrl && (
-                    <a
-                      href={reward.depositUrl}
-                      className="bg-morpho-brand flex items-center gap-1 rounded-sm px-0.5"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      {getDomain(reward.depositUrl)}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-                {"-"}
-                {formatApy(parseUnits(reward.apr.toString(), 16))}
-              </div>
-            ))}
           </div>
         </TooltipContent>
       </Tooltip>
@@ -348,7 +289,11 @@ export function BorrowTable({
                     : "－"}
                 </TableCell>
                 <TableCell>
-                  <ApyTableCell market={market} rewards={borrowingRewards.get(market.id) ?? []} />
+                  <ApyTableCell
+                    nativeApy={market.borrowApy}
+                    rewards={borrowingRewards.get(market.id) ?? []}
+                    mode="owe"
+                  />
                 </TableCell>
                 <TableCell className="rounded-r-lg">
                   <VaultsTableCell
@@ -429,7 +374,11 @@ export function BorrowPositionTable({
                     <TokenTableCell {...loanToken} symbol={loanText} chain={chain} />
                   </TableCell>
                   <TableCell>
-                    <ApyTableCell market={market} rewards={borrowingRewards.get(market.id) ?? []} />
+                    <ApyTableCell
+                      nativeApy={market.borrowApy}
+                      rewards={borrowingRewards.get(market.id) ?? []}
+                      mode="owe"
+                    />
                   </TableCell>
                   <TableCell className="rounded-r-lg">
                     <HealthTableCell
