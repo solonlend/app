@@ -12,8 +12,9 @@ import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
 import { BorrowPositionTable, BorrowTable } from "@/components/borrow-table";
 import { CtaCard } from "@/components/cta-card";
-import { useBorrowingRewards } from "@/hooks/use-borrowing-rewards";
 import { useMarkets } from "@/hooks/use-markets";
+import * as Merkl from "@/hooks/use-merkl-campaigns";
+import { useMerklRewards } from "@/hooks/use-merkl-rewards";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo } from "@/lib/constants";
 import { type DisplayableCurators, getDisplayableCurators } from "@/lib/curators";
@@ -34,7 +35,7 @@ export function BorrowSubPage() {
     [chainId],
   );
 
-  const borrowingRewards = useBorrowingRewards(chainId);
+  const borrowingRewards = useMerklRewards({ chainId, subType: Merkl.SubType.BORROW });
 
   // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {

@@ -24,7 +24,7 @@ import { ExternalLink, Info, SignalHigh, Sparkles } from "lucide-react";
 import { type Chain, type Hex, type Address, parseUnits } from "viem";
 
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
-import { type BorrowingRewards, type useBorrowingRewards } from "@/hooks/use-borrowing-rewards";
+import { type MerklRewards, type useMerklRewards } from "@/hooks/use-merkl-rewards";
 import { SHARED_LIQUIDITY_DOCUMENTATION } from "@/lib/constants";
 import { type DisplayableCurators } from "@/lib/curators";
 
@@ -124,7 +124,7 @@ function HealthTableCell({
   );
 }
 
-function ApyTableCell({ market, rewards }: { market: Market; rewards: BorrowingRewards }) {
+function ApyTableCell({ market, rewards }: { market: Market; rewards: MerklRewards }) {
   // NOTE: To lower-bound, we assume rewards do not compound, so APR=APY.
   const rewardsApy = rewards.reduce((acc, x) => acc + x.apr, 0);
 
@@ -280,7 +280,7 @@ export function BorrowTable({
   markets: Market[];
   tokens: Map<Address, Token>;
   marketVaults: Map<Hex, { name: string; address: Address; totalAssets: bigint; curators: DisplayableCurators }[]>;
-  borrowingRewards: ReturnType<typeof useBorrowingRewards>;
+  borrowingRewards: ReturnType<typeof useMerklRewards>;
   refetchPositions: () => void;
 }) {
   return (
@@ -379,7 +379,7 @@ export function BorrowPositionTable({
   markets: Market[];
   tokens: Map<Address, Token>;
   positions: Map<Hex, AccrualPosition> | undefined;
-  borrowingRewards: ReturnType<typeof useBorrowingRewards>;
+  borrowingRewards: ReturnType<typeof useMerklRewards>;
   refetchPositions: () => void;
 }) {
   return (

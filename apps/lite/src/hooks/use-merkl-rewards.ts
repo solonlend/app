@@ -1,10 +1,10 @@
 import { type Token } from "@morpho-org/uikit/lib/utils";
 import { useMemo } from "react";
-import { type Address } from "viem";
+import { type Hex, type Address } from "viem";
 
 import * as Merkl from "@/hooks/use-merkl-campaigns";
 
-export type LendingRewards = {
+export type MerklRewards = {
   campaignId: string;
   opportunityId: string;
   startTimestamp: number;
@@ -18,11 +18,24 @@ export type LendingRewards = {
   dailyRewards: number;
 }[];
 
-export function useLendingRewards(chainId: number | undefined) {
-  const { data: campaigns } = Merkl.useMerklCampaigns({ chainId, subType: Merkl.SubType.LEND });
+export function useMerklRewards({ chainId, subType }: { chainId: number | undefined; subType: Merkl.SubType }) {
+  const { data: campaigns } = Merkl.useMerklCampaigns({ chainId, subType });
+
+  const paramKey = useMemo(() => {
+    let paramKey = "";
+    switch (subType) {
+      case Merkl.SubType.LEND:
+        paramKey = "targetToken";
+        break;
+      case Merkl.SubType.BORROW:
+        paramKey = "marketId";
+        break;
+    }
+    return paramKey;
+  }, [subType]);
 
   return useMemo(() => {
-    const vaultRewardMap = new Map<Address, LendingRewards>();
+    const rewardsMap = new Map<Hex, MerklRewards>();
 
     campaigns?.forEach((campaign) => {
       const {
@@ -30,20 +43,21 @@ export function useLendingRewards(chainId: number | undefined) {
         startTimestamp,
         endTimestamp,
         rewardToken,
-        params: { blacklist, whitelist, targetToken: vault },
+        params: { blacklist, whitelist, ...params },
         Opportunity: opportunity,
       } = campaign;
+      const paramKeyValue = params[paramKey] as Hex;
 
       if (blacklist.length > 0 && whitelist.length > 0) {
         console.warn(`Skipping campaignId ${campaignId} because blacklist/whitelist isn't implemented.`);
         return;
       }
 
-      if (!vaultRewardMap.has(vault)) {
-        vaultRewardMap.set(vault, []);
+      if (!rewardsMap.has(paramKeyValue)) {
+        rewardsMap.set(paramKeyValue, []);
       }
 
-      vaultRewardMap.get(vault)!.push({
+      rewardsMap.get(paramKeyValue)!.push({
         campaignId,
         opportunityId: opportunity.id,
         startTimestamp,
@@ -63,6 +77,6 @@ export function useLendingRewards(chainId: number | undefined) {
       });
     });
 
-    return vaultRewardMap;
-  }, [campaigns]);
+    return rewardsMap;
+  }, [campaigns, paramKey]);
 }

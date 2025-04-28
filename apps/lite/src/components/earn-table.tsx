@@ -27,7 +27,7 @@ import { DollarSign, ExternalLink, SignalHigh, Sparkles } from "lucide-react";
 import { Chain, hashMessage, Address, zeroAddress, parseUnits } from "viem";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
-import { type LendingRewards, type useLendingRewards } from "@/hooks/use-lending-rewards";
+import { type MerklRewards, type useMerklRewards } from "@/hooks/use-merkl-rewards";
 import { type DisplayableCurators } from "@/lib/curators";
 
 export type Row = {
@@ -140,7 +140,7 @@ function CuratorTableCell({
   );
 }
 
-function ApyTableCell({ vault, rewards }: Pick<Row, "vault"> & { rewards: LendingRewards }) {
+function ApyTableCell({ vault, rewards }: Pick<Row, "vault"> & { rewards: MerklRewards }) {
   // NOTE: To lower-bound, we assume rewards do not compound, so APR=APY.
   const rewardsApy = rewards.reduce((acc, x) => acc + x.apr, 0);
 
@@ -287,7 +287,7 @@ export function EarnTable({
   rows: Row[];
   depositsMode: "totalAssets" | "maxWithdraw";
   tokens: Map<Address, { decimals?: number; symbol?: string }>;
-  lendingRewards: ReturnType<typeof useLendingRewards>;
+  lendingRewards: ReturnType<typeof useMerklRewards>;
   refetchPositions: () => void;
 }) {
   return (
