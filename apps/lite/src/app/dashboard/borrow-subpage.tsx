@@ -12,6 +12,7 @@ import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
 import { BorrowPositionTable, BorrowTable } from "@/components/borrow-table";
 import { CtaCard } from "@/components/cta-card";
+import { useBorrowingRewards } from "@/hooks/use-borrowing-rewards";
 import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo } from "@/lib/constants";
@@ -32,6 +33,8 @@ export function BorrowSubPage() {
     ],
     [chainId],
   );
+
+  const borrowingRewards = useBorrowingRewards(chainId);
 
   // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {
@@ -225,6 +228,7 @@ export function BorrowSubPage() {
                 markets={userMarkets}
                 tokens={tokens}
                 positions={positions}
+                borrowingRewards={borrowingRewards}
                 refetchPositions={refetchPositionsRaw}
               />
             </div>
@@ -243,6 +247,7 @@ export function BorrowSubPage() {
               markets={marketsArr}
               tokens={tokens}
               marketVaults={marketVaults}
+              borrowingRewards={borrowingRewards}
               refetchPositions={refetchPositionsRaw}
             />
           </div>

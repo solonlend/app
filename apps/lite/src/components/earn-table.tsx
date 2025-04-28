@@ -18,6 +18,7 @@ import {
   getTokenSymbolURI,
   formatLtv,
   abbreviateAddress,
+  getDomain,
 } from "@morpho-org/uikit/lib/utils";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types
@@ -26,7 +27,7 @@ import { DollarSign, ExternalLink, SignalHigh, Sparkles } from "lucide-react";
 import { Chain, hashMessage, Address, zeroAddress, parseUnits } from "viem";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
-import { LendingRewards, type useLendingRewards } from "@/hooks/use-lending-rewards";
+import { type LendingRewards, type useLendingRewards } from "@/hooks/use-lending-rewards";
 import { type DisplayableCurators } from "@/lib/curators";
 
 export type Row = {
@@ -36,12 +37,6 @@ export type Row = {
   maxWithdraw: bigint | undefined;
   imageSrc: string;
 };
-
-function getDomain(urlString: string): string {
-  const url = new URL(urlString);
-  const hostname = url.hostname;
-  return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
-}
 
 function VaultTableCell({
   address,

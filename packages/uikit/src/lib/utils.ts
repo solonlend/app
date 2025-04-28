@@ -6,6 +6,11 @@ export function getChainSlug(chain: Pick<Chain, "name">) {
   return chain.name.toLowerCase().replace(" ", "-");
 }
 
+export function getDomain(url: string): string {
+  const hostname = new URL(url).hostname;
+  return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
