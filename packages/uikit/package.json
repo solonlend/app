@@ -1,5 +1,6 @@
 {
   "name": "@morpho-blue-offchain-public/uikit",
+  "license": "MIT",
   "private": true,
   "version": "0.0.0",
   "type": "module",
