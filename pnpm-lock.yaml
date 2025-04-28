@@ -165,7 +165,7 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0(rollup@4.37.0)(typescript@5.7.3)(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(tsx@4.19.3)(yaml@2.7.0))
 
-  apps/lightweight:
+  apps/lite:
     dependencies:
       "@merkl/api":
         specifier: ^0.20.171
