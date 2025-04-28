@@ -19,6 +19,7 @@ import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
 import { CtaCard } from "@/components/cta-card";
 import { EarnTable } from "@/components/earn-table";
+import { useLendingRewards } from "@/hooks/use-lending-rewards";
 import { useMarkets } from "@/hooks/use-markets";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo, MIN_TIMELOCK } from "@/lib/constants";
@@ -39,6 +40,8 @@ export function EarnSubPage() {
     ],
     [chainId],
   );
+
+  const lendingRewards = useLendingRewards(chainId);
 
   // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {
@@ -233,6 +236,7 @@ export function EarnSubPage() {
               rows={userRows}
               depositsMode="maxWithdraw"
               tokens={tokens}
+              lendingRewards={lendingRewards}
               refetchPositions={refetchMaxWithdraws}
             />
           </div>
@@ -249,6 +253,7 @@ export function EarnSubPage() {
             rows={rows}
             depositsMode="totalAssets"
             tokens={tokens}
+            lendingRewards={lendingRewards}
             refetchPositions={refetchMaxWithdraws}
           />
         </div>

@@ -27,10 +27,11 @@ import { AccrualVault } from "@morpho-org/blue-sdk";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
-import { DollarSign, ExternalLink, SignalHigh } from "lucide-react";
-import { Chain, hashMessage, Address, zeroAddress } from "viem";
+import { DollarSign, ExternalLink, SignalHigh, Sparkles } from "lucide-react";
+import { Chain, hashMessage, Address, zeroAddress, parseUnits } from "viem";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
+import { LendingRewards, type useLendingRewards } from "@/hooks/use-lending-rewards";
 import { type DisplayableCurators } from "@/lib/curators";
 
 export type Row = {
@@ -40,6 +41,12 @@ export type Row = {
   maxWithdraw: bigint | undefined;
   imageSrc: string;
 };
+
+function getDomain(urlString: string): string {
+  const url = new URL(urlString);
+  const hostname = url.hostname;
+  return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
+}
 
 function VaultTableCell({
   address,
@@ -143,13 +150,17 @@ function CuratorTableCell({
   );
 }
 
-function ApyTableCell({ vault }: Pick<Row, "vault">) {
+function ApyTableCell({ vault, rewards }: Pick<Row, "vault"> & { rewards: LendingRewards }) {
+  // NOTE: To lower-bound, we assume rewards do not compound, so APR=APY.
+  const rewardsApy = rewards.reduce((acc, x) => acc + x.apr, 0);
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="hover:bg-secondary ml-[-8px] flex w-min items-center gap-2 rounded-sm p-2">
-            {formatApy(vault.netApy)}
+            {formatApy(vault.netApy + parseUnits(rewardsApy.toString(), 16))}
+            {rewards.length > 0 && <Sparkles className="text-morpho-brand h-4 w-4" />}
           </div>
         </TooltipTrigger>
         <TooltipContent
@@ -164,6 +175,27 @@ function ApyTableCell({ vault }: Pick<Row, "vault">) {
               </div>
               {formatApy(vault.apy)}
             </div>
+            {rewards.map((reward) => (
+              <div className="flex justify-between" key={reward.opportunityId}>
+                <div className="flex items-end gap-1 font-light">
+                  <img height={16} width={16} src={reward.rewardToken.imageSrc} />
+                  {reward.rewardToken.symbol}
+                  {reward.depositUrl && (
+                    <a
+                      href={reward.depositUrl}
+                      className="bg-morpho-brand flex items-center gap-1 rounded-sm px-0.5"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {getDomain(reward.depositUrl)}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+                {"+"}
+                {formatApy(parseUnits(reward.apr.toString(), 16))}
+              </div>
+            ))}
             <div className="flex justify-between">
               <div className="flex items-end font-light">
                 <DollarSign size={18} />
@@ -258,12 +290,14 @@ export function EarnTable({
   rows,
   depositsMode,
   tokens,
+  lendingRewards,
   refetchPositions,
 }: {
   chain: Chain | undefined;
   rows: Row[];
   depositsMode: "totalAssets" | "maxWithdraw";
   tokens: Map<Address, { decimals?: number; symbol?: string }>;
+  lendingRewards: ReturnType<typeof useLendingRewards>;
   refetchPositions: () => void;
 }) {
   return (
@@ -319,7 +353,7 @@ export function EarnTable({
                       <CollateralsTableCell vault={row.vault} chain={chain} tokens={tokens} />
                     </TableCell>
                     <TableCell className="rounded-r-lg">
-                      <ApyTableCell vault={row.vault} />
+                      <ApyTableCell vault={row.vault} rewards={lendingRewards.get(row.vault.address) ?? []} />
                     </TableCell>
                   </TableRow>
                 </SheetTrigger>
