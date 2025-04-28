@@ -1,8 +1,8 @@
 name: Deploy lite app to S3
 on:
   push:
-    branches:
-      - "release"
+    branches: ["release"]
+    paths: ["pnpm-lock.yaml", "scripts/deploy.sh", "packages/uikit/**", "apps/lite/**"]
 
 permissions:
   id-token: write

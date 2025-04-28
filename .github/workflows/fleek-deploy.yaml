@@ -1,8 +1,8 @@
 name: Deploy site via Fleek
 on:
   push:
-    branches:
-      - "release"
+    branches: ["release"]
+    paths: ["pnpm-lock.yaml", "fleek.config.ts", "packages/uikit/**", "apps/fallback/**"]
 jobs:
   deploy-to-fleek:
     # Create an environment for static hosting on IPFS
