@@ -31,6 +31,7 @@ describe("connect wallet flow", () => {
       ],
     });
 
+    window.localStorage.setItem("hasSeenWelcome", "true");
     render(<Page />, { wagmiConfig });
 
     await userEvent.click(screen.getByText("Connect Wallet"));
@@ -53,6 +54,7 @@ describe("connect wallet flow", () => {
       connectors: [mock({ accounts: [account] })],
     });
 
+    window.localStorage.setItem("hasSeenWelcome", "true");
     render(<Page />, { wagmiConfig });
 
     await userEvent.click(screen.getByText("Connect Wallet"));
@@ -77,6 +79,7 @@ describe("switch chain flow", () => {
       connectors: [mock({ accounts: [account] })],
     });
 
+    window.localStorage.setItem("hasSeenWelcome", "true");
     render(<Page />, {
       wagmiConfig,
       routes: [{ element: <div>Switched to Optimism successfully!</div>, path: "op-mainnet/earn" }],
@@ -101,6 +104,7 @@ describe("switch chain flow", () => {
       connectors: [mock({ accounts: [account], features: { defaultConnected: true } })],
     });
 
+    window.localStorage.setItem("hasSeenWelcome", "true");
     render(<Page />, {
       wagmiConfig,
       routes: [{ element: <div>Switched to Optimism successfully!</div>, path: "op-mainnet/earn" }],
