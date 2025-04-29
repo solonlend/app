@@ -10,6 +10,7 @@ import { useChains } from "wagmi";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { MorphoMenu } from "@/components/morpho-menu";
+import { WelcomeModal } from "@/components/welcome-modal";
 import { APP_DETAILS, CORE_DEPLOYMENTS, WORDMARK } from "@/lib/constants";
 
 enum SubPage {
@@ -104,6 +105,7 @@ export default function Page() {
           />
         </div>
       </Header>
+      <WelcomeModal />
       <Outlet context={{ chain }} />
       <Footer />
     </div>
