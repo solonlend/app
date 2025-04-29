@@ -10,6 +10,7 @@ import {
   mainnet,
   mode as modeMainnet,
   optimism,
+  plumeMainnet,
   polygon,
   scroll as scrollMainnet,
   sonic,
@@ -26,6 +27,7 @@ import HemiSvg from "@/assets/chains/hemi.svg?react";
 import InkSvg from "@/assets/chains/ink.svg?react";
 import ModeSvg from "@/assets/chains/mode.svg?react";
 import OptimismSvg from "@/assets/chains/op.svg?react";
+import PlumeSvg from "@/assets/chains/plume.svg?react";
 import PolygonSvg from "@/assets/chains/polygon.svg?react";
 import ScrollSvg from "@/assets/chains/scroll.svg?react";
 import SonicSvg from "@/assets/chains/sonic.svg?react";
@@ -46,6 +48,8 @@ export function ChainIcon({ id }: { id: number | undefined }): JSX.Element {
       return <InkSvg />;
     case optimism.id:
       return <OptimismSvg />;
+    case plumeMainnet.id:
+      return <PlumeSvg />;
     case polygon.id:
       return <PolygonSvg />;
     case scrollMainnet.id:

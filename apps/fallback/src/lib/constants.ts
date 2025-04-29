@@ -9,6 +9,7 @@ import {
   mainnet,
   mode as modeMainnet,
   optimism,
+  plumeMainnet,
   polygon,
   scroll as scrollMainnet,
   sonic,
@@ -92,6 +93,10 @@ export const DEPLOYMENTS: Deployments = {
     Morpho: { address: "0xd6c916eB7542D0Ad3f18AEd0FCBD50C582cfa95f", fromBlock: 9100931n },
     MetaMorphoV1_1Factory: { address: "0x0cE9e3512CB4df8ae7e265e62Fb9258dc14f12e8", fromBlock: 9101319n },
   },
+  [plumeMainnet.id]: {
+    Morpho: { address: "0x42b18785CE0Aed7BF7Ca43a39471ED4C0A3e0bB5", fromBlock: 765994n },
+    MetaMorphoV1_1Factory: { address: "0x2525D453D9BA13921D5aB5D8c12F9202b0e19456", fromBlock: 766078n },
+  },
 };
 
 export const CORE_DEPLOYMENTS = new Set<keyof Deployments>([mainnet.id, base.id]);
@@ -107,6 +112,8 @@ export const BATCH1_DEPLOYMENTS = new Set<keyof Deployments>([
 ]);
 
 export const BATCH2_DEPLOYMENTS = new Set<keyof Deployments>([unichain.id, corn.id, modeMainnet.id, hemi.id, sonic.id]);
+
+export const BATCH3_DEPLOYMENTS = new Set<keyof Deployments>([plumeMainnet.id]);
 
 export function getContractDeploymentInfo(chainId: number, name: OptionalContracts): DeploymentDetails | undefined;
 export function getContractDeploymentInfo(chainId: number, name: RequiredContracts): DeploymentDetails;

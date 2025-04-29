@@ -10,6 +10,7 @@ import {
   mainnet,
   mode as modeMainnet,
   optimism,
+  plumeMainnet,
   polygon,
   scroll as scrollMainnet,
   sonic,
@@ -135,6 +136,20 @@ export const DEPLOYMENTS: Deployments = {
     Morpho: { address: "0xd6c916eB7542D0Ad3f18AEd0FCBD50C582cfa95f", fromBlock: 9100931n },
     MetaMorphoV1_1Factory: { address: "0x0cE9e3512CB4df8ae7e265e62Fb9258dc14f12e8", fromBlock: 9101319n },
   },
+  [plumeMainnet.id]: {
+    Morpho: { address: "0x42b18785CE0Aed7BF7Ca43a39471ED4C0A3e0bB5", fromBlock: 765994n },
+    MetaMorphoV1_1Factory: { address: "0x2525D453D9BA13921D5aB5D8c12F9202b0e19456", fromBlock: 766078n },
+  },
+  // TODO: flame.id once viem supports it
+  [253368190]: {
+    Morpho: { address: "0x63971484590b054b6Abc4FEe9F31BC6F68CfeC04", fromBlock: 5991116n },
+    MetaMorphoV1_1Factory: { address: "0xf2BD176D3A89f6E9f6D0c7F17C4Ae6A3515007a8", fromBlock: 5991236n },
+  },
+  // TODO: camp.id once viem supports it
+  [123420001114]: {
+    Morpho: { address: "0xc7CAd9B1377Eb8103397Cb07Cb5c4f03eb2eBEa8", fromBlock: 4804080n },
+    MetaMorphoV1_1Factory: { address: "0xa8CD521d42b716821D7ddD2Ca6a237087aA5b487", fromBlock: 4804270n },
+  },
 };
 
 export const CORE_DEPLOYMENTS = new Set<keyof Deployments>([mainnet.id, base.id]);
@@ -150,6 +165,9 @@ export const BATCH1_DEPLOYMENTS = new Set<keyof Deployments>([
 ]);
 
 export const BATCH2_DEPLOYMENTS = new Set<keyof Deployments>([unichain.id, corn.id, modeMainnet.id, hemi.id, sonic.id]);
+
+// TODO: update once viem supports flame, camp, hyperliquid, and tac
+export const BATCH3_DEPLOYMENTS = new Set<keyof Deployments>([plumeMainnet.id, 253368190, 123420001114]);
 
 export function getContractDeploymentInfo(chainId: number, name: OptionalContracts): DeploymentDetails | undefined;
 export function getContractDeploymentInfo(chainId: number, name: RequiredContracts): DeploymentDetails;

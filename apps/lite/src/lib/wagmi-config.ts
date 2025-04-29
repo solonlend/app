@@ -11,6 +11,7 @@ import {
   mainnet,
   mode as modeMainnet,
   optimism,
+  plumeMainnet,
   polygon,
   scroll as scrollMainnet,
   sonic,
@@ -67,6 +68,7 @@ const chains = [
   // corn,
   // modeMainnet,
   // hemi,
+  plumeMainnet,
 ] as const;
 
 const transports: { [K in (typeof chains)[number]["id"]]: Transport } & { [k: number]: Transport } = {
@@ -129,6 +131,7 @@ const transports: { [K in (typeof chains)[number]["id"]]: Transport } & { [k: nu
   ]),
   [modeMainnet.id]: createFallbackTransport([{ url: "https://mode.drpc.org", batch: false }]),
   [hemi.id]: createFallbackTransport([{ url: "https://rpc.hemi.network/rpc", batch: false }]),
+  [plumeMainnet.id]: createFallbackTransport([{ url: "https://phoenix-rpc.plumenetwork.xyz", batch: false }]),
 };
 
 export function createConfig(args: {

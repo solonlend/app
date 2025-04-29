@@ -3,7 +3,7 @@ import { cyrb64Hash } from "@morpho-org/uikit/lib/cyrb64";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import type { Chain, HttpTransportConfig } from "viem";
+import type { HttpTransportConfig } from "viem";
 import {
   createConfig,
   deserialize,
@@ -25,6 +25,7 @@ import {
   mainnet,
   mode as modeMainnet,
   optimism,
+  plumeMainnet,
   polygon,
   scroll as scrollMainnet,
   sonic,
@@ -56,7 +57,8 @@ const chains = [
   optimism,
   arbitrum,
   polygon,
-  unichain as Chain,
+  unichain,
+  plumeMainnet,
   worldchain,
   scrollMainnet,
   fraxtal,
@@ -100,6 +102,7 @@ const transports: Record<(typeof chains)[number]["id"], Transport> = {
     { url: "https://polygon.gateway.tenderly.co", batch: { batchSize: 10 } },
     { url: "https://polygon.drpc.org", batch: false },
   ]),
+  [plumeMainnet.id]: createFallbackTransport([{ url: "https://phoenix-rpc.plumenetwork.xyz", batch: false }]),
   [unichain.id]: createFallbackTransport([
     { url: "https://mainnet.unichain.org", batch: false },
     { url: "https://unichain.drpc.org", batch: false },
