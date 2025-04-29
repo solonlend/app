@@ -18,7 +18,7 @@ import { type Chain, type Hex, type Address } from "viem";
 
 import { BorrowSheetContent } from "@/components/borrow-sheet-content";
 import { ApyTableCell } from "@/components/table-cells/apy-table-cell";
-import { type useMerklRewards } from "@/hooks/use-merkl-rewards";
+import { type useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
 import { SHARED_LIQUIDITY_DOCUMENTATION } from "@/lib/constants";
 import { type DisplayableCurators } from "@/lib/curators";
 
@@ -221,7 +221,7 @@ export function BorrowTable({
   markets: Market[];
   tokens: Map<Address, Token>;
   marketVaults: Map<Hex, { name: string; address: Address; totalAssets: bigint; curators: DisplayableCurators }[]>;
-  borrowingRewards: ReturnType<typeof useMerklRewards>;
+  borrowingRewards: ReturnType<typeof useMerklOpportunities>;
   refetchPositions: () => void;
 }) {
   return (
@@ -324,7 +324,7 @@ export function BorrowPositionTable({
   markets: Market[];
   tokens: Map<Address, Token>;
   positions: Map<Hex, AccrualPosition> | undefined;
-  borrowingRewards: ReturnType<typeof useMerklRewards>;
+  borrowingRewards: ReturnType<typeof useMerklOpportunities>;
   refetchPositions: () => void;
 }) {
   return (

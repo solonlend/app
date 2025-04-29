@@ -3,7 +3,7 @@ import { formatApy, getDomain } from "@morpho-org/uikit/lib/utils";
 import { Sparkles, SignalHigh, ExternalLink, DollarSign } from "lucide-react";
 import { parseUnits } from "viem";
 
-import { type MerklRewards } from "@/hooks/use-merkl-rewards";
+import { type MerklOpportunities } from "@/hooks/use-merkl-opportunities";
 
 export function ApyTableCell({
   nativeApy,
@@ -13,7 +13,7 @@ export function ApyTableCell({
 }: {
   nativeApy: bigint;
   fee?: bigint;
-  rewards: MerklRewards;
+  rewards: MerklOpportunities;
   mode: "earn" | "owe";
 }) {
   if (mode === "owe" && fee > 0n) {

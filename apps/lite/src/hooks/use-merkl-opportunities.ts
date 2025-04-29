@@ -4,7 +4,7 @@ import { type Hex, type Address } from "viem";
 
 import * as Merkl from "@/hooks/use-merkl-campaigns";
 
-export type MerklRewards = {
+export type MerklOpportunities = {
   campaignId: string;
   opportunityId: string;
   startTimestamp: number;
@@ -18,7 +18,7 @@ export type MerklRewards = {
   dailyRewards: number;
 }[];
 
-export function useMerklRewards({ chainId, subType }: { chainId: number | undefined; subType: Merkl.SubType }) {
+export function useMerklOpportunities({ chainId, subType }: { chainId: number | undefined; subType: Merkl.SubType }) {
   const { data: campaigns } = Merkl.useMerklCampaigns({ chainId, subType });
 
   const paramKey = useMemo(() => {
@@ -35,7 +35,7 @@ export function useMerklRewards({ chainId, subType }: { chainId: number | undefi
   }, [subType]);
 
   return useMemo(() => {
-    const rewardsMap = new Map<Hex, MerklRewards>();
+    const rewardsMap = new Map<Hex, MerklOpportunities>();
 
     campaigns?.forEach((campaign) => {
       const {

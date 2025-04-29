@@ -26,7 +26,7 @@ import { Chain, hashMessage, Address, zeroAddress } from "viem";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
 import { ApyTableCell } from "@/components/table-cells/apy-table-cell";
-import { type useMerklRewards } from "@/hooks/use-merkl-rewards";
+import { type useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
 import { type DisplayableCurators } from "@/lib/curators";
 
 export type Row = {
@@ -225,7 +225,7 @@ export function EarnTable({
   rows: Row[];
   depositsMode: "totalAssets" | "maxWithdraw";
   tokens: Map<Address, { decimals?: number; symbol?: string }>;
-  lendingRewards: ReturnType<typeof useMerklRewards>;
+  lendingRewards: ReturnType<typeof useMerklOpportunities>;
   refetchPositions: () => void;
 }) {
   return (

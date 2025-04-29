@@ -21,7 +21,7 @@ import { CtaCard } from "@/components/cta-card";
 import { EarnTable } from "@/components/earn-table";
 import { useMarkets } from "@/hooks/use-markets";
 import * as Merkl from "@/hooks/use-merkl-campaigns";
-import { useMerklRewards } from "@/hooks/use-merkl-rewards";
+import { useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { CORE_DEPLOYMENTS, getContractDeploymentInfo, MIN_TIMELOCK } from "@/lib/constants";
 import { getDisplayableCurators } from "@/lib/curators";
@@ -42,7 +42,7 @@ export function EarnSubPage() {
     [chainId],
   );
 
-  const lendingRewards = useMerklRewards({ chainId, subType: Merkl.SubType.LEND });
+  const lendingRewards = useMerklOpportunities({ chainId, subType: Merkl.SubType.LEND });
 
   // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {
