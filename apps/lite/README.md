@@ -36,3 +36,7 @@ To add a new chain, you'll need to update additional values in [constants](/apps
 > Only vault `owner` addresses should be used for whitelisting. Listing or checking against other vault attributes
 > (like `curator`) is dangerous as those roles can be assigned without acceptance, i.e. a scammer could assign a
 > whitelisted party as their scam's curator, making it appear more legitimate than it is.
+
+## License
+
+Licensed under [AGPL-3.0](/apps/lite/LICENSE). If you fork, deploy, or modify the code herein (particularly for whitelabeling use-cases), please keep the "Powered by Morpho" branding in the top left of the page.
