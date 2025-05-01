@@ -56,19 +56,19 @@ function createAlchemyHttp(slug: string): ({ url: string } & HttpTransportConfig
 const chains = [
   mainnet,
   base,
-  // ink,
-  optimism,
   // arbitrum,
-  polygon,
-  // unichain,
-  // worldchain,
-  // scrollMainnet,
-  // fraxtal,
-  // sonic,
   // corn,
-  // modeMainnet,
+  // fraxtal,
   // hemi,
+  // ink,
+  // modeMainnet,
+  optimism,
   // plumeMainnet,
+  polygon,
+  // scrollMainnet,
+  // sonic,
+  // unichain,
+  worldchain,
 ] as const;
 
 const transports: { [K in (typeof chains)[number]["id"]]: Transport } & { [k: number]: Transport } = {

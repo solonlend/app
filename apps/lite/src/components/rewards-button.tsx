@@ -50,7 +50,7 @@ export function RewardsButton({ chainId }: { chainId: number | undefined }) {
         <Button variant="tertiary" size="lg" className="rounded-full px-4 font-light">
           <Sparkles className="animate-rainbow h-4 w-4 fill-current" />
           <div className="hidden md:block">
-            <NewsTicker width={100} spacing={16}>
+            <NewsTicker width={110} spacing={16}>
               {claimables.map((reward) => (
                 <span key={reward.token.address}>
                   {formatBalanceWithSymbol(reward.claimable, reward.token.decimals, reward.token.symbol, 3, true)}
