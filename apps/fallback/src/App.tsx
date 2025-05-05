@@ -34,6 +34,7 @@ import {
   unichain,
   worldchain,
 } from "wagmi/chains";
+import { walletConnect } from "wagmi/connectors";
 
 import DashboardPage from "@/app/dashboard/page";
 
@@ -142,7 +143,9 @@ const transports: Record<(typeof chains)[number]["id"], Transport> = {
 const wagmiConfig = createConfig({
   chains,
   transports,
-  connectors: [injected({ shimDisconnect: true })],
+  connectors: import.meta.env.VITE_WALLET_KIT_PROJECT_ID
+    ? [injected({ shimDisconnect: true }), walletConnect({ projectId: import.meta.env.VITE_WALLET_KIT_PROJECT_ID })]
+    : [injected({ shimDisconnect: true })],
   batch: {
     multicall: {
       batchSize: 2048,
