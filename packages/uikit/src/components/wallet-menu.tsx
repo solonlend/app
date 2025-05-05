@@ -62,7 +62,7 @@ function ConnectWalletButton() {
           {connectors.map((connector) => (
             <Button
               key={connector.uid}
-              variant="outline"
+              variant="secondary"
               onClick={() => {
                 // Manually close the modal when the connector is connecting
                 // This indicates the connector's modal/popup is or will soon be open

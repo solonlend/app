@@ -30,8 +30,8 @@ export function AddressScreeningProvider({ children }: { children: ReactNode }) 
 
   const screen = useCallback(async (address: Address) => {
     try {
-      if (window.location.protocol.startsWith("ipfs")) {
-        throw new Error("Address screening API is only available on Morpho subdomains.");
+      if (!window.location.host.includes("morpho")) {
+        throw new Error("Address screening API is only available on Morpho sites.");
       }
 
       setStatus((prev) => ({ ...prev, isLoading: true, error: null }));
