@@ -1,3 +1,5 @@
+import { AddressScreeningModal } from "@morpho-org/uikit/components/address-screening-modal";
+import { AddressScreeningProvider } from "@morpho-org/uikit/hooks/use-address-screening";
 import { RequestTrackingProvider } from "@morpho-org/uikit/hooks/use-request-tracking";
 import { cyrb64Hash } from "@morpho-org/uikit/lib/cyrb64";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
@@ -33,7 +35,7 @@ import {
   worldchain,
 } from "wagmi/chains";
 
-import DashboardPage from "./app/dashboard/page";
+import DashboardPage from "@/app/dashboard/page";
 
 const httpConfig: HttpTransportConfig = {
   retryDelay: 0,
@@ -173,7 +175,10 @@ function App() {
     <WagmiProvider config={wagmiConfig}>
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, buster: "v1" }}>
         <RequestTrackingProvider>
-          <DashboardPage />
+          <AddressScreeningProvider>
+            <DashboardPage />
+            <AddressScreeningModal />
+          </AddressScreeningProvider>
         </RequestTrackingProvider>
       </PersistQueryClientProvider>
     </WagmiProvider>
