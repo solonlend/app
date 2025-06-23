@@ -36,7 +36,7 @@ export function BorrowSubPage() {
     [chainId],
   );
 
-  const borrowingRewards = useMerklOpportunities({ chainId, subType: Merkl.SubType.BORROW });
+  const borrowingRewards = useMerklOpportunities({ chainId, subType: Merkl.SubType.BORROW, userAddress });
 
   // MARK: Index `MetaMorphoFactory.CreateMetaMorpho` on all factory versions to get a list of all vault addresses
   const {
