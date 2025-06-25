@@ -11,7 +11,7 @@ export enum SubType {
 
 // Updated 06/06/2025, subject to change by Merkl
 const MERKL_LISTING_TYPES: Record<SubType, string[]> = {
-  [SubType.LEND]: ["MORPHOSUPPLY", "ERC20LOGPROCESSOR"], // market and vault-based lending, respectively
+  [SubType.LEND]: ["MORPHOVAULT", "MORPHOSUPPLY", "ERC20LOGPROCESSOR"], // market and vault-based lending, respectively
   [SubType.UNUSED]: [],
   [SubType.BORROW]: ["MORPHOBORROW"],
   // TODO: MORPHOCOLLATERAL (no campaigns with this for now, and UI doesn't support it)

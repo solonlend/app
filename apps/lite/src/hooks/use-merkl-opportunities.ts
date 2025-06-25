@@ -18,7 +18,15 @@ export type MerklOpportunities = {
   dailyRewards: number;
 }[];
 
-export function useMerklOpportunities({ chainId, subType }: { chainId: number | undefined; subType: Merkl.SubType }) {
+export function useMerklOpportunities({
+  chainId,
+  subType,
+  userAddress,
+}: {
+  chainId: number | undefined;
+  subType: Merkl.SubType;
+  userAddress?: Address;
+}) {
   const { data: campaigns } = Merkl.useMerklCampaigns({ chainId, subType });
 
   const paramKey = useMemo(() => {
@@ -48,8 +56,12 @@ export function useMerklOpportunities({ chainId, subType }: { chainId: number | 
       } = campaign;
       const paramKeyValue = params[paramKey] as Hex;
 
-      if (blacklist.length > 0 && whitelist.length > 0) {
-        console.warn(`Skipping campaignId ${campaignId} because blacklist/whitelist isn't implemented.`);
+      if (
+        (!userAddress && (blacklist.length > 0 || whitelist.length > 0)) ||
+        (blacklist.length > 0 && blacklist.includes(userAddress)) ||
+        (whitelist.length > 0 && !whitelist.includes(userAddress))
+      ) {
+        console.warn(`Skipping campaignId ${campaignId} because of whitelist/blacklist requirements.`);
         return;
       }
 
@@ -93,5 +105,5 @@ export function useMerklOpportunities({ chainId, subType }: { chainId: number | 
     });
 
     return rewardsMap;
-  }, [campaigns, paramKey]);
+  }, [campaigns, paramKey, userAddress]);
 }
