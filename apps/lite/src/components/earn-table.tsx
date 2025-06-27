@@ -11,6 +11,7 @@ import {
   Table,
 } from "@morpho-org/uikit/components/shadcn/table";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
+import { useModifierKey } from "@morpho-org/uikit/hooks/use-modifier-key";
 import { formatBalanceWithSymbol, Token, formatLtv, abbreviateAddress } from "@morpho-org/uikit/lib/utils";
 import { blo } from "blo";
 // @ts-expect-error: this package lacks types
@@ -114,24 +115,29 @@ function CuratorTableCell({
           className="text-primary-foreground rounded-3xl p-4 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="underline">Roles</p>
-          {roles.map((role) => (
-            <div className="flex items-center gap-1" key={role.name}>
-              <p>
-                {role.name}: <code>{abbreviateAddress(role.address)}</code>
-              </p>
-              {chain?.blockExplorers?.default.url && (
-                <a
-                  href={`${chain.blockExplorers.default.url}/address/${role.address}`}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
-            </div>
-          ))}
-          <br />
+          {/* It's possible for a curator to have no onchain roles. In that case, just show their URL. */}
+          {roles.length > 0 && (
+            <>
+              <p className="underline">Roles</p>
+              {roles.map((role) => (
+                <div className="flex items-center gap-1" key={role.name}>
+                  <p>
+                    {role.name}: <code>{abbreviateAddress(role.address)}</code>
+                  </p>
+                  {chain?.blockExplorers?.default.url && (
+                    <a
+                      href={`${chain.blockExplorers.default.url}/address/${role.address}`}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+              ))}
+              <br />
+            </>
+          )}
           {url != null && (
             <a className="text-blue-200 underline" href={url} rel="noopener noreferrer" target="_blank">
               {url}
@@ -235,6 +241,8 @@ export function EarnTable({
   lendingRewards: ReturnType<typeof useMerklOpportunities>;
   refetchPositions: () => void;
 }) {
+  const isShiftHeld = useModifierKey("Shift");
+
   return (
     <div className="text-primary-foreground w-full max-w-7xl px-2 lg:px-8">
       <Table className="border-separate border-spacing-y-3">
@@ -278,9 +286,11 @@ export function EarnTable({
                     <TableCell>
                       <div className="flex w-min gap-2">
                         {Object.keys(row.curators).length > 0
-                          ? Object.values(row.curators).map((curator) => (
-                              <CuratorTableCell key={curator.name} {...curator} chain={chain} />
-                            ))
+                          ? Object.values(row.curators)
+                              // By default, only show roles with `shouldAlwaysShow == true`.
+                              // When shift key is held, remove filter and show all roles.
+                              .filter((curator) => (isShiftHeld ? true : curator.shouldAlwaysShow))
+                              .map((curator) => <CuratorTableCell key={curator.name} {...curator} chain={chain} />)
                           : ownerText}
                       </div>
                     </TableCell>
