@@ -1,0 +1,18 @@
+{
+  "generated_at": 1788412049,
+  "block": 53158652,
+  "params": {
+    "supply_weight": 1.0,
+    "borrow_weight": 1.0,
+    "point_scale": "1e12 share-units x 1 day (~1 USDG-day)",
+    "markets": 1
+  },
+  "leaderboard": [
+    {
+      "address": "0xd0340f008bee8f6101cd609e0447cd3d44f8cc84",
+      "supply_points": 1.2326,
+      "borrow_points": 0.0,
+      "total": 1.2326
+    }
+  ]
+}

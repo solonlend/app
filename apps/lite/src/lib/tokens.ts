@@ -11,10 +11,20 @@ type TokenList = {
   tokens: { name: string; symbol: string; decimals: number; chainId: number; address: Address; logoURI: string }[];
 };
 
+const ROBINHOOD_CHAIN_ID = 4663;
+const USDG_ADDRESS = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
+
 export function getTokenURI(
   token: { symbol?: string; address: Address; chainId?: number },
   tokenLists: { [chainId: number]: TokenList[] } = { [plumeMainnet.id]: [plumeTokenList] },
 ) {
+  // Robinhood Chain: use the real company/ETF logo by ticker (Robinhood's own CDN serves the same
+  // generic feather for every token, which distinguishes nothing). Unknown tickers 404 and fall
+  // back to the monogram avatar. USDG falls through to the Morpho CDN symbol lookup.
+  if (token.chainId === ROBINHOOD_CHAIN_ID && token.address.toLowerCase() !== USDG_ADDRESS) {
+    return token.symbol ? `https://assets.parqet.com/logos/symbol/${token.symbol}?format=png` : undefined;
+  }
+
   if (token.chainId !== undefined) {
     const match = tokenLists[token.chainId]
       ?.map((tokenList) => tokenList.tokens)

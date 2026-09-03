@@ -50,6 +50,7 @@ import MonadSvg from "@/assets/chains/monad.svg?react";
 import OptimismSvg from "@/assets/chains/op.svg?react";
 import PlumeSvg from "@/assets/chains/plume.svg?react";
 import PolygonSvg from "@/assets/chains/polygon.svg?react";
+import RobinhoodSvg from "@/assets/chains/robinhood.svg?react";
 import ScrollSvg from "@/assets/chains/scroll.svg?react";
 import SeiSvg from "@/assets/chains/sei.svg?react";
 import SoneiumSvg from "@/assets/chains/soneium.svg?react";
@@ -107,6 +108,8 @@ export function ChainIcon({ id }: { id: number | undefined }): JSX.Element {
       return <PlumeSvg />;
     case polygon.id:
       return <PolygonSvg />;
+    case customChains.robinhood.id:
+      return <RobinhoodSvg />;
     case scrollMainnet.id:
       return <ScrollSvg />;
     case sei.id:

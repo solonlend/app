@@ -165,6 +165,14 @@ export function EarnSheetContent({
               onChange={setTextInputValue}
             />
           </div>
+          <div className="text-secondary-foreground flex items-center justify-between px-1 pb-2 font-mono text-xs">
+            <span>Solon Points</span>
+            <span>
+              {textInputValue && Number(textInputValue) > 0
+                ? `≈ +${Number(textInputValue).toLocaleString("en-US", { maximumFractionDigits: 1 })} pts / day`
+                : "+1 pt / USDG·day"}
+            </span>
+          </div>
           {approvalTxnConfig ? (
             <TransactionButton
               variables={approvalTxnConfig}

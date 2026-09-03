@@ -274,3 +274,114 @@
     filter: url("#rounding_blur");
   }
 }
+
+/* ============================================================
+   SOLON theme override — black/white ascii, matches solonlend.xyz
+   Applied on top of the stock Morpho Lite tokens (html.dark).
+   ============================================================ */
+.dark {
+  --morpho-brand: hsl(0, 0%, 100%);
+  --morpho-active: hsl(0, 0%, 80%);
+  --morpho-banner: hsl(0, 0%, 10%);
+
+  --background: hsl(0, 0%, 0%);
+  --foreground: hsl(0, 0%, 100%);
+
+  --card: hsl(0, 0%, 4%);
+  --card-foreground: hsl(0, 0%, 96%);
+  --popover: hsl(0, 0%, 4%);
+  --popover-foreground: hsl(0, 0%, 96%);
+
+  --primary: hsl(0, 0%, 0%);
+  --primary-foreground: hsl(0, 0%, 96%);
+
+  --secondary: hsla(0, 0%, 100%, 0.08);
+  --secondary-foreground: hsla(0, 0%, 100%, 0.72);
+
+  --tertiary: hsl(0, 0%, 100%);
+  --tertiary-foreground: hsla(0, 0%, 100%, 0.5);
+
+  --muted: hsl(0, 0%, 8%);
+  --muted-foreground: hsl(0, 0%, 54%);
+
+  --accent: hsl(0, 0%, 12%);
+  --accent-foreground: hsl(0, 0%, 100%);
+
+  --border: hsl(0, 0%, 15%);
+  --input: hsl(0, 0%, 15%);
+  --ring: hsl(0, 0%, 100%);
+  --navbar-interactive: hsl(0, 0%, 12%);
+
+  --radius: 0rem;
+
+  --chart-1: hsl(0, 0%, 100%);
+  --chart-2: hsl(0, 0%, 60%);
+  --chart-3: hsl(0, 0%, 40%);
+  --chart-4: hsl(0, 0%, 75%);
+  --chart-5: hsl(0, 0%, 25%);
+
+  --allocation-0: hsl(0, 0%, 95%);
+  --allocation-1: hsl(0, 0%, 82%);
+  --allocation-2: hsl(0, 0%, 70%);
+  --allocation-3: hsl(0, 0%, 58%);
+  --allocation-4: hsl(0, 0%, 47%);
+  --allocation-5: hsl(0, 0%, 38%);
+  --allocation-6: hsl(0, 0%, 30%);
+  --allocation-7: hsl(0, 0%, 23%);
+  --allocation-8: hsl(0, 0%, 17%);
+  --allocation-9: hsl(0, 0%, 12%);
+}
+
+/* Mono everywhere, square everything — terminal aesthetic.
+   Same faces as solonlend.xyz: Geist Mono body, Silkscreen for pixel headings.
+   Overriding the Tailwind font theme vars makes every font-sans/font-mono utility resolve
+   to Geist Mono too — body inheritance alone loses to utility classes. */
+@theme {
+  --font-sans: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-pixel: "Silkscreen", "Geist Mono", monospace;
+}
+html {
+  font-size: 14px; /* match the main site's denser type scale */
+}
+.dark body,
+.dark button,
+.dark input,
+.dark table {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+.font-pixel {
+  font-family: "Silkscreen", "Geist Mono", monospace;
+}
+.dark * {
+  border-radius: 0 !important;
+}
+
+/* Inverted (white) fills need black text: shadcn "blue"/"tertiary" variants use text-primary-foreground */
+.dark .bg-morpho-brand,
+.dark .bg-tertiary {
+  color: #000 !important;
+}
+
+/* Dropdown items: keep the focus highlight dark (focus:bg-tertiary would be white-on-white here) */
+.dark [data-slot="select-item"]:focus,
+.dark [data-slot="select-item"][data-highlighted] {
+  background: var(--accent) !important;
+  color: var(--foreground) !important;
+}
+
+/* Same family of clashes, fixed once for all components:
+   with --tertiary now solid white, any hover that swaps to a translucent/white fill
+   must keep a readable pairing. Light fill -> black text; dark fill -> white text. */
+.dark .bg-tertiary:hover {
+  background: hsl(0 0% 82%) !important; /* dimmed white, not translucent-dark */
+  color: #000 !important;
+}
+.dark .bg-morpho-brand:hover {
+  color: #000 !important; /* hover:bg-morpho-brand/90 stays light */
+}
+/* Sheet tabs use hover:bg-tertiary with white text — go dark-highlight instead */
+.dark [data-slot="tabs-trigger"]:hover:not([data-state="active"]) {
+  background: var(--accent) !important;
+  color: var(--foreground) !important;
+}

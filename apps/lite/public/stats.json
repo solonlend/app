@@ -1,0 +1,54 @@
+{
+  "generated_at": 1788401093,
+  "markets": 76,
+  "total_supply_usdg": 22365.46,
+  "total_borrow_usdg": 4059.31,
+  "available_liquidity_usdg": 18306.14,
+  "utilization_pct": 18.15,
+  "liquidations_count": 2,
+  "bad_debt_usdg": 0.0,
+  "top_markets": [
+    {
+      "id": "0x50bc39b5722fb5634c436d74c6787f3c125b879e7b73cf9e9ecc01bbb57b8e55",
+      "ticker": "SPY",
+      "lltv": 62.5,
+      "supply_usdg": 4265.53,
+      "borrow_usdg": 4000.47
+    },
+    {
+      "id": "0x66306c087add8907752320b309934abcc354d21626de8115c79df49d9c214edc",
+      "ticker": "NVDA",
+      "lltv": 62.5,
+      "supply_usdg": 2015.11,
+      "borrow_usdg": 14.88
+    },
+    {
+      "id": "0xafc86936af4f7edf083eb2550b8c42311b83c685982742b9271b309a58268855",
+      "ticker": "MSFT",
+      "lltv": 62.5,
+      "supply_usdg": 1603.04,
+      "borrow_usdg": 2.0
+    },
+    {
+      "id": "0x30a2a5f1a098b23ed91eadc4529a8d1c967f2cdc2e40a709f3a5992004b01ac0",
+      "ticker": "AAPL",
+      "lltv": 62.5,
+      "supply_usdg": 1349.9,
+      "borrow_usdg": 0.0
+    },
+    {
+      "id": "0x315b99abb698487891243a84afd28a5ff56fe02143f203c03edd3f103936bf60",
+      "ticker": "QQQ",
+      "lltv": 62.5,
+      "supply_usdg": 1327.4,
+      "borrow_usdg": 0.0
+    },
+    {
+      "id": "0x69400cfe81f2ae381b9a9f27076a4d637338379d999e9ffdfbde52f0876312ee",
+      "ticker": "META",
+      "lltv": 62.5,
+      "supply_usdg": 1325.58,
+      "borrow_usdg": 0.0
+    }
+  ]
+}

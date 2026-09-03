@@ -4,7 +4,8 @@ import { WalletMenu } from "@morpho-org/uikit/components/wallet-menu";
 import { CORE_DEPLOYMENTS } from "@morpho-org/uikit/lib/deployments";
 import { getChainSlug } from "@morpho-org/uikit/lib/utils";
 import { ConnectKitButton } from "connectkit";
-import { useCallback, useEffect, useMemo } from "react";
+import { Menu, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router";
 import { Toaster } from "sonner";
 import { useChains } from "wagmi";
@@ -13,13 +14,15 @@ import { DeprecationModal } from "@/components/deprecation-modal";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { MorphoMenu } from "@/components/morpho-menu";
-import { RewardsButton } from "@/components/rewards-button";
 import { WelcomeModal } from "@/components/welcome-modal";
-import { APP_DETAILS, WORDMARK } from "@/lib/constants";
+import { APP_DETAILS, SHOW_REWARDS, SITE_URL, WORDMARK } from "@/lib/constants";
 
 enum SubPage {
   Earn = "earn",
   Borrow = "borrow",
+  Points = "points",
+  Liquidations = "liquidations",
+  Rewards = "rewards",
 }
 
 function ConnectWalletButton() {
@@ -27,7 +30,7 @@ function ConnectWalletButton() {
     <ConnectKitButton.Custom>
       {({ show }) => {
         return (
-          <Button variant="blue" size="lg" className="rounded-full px-4 font-light md:px-6" onClick={show}>
+          <Button variant="blue" size="lg" className="rounded-full px-3 font-light md:px-6" onClick={show}>
             <span className="inline md:hidden">Connect</span>
             <span className="hidden md:inline">Connect&nbsp;Wallet</span>
           </Button>
@@ -39,11 +42,21 @@ function ConnectWalletButton() {
 
 export default function Page() {
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { chain: selectedChainSlug } = useParams();
 
   const location = useLocation();
   const locationSegments = location.pathname.toLowerCase().split("/").slice(1);
-  const selectedSubPage = locationSegments.at(1) === SubPage.Borrow ? SubPage.Borrow : SubPage.Earn;
+  const selectedSubPage =
+    locationSegments.at(1) === SubPage.Borrow
+      ? SubPage.Borrow
+      : locationSegments.at(1) === SubPage.Points
+        ? SubPage.Points
+        : locationSegments.at(1) === SubPage.Liquidations
+          ? SubPage.Liquidations
+          : locationSegments.at(1) === SubPage.Rewards
+            ? SubPage.Rewards
+            : SubPage.Earn;
 
   const chains = useChains();
   const chain = useMemo(
@@ -70,22 +83,24 @@ export default function Page() {
   return (
     <div className="bg-background">
       <Toaster theme="dark" position="bottom-left" richColors />
-      <Header className="flex items-center justify-between px-5 py-3" chainId={chain?.id}>
-        <div className="text-primary-foreground flex items-center gap-4">
+      <Header className="flex flex-wrap items-center justify-between gap-y-2 px-3 py-3 md:px-5" chainId={chain?.id}>
+        <div className="text-primary-foreground flex min-w-0 items-center gap-2 md:gap-4">
           {WORDMARK.length > 0 ? (
             <>
-              <img className="max-h-[24px]" src={WORDMARK} />
-              <WatermarkSvg height={24} className="text-primary-foreground/50 w-[170px] min-w-[170px]" />
+              <a href={SITE_URL} aria-label="Back to solonlend.xyz">
+                <img className="max-h-[24px]" src={WORDMARK} />
+              </a>
+              <WatermarkSvg height={24} className="text-primary-foreground/50 hidden w-[170px] min-w-0 md:block" />
             </>
           ) : (
             <MorphoMenu />
           )}
-          <div className="flex items-center gap-0.5 rounded-full bg-transparent p-1 md:gap-2">
+          <div className="hidden items-center gap-0.5 rounded-full bg-transparent p-1 md:flex md:gap-2">
             <Link to={SubPage.Earn} relative="path">
               <Button
                 variant={selectedSubPage === SubPage.Earn ? "tertiary" : "secondaryTab"}
                 size="lg"
-                className="rounded-full px-4 font-light md:px-6"
+                className="rounded-full px-3 font-light md:px-6"
               >
                 Earn
               </Button>
@@ -94,15 +109,56 @@ export default function Page() {
               <Button
                 variant={selectedSubPage === SubPage.Borrow ? "tertiary" : "secondaryTab"}
                 size="lg"
-                className="rounded-full px-4 font-light md:px-6"
+                className="rounded-full px-3 font-light md:px-6"
               >
                 Borrow
               </Button>
             </Link>
+            <Link to={SubPage.Points} relative="path">
+              <Button
+                variant={selectedSubPage === SubPage.Points ? "tertiary" : "secondaryTab"}
+                size="lg"
+                className="rounded-full px-3 font-light md:px-6"
+              >
+                Points
+              </Button>
+            </Link>
+            <Link to={SubPage.Liquidations} relative="path">
+              <Button
+                variant={selectedSubPage === SubPage.Liquidations ? "tertiary" : "secondaryTab"}
+                size="lg"
+                className="rounded-full px-3 font-light md:px-6"
+              >
+                Liquidations
+              </Button>
+            </Link>
+            {SHOW_REWARDS && (
+              <Link to={SubPage.Rewards} relative="path">
+                <Button
+                  variant={selectedSubPage === SubPage.Rewards ? "tertiary" : "secondaryTab"}
+                  size="lg"
+                  className="rounded-full px-3 font-light md:px-6"
+                >
+                  Rewards
+                </Button>
+              </Link>
+            )}
+            <a href={`${SITE_URL}/docs`} target="_blank" rel="noopener noreferrer">
+              <Button variant="secondaryTab" size="lg" className="rounded-full px-3 font-light md:px-6">
+                Docs ↗
+              </Button>
+            </a>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <RewardsButton chainId={chain?.id} />
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0 md:gap-2">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="text-primary-foreground hover:bg-foreground hover:text-background p-2 font-mono transition-all duration-200 md:hidden"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <WalletMenu
             selectedChainSlug={selectedChainSlug!}
             setSelectedChainSlug={setSelectedChainSlug}
@@ -110,6 +166,44 @@ export default function Page() {
             coreDeployments={CORE_DEPLOYMENTS}
           />
         </div>
+        {isMobileMenuOpen && (
+          <div className="border-border bg-background/95 order-last -mx-3 w-screen border-b backdrop-blur-md md:hidden">
+            <div className="flex flex-col gap-1 px-4 py-4">
+              {[
+                { to: SubPage.Earn, label: "EARN" },
+                { to: SubPage.Borrow, label: "BORROW" },
+                { to: SubPage.Points, label: "POINTS" },
+                { to: SubPage.Liquidations, label: "LIQUIDATIONS" },
+                ...(SHOW_REWARDS ? [{ to: SubPage.Rewards, label: "REWARDS" }] : []),
+              ].map(({ to, label }) => (
+                <Link key={to} to={to} relative="path" onClick={() => setIsMobileMenuOpen(false)}>
+                  <span
+                    className={`block px-3 py-2 text-left font-mono text-sm transition-all duration-200 ${
+                      selectedSubPage === to
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:bg-foreground hover:text-background"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              ))}
+              <div className="bg-border my-2 h-px" />
+              <div className="px-3 py-1">
+                <WatermarkSvg height={18} className="text-primary-foreground/50 w-[130px]" />
+              </div>
+              <a
+                href={`${SITE_URL}/docs`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground flex items-center gap-1 px-3 py-2 font-mono text-sm transition-all duration-200"
+              >
+                DOCS
+                <span>{"\u2192"}</span>
+              </a>
+            </div>
+          </div>
+        )}
       </Header>
       <WelcomeModal />
       <DeprecationModal chainId={chain?.id} />

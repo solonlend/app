@@ -13,7 +13,6 @@ import {
 } from "@morpho-org/uikit/components/shadcn/table";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
 import { formatLtv, formatBalanceWithSymbol, Token, abbreviateAddress } from "@morpho-org/uikit/lib/utils";
-import { blo } from "blo";
 import { CheckCheck, Copy, ExternalLink, Info } from "lucide-react";
 import { useState } from "react";
 import { type Chain, type Hex, type Address } from "viem";
@@ -23,6 +22,8 @@ import { ApyTableCell } from "@/components/table-cells/apy-table-cell";
 import { type useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
 import { SHARED_LIQUIDITY_DOCUMENTATION } from "@/lib/constants";
 import { type DisplayableCurators } from "@/lib/curators";
+import { monogramURI } from "@/lib/monogram";
+import { SOLON_CREATED_MARKETS } from "@/lib/solon-markets";
 
 function TokenTableCell({ address, symbol, imageSrc, chain }: Token & { chain: Chain | undefined }) {
   return (
@@ -33,7 +34,7 @@ function TokenTableCell({ address, symbol, imageSrc, chain }: Token & { chain: C
             <Avatar className="size-4 rounded-full">
               <AvatarImage src={imageSrc} alt="Avatar" />
               <AvatarFallback delayMs={1000}>
-                <img src={blo(address)} />
+                <img src={monogramURI(symbol ?? address)} />
               </AvatarFallback>
             </Avatar>
             {symbol ?? "－"}
@@ -43,6 +44,7 @@ function TokenTableCell({ address, symbol, imageSrc, chain }: Token & { chain: C
           className="text-primary-foreground rounded-3xl p-4 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
+          <p className="text-morpho-valid text-xs">Issuer-verified on-chain ✓</p>
           <div className="flex items-center gap-1">
             <p>
               Address: <code>{abbreviateAddress(address)}</code>
@@ -265,6 +267,12 @@ export function BorrowTable({
   borrowingRewards: ReturnType<typeof useMerklOpportunities>;
   refetchPositions: () => void;
 }) {
+  // Hide the Vault Listing column until at least one vault (Solon's, at genesis) funds a market.
+  const hasVaultListings = [...marketVaults.values()].some((v) => v.length > 0);
+  // Vault-funded markets first — traffic goes to the pools that feed our depositors.
+  const solonRank = (m: Market) =>
+    (SOLON_CREATED_MARKETS.includes(m.id) ? 2 : 0) + ((marketVaults.get(m.params.id) ?? []).length > 0 ? 1 : 0);
+  const orderedMarkets = [...markets].sort((a, b) => solonRank(b) - solonRank(a));
   return (
     <Table className="border-separate border-spacing-y-3">
       <TableHeader className="bg-primary">
@@ -297,12 +305,14 @@ export function BorrowTable({
             </div>
           </TableHead>
           <TableHead className="text-secondary-foreground text-xs font-light">Rate</TableHead>
-          <TableHead className="text-secondary-foreground text-xs font-light">Vault Listing</TableHead>
+          {hasVaultListings && (
+            <TableHead className="text-secondary-foreground text-xs font-light">Vault Listing</TableHead>
+          )}
           <TableHead className="text-secondary-foreground rounded-r-lg text-xs font-light">ID</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {markets.map((market) => (
+        {orderedMarkets.map((market) => (
           <Sheet
             key={market.id}
             onOpenChange={(isOpen) => {
@@ -313,7 +323,17 @@ export function BorrowTable({
             <SheetTrigger asChild>
               <TableRow className="bg-primary hover:bg-secondary">
                 <TableCell className="rounded-l-lg py-3">
-                  <TokenTableCell {...tokens.get(market.params.collateralToken)!} chain={chain} />
+                  <div className="flex items-center gap-2">
+                    <TokenTableCell {...tokens.get(market.params.collateralToken)!} chain={chain} />
+                    {SOLON_CREATED_MARKETS.includes(market.id) && (
+                      <span
+                        title="Solon-certified market — created and funded by the Solon vault. Borrowing here earns points."
+                        className="bg-foreground text-background px-1.5 py-0.5 text-[10px] font-semibold tracking-widest"
+                      >
+                        SOLON
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <TokenTableCell {...tokens.get(market.params.loanToken)!} chain={chain} />
@@ -335,15 +355,22 @@ export function BorrowTable({
                     nativeApy={market.borrowApy}
                     rewards={borrowingRewards.get(market.id) ?? []}
                     mode="owe"
+                    // Borrowing only earns points when the liquidity comes from a Solon vault —
+                    // external markets don't accrue pts (policy: 2026-09-03).
+                    points={
+                      SOLON_CREATED_MARKETS.includes(market.id) || (marketVaults.get(market.params.id) ?? []).length > 0
+                    }
                   />
                 </TableCell>
-                <TableCell>
-                  <VaultsTableCell
-                    token={tokens.get(market.params.loanToken)!}
-                    vaults={marketVaults.get(market.params.id) ?? []}
-                    chain={chain}
-                  />
-                </TableCell>
+                {hasVaultListings && (
+                  <TableCell>
+                    <VaultsTableCell
+                      token={tokens.get(market.params.loanToken)!}
+                      vaults={marketVaults.get(market.params.id) ?? []}
+                      chain={chain}
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="rounded-r-lg">
                   <IdTableCell marketId={market.id} />
                 </TableCell>

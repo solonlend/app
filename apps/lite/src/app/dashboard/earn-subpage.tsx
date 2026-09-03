@@ -28,9 +28,12 @@ import { EarnTable } from "@/components/earn-table";
 import { useMarkets } from "@/hooks/use-markets";
 import * as Merkl from "@/hooks/use-merkl-campaigns";
 import { useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
+import { useSolonVault } from "@/hooks/use-solon-vault";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { getDisplayableCurators } from "@/lib/curators";
 import { getDeploylessMode, getShouldEnforceDeadDeposit } from "@/lib/overrides";
+import { SOLON_VAULT } from "@/lib/solon-markets";
+import { MOCK_EARN_TOKENS } from "@/lib/solon-mock";
 import { getTokenURI } from "@/lib/tokens";
 
 const STALE_TIME = 5 * 60 * 1000;
@@ -259,7 +262,68 @@ export function EarnSubPage() {
       .filter((vault) => vault.isDeadDepositStateValid || (vault.userShares ?? 0n) > 0n);
   }, [vaults, hasDeadDeposits, shouldEnforceDeadDeposit, tokens, userShares, curators, chainId]);
 
-  const userRows = rows.filter((row) => (row.userShares ?? 0n) > 0n);
+  // Live Solon Vault V2 row (genesis 2026-09-03) — read straight from chain.
+  const solon = useSolonVault({ chainId, userAddress });
+  const solonRow = useMemo(() => {
+    const AAPL = "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9" as Address;
+    const vaultDuck = {
+      address: SOLON_VAULT.address,
+      owner: SOLON_VAULT.owner,
+      name: solon.name,
+      asset: "0x5fc5360d0400a0fd4f2af552add042d716f1d168" as Address,
+      timelock: 0n,
+      totalAssets: solon.totalAssets,
+      apy: solon.apy,
+      fee: SOLON_VAULT.performanceFeeWad,
+      allocations: new Map(),
+      collateralAllocations: new Map([
+        [
+          AAPL,
+          {
+            proportion: 10n ** 18n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0x4f6185269EbcAD4cFA0371d63b29d923956E60AC"]),
+          },
+        ],
+      ]),
+      toAssets: solon.toAssets,
+      getAllocationProportion: () => 0n,
+    } as unknown as AccrualVault;
+    return {
+      vault: vaultDuck,
+      isDeadDepositStateValid: true,
+      asset: {
+        address: "0x5fc5360d0400a0fd4f2af552add042d716f1d168" as Address,
+        symbol: "USDG",
+        decimals: 6,
+        imageSrc: getTokenURI({
+          symbol: "USDG",
+          address: "0x5fc5360d0400a0fd4f2af552add042d716f1d168" as Address,
+          chainId,
+        }),
+      },
+      curators: {
+        Solon: {
+          name: "Solon",
+          roles: [{ name: "Owner", address: SOLON_VAULT.owner }],
+          url: "https://solonlend.xyz",
+          imageSrc: `${import.meta.env.BASE_URL}solon-icon.svg`,
+          shouldAlwaysShow: true,
+        },
+      },
+      userShares: solon.userShares,
+      imageSrc: `${import.meta.env.BASE_URL}solon-icon.svg`,
+    };
+  }, [solon, chainId]);
+
+  const displayRows = useMemo(() => [solonRow as unknown as (typeof rows)[number], ...rows], [solonRow, rows]);
+  const displayTokens = useMemo(() => {
+    const m = new Map(tokens);
+    for (const [k, v] of MOCK_EARN_TOKENS) if (!m.has(k)) m.set(k, v);
+    return m;
+  }, [tokens]);
+
+  const userRows = displayRows.filter((row) => (row.userShares ?? 0n) > 0n);
 
   if (status === "reconnecting") return undefined;
 
@@ -268,13 +332,9 @@ export function EarnSubPage() {
       {status === "disconnected" ? (
         <div className="bg-linear-to-b flex w-full flex-col from-transparent to-white/[0.03] px-8 pb-20 pt-8">
           <CtaCard
-            className="md:w-7xl flex flex-col gap-4 md:mx-auto md:max-w-full md:flex-row md:items-center md:justify-between"
+            className="md:w-7xl w-full md:mx-auto md:max-w-full"
             bigText="Earn on your terms"
             littleText="Connect wallet to get started"
-            videoSrc={{
-              mov: "https://cdn.morpho.org/v2/assets/videos/earn-animation.mov",
-              webm: "https://cdn.morpho.org/v2/assets/videos/earn-animation.webm",
-            }}
           />
         </div>
       ) : (
@@ -284,7 +344,7 @@ export function EarnSubPage() {
               chain={chain}
               rows={userRows}
               depositsMode="userAssets"
-              tokens={tokens}
+              tokens={displayTokens}
               lendingRewards={lendingRewards}
               refetchPositions={refetchBalanceOf}
             />
@@ -299,9 +359,9 @@ export function EarnSubPage() {
         <div className="bg-linear-to-b from-background to-primary flex h-full grow justify-center rounded-t-xl pb-16 pt-8">
           <EarnTable
             chain={chain}
-            rows={rows}
+            rows={displayRows}
             depositsMode="totalAssets"
-            tokens={tokens}
+            tokens={displayTokens}
             lendingRewards={lendingRewards}
             refetchPositions={refetchBalanceOf}
           />

@@ -43,6 +43,12 @@ export type Deployments = {
 };
 
 export const DEPLOYMENTS: Deployments = {
+  [customChains.robinhood.id]: {
+    Morpho: { address: "0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010", fromBlock: 287n },
+    // Robinhood Chain has Morpho Vault V2 (no MetaMorpho v1.1 factory); this points at the V2 factory so
+    // the CreateMetaMorpho scan simply yields nothing instead of crashing. Vault V2 needs its own lens.
+    MetaMorphoV1_1Factory: { address: "0x0FBad98595b0186dA120E41f77C102beb49f803c", fromBlock: 287n },
+  },
   [mainnet.id]: {
     Morpho: { address: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb", fromBlock: 18883124n },
     MetaMorphoFactory: { address: "0xA9c3D3a366466Fa809d1Ae982Fb2c46E5fC41101", fromBlock: 18925584n },

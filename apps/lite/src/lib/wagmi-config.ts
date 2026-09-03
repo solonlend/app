@@ -60,31 +60,13 @@ function createPrivateProxyHttp(chainId: number): ({ url: string } & HttpTranspo
   ];
 }
 
-const chains = [
-  // full support
-  mainnet,
-  base,
-  polygon,
-  unichain,
-  customChains.katana,
-  arbitrum,
-  customChains.hyperevm,
-  optimism,
-  // lite support (alphabetical)
-  // abstract,
-  // celo,
-  // corn,
-  // fraxtal,
-  // ink,
-  // lisk,
-  // modeMainnet,
-  // scrollMainnet,
-  // soneium,
-  // sonic,
-  worldchain,
-] as const;
+// Solon: single-chain deployment on Robinhood Chain.
+const chains = [customChains.robinhood] as const;
 
 const transports: { [K in (typeof chains)[number]["id"]]: Transport } & { [k: number]: Transport } = {
+  [customChains.robinhood.id]: createFallbackTransport([
+    { url: "https://rpc.mainnet.chain.robinhood.com/rpc", batch: { batchSize: 10 } },
+  ]),
   // full support
   [mainnet.id]: createFallbackTransport([
     ...createPrivateProxyHttp(mainnet.id),

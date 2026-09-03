@@ -1,4 +1,5 @@
 import { SafeLink } from "@morpho-org/uikit/components/safe-link";
+import * as customChains from "@morpho-org/uikit/lib/chains";
 import { type Deployments } from "@morpho-org/uikit/lib/deployments";
 import { ReactNode } from "react";
 import { type Chain, hemi, optimism, plumeMainnet, polygon, worldchain } from "wagmi/chains";
@@ -7,22 +8,7 @@ import { type Chain, hemi, optimism, plumeMainnet, polygon, worldchain } from "w
  * App-wide deprecation banner configuration.
  * Set to undefined to disable the banner.
  */
-export const APP_DEPRECATION_BANNER: { color: string; text: ReactNode } | undefined = {
-  color: "bg-amber-600",
-  text: (
-    <span className="grow py-2 text-center">
-      Morpho Lite will be gradually phased out in the coming months; learn more{" "}
-      <SafeLink
-        href="https://help.morpho.org/en/articles/13560956-morpho-lite-app-deprecation"
-        target="_blank"
-        className="underline"
-      >
-        here
-      </SafeLink>
-      .
-    </span>
-  ),
-};
+export const APP_DEPRECATION_BANNER: { color: string; text: ReactNode } | undefined = undefined;
 
 /**
  * Chain-specific deprecation modal configuration.
@@ -45,17 +31,22 @@ export function isReduceOnly(chainId: number | undefined) {
 
 export const APP_DETAILS = {
   // NOTE: Should always match the title in `index.html` (won't break anything, but should be correct)
-  name: import.meta.env.VITE_APP_TITLE,
-  description: "A minimal and open-source version of the main Morpho App",
-  url: "https://lite.morpho.org",
+  name: import.meta.env.VITE_APP_TITLE ?? "Solon",
+  description: "Borrow USDG against tokenized US stocks on Robinhood Chain. A curator on Morpho.",
+  url: "https://app.solonlend.xyz",
   icon: "/favicon.svg",
 };
 
-export const WORDMARK = ""; // Replace with "/your-wordmark.svg" to customize interface
+export const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://solonlend.xyz";
+
+// Rewards page ships ready but hidden; flip to true to open it up.
+export const SHOW_REWARDS = false;
+
+export const WORDMARK = `${import.meta.env.BASE_URL}solon-wordmark.svg`; // Replace with "/your-wordmark.svg" to customize interface
 
 export const MIN_TIMELOCK = 3 * 24 * 60 * 60; // For filtering vaults
 
-export const DEFAULT_CHAIN = worldchain;
+export const DEFAULT_CHAIN = customChains.robinhood;
 
 export const TRANSACTION_DATA_SUFFIX = "0x117E"; // (L I T E)
 

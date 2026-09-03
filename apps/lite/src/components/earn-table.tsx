@@ -14,17 +14,17 @@ import {
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
 import { useModifierKey } from "@morpho-org/uikit/hooks/use-modifier-key";
 import { formatBalanceWithSymbol, Token, formatLtv, abbreviateAddress } from "@morpho-org/uikit/lib/utils";
-import { blo } from "blo";
 // @ts-expect-error: this package lacks types
 import humanizeDuration from "humanize-duration";
 import { ClockAlert, ExternalLink } from "lucide-react";
-import { Chain, hashMessage, Address, zeroAddress, formatUnits } from "viem";
+import { Chain, Address, zeroAddress, formatUnits } from "viem";
 
 import { EarnSheetContent } from "@/components/earn-sheet-content";
 import { ApyTableCell } from "@/components/table-cells/apy-table-cell";
 import { type useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
 import { MIN_TIMELOCK } from "@/lib/constants";
 import { type DisplayableCurators } from "@/lib/curators";
+import { monogramURI } from "@/lib/monogram";
 import { getTokenURI } from "@/lib/tokens";
 
 export type Row = {
@@ -51,7 +51,7 @@ function VaultTableCell({
             <Avatar className="h-4 w-4 rounded-full">
               <AvatarImage src={imageSrc} alt="Avatar" />
               <AvatarFallback delayMs={1000}>
-                <img src={blo(address)} />
+                <img src={monogramURI(symbol ?? address)} />
               </AvatarFallback>
             </Avatar>
             {symbol ?? "－"}
@@ -107,7 +107,7 @@ function CuratorTableCell({
             <Avatar className="h-4 w-4 rounded-full">
               <AvatarImage src={imageSrc ?? ""} alt="Avatar" />
               <AvatarFallback delayMs={500}>
-                <img src={blo(hashMessage(name).padEnd(42, "0").slice(0, 42) as Address)} />
+                <img src={monogramURI(name)} />
               </AvatarFallback>
             </Avatar>
             {name}
@@ -165,7 +165,7 @@ function CollateralsTableCell({
         const token = tokens.get(collateral);
         const logoUrl = [
           getTokenURI({ symbol: token?.symbol, address: collateral, chainId: chain?.id }),
-          blo(collateral),
+          monogramURI(tokens.get(collateral)?.symbol ?? collateral),
         ];
         const lltvs = [...allocation.lltvs.values()];
         const oracles = [...allocation.oracles];
@@ -323,7 +323,13 @@ export function EarnTable({
                       <CollateralsTableCell vault={row.vault} chain={chain} tokens={tokens} />
                     </TableCell>
                     <TableCell className="rounded-r-lg">
-                      <ApyTableCell nativeApy={row.vault.apy} fee={row.vault.fee} rewards={rewards} mode="earn" />
+                      <ApyTableCell
+                        nativeApy={row.vault.apy}
+                        fee={row.vault.fee}
+                        rewards={rewards}
+                        mode="earn"
+                        points
+                      />
                     </TableCell>
                   </TableRow>
                 </SheetTrigger>

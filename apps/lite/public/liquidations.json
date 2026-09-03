@@ -1,0 +1,31 @@
+{
+  "generated_at": 1788398912,
+  "block": 53030654,
+  "totals": { "count": 2, "repaid_usdg": 13.75, "bad_debt_usdg": 0.0 },
+  "events": [
+    {
+      "ts": 1784888194,
+      "block": 18069978,
+      "tx": "0x3c1dbd5e26a9d9b6662771d0d2c46300c83791c3dfb9d90882569b990bf40b25",
+      "market": "NVDA",
+      "lltv": 62.5,
+      "borrower": "0x1bf704707e9f3f407ebc9364fdaed08c39893770",
+      "liquidator": "0x1bf704707e9f3f407ebc9364fdaed08c39893770",
+      "repaid_usdg": 4.99,
+      "seized": 0.027067,
+      "bad_debt_usdg": 0.0
+    },
+    {
+      "ts": 1784207284,
+      "block": 11280725,
+      "tx": "0xe25219d9811af39e48c25ab889112764ee7cbaf0428d9742f71261067b461892",
+      "market": "SGOV",
+      "lltv": 91.5,
+      "borrower": "0x511304df6abb9a9ba71f40a17784db5fe33682cc",
+      "liquidator": "0x511304df6abb9a9ba71f40a17784db5fe33682cc",
+      "repaid_usdg": 8.76,
+      "seized": 0.089312,
+      "bad_debt_usdg": 0.0
+    }
+  ]
+}

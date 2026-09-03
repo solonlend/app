@@ -11,11 +11,13 @@ export function ApyTableCell({
   fee = 0n,
   rewards,
   mode,
+  points = false,
 }: {
   nativeApy: bigint;
   fee?: bigint;
   rewards: MerklOpportunities;
   mode: "earn" | "owe";
+  points?: boolean;
 }) {
   if (mode === "owe" && fee > 0n) {
     console.warn(`You've specified a fee of ${fee} for borrowing. Are you sure that's right?`);
@@ -33,6 +35,11 @@ export function ApyTableCell({
           <div className="hover:bg-secondary ml-[-8px] flex w-min items-center gap-2 rounded-sm p-2">
             {formatApy(netApy)}
             {rewards.length > 0 && <Sparkles className="text-morpho-brand h-4 w-4" />}
+            {points && (
+              <span className="border-foreground/40 text-foreground/80 border px-1 py-px font-mono text-[10px] tracking-wider">
+                +PTS
+              </span>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent
@@ -66,6 +73,15 @@ export function ApyTableCell({
                 {formatApy(parseUnits(reward.apr.toFixed(18), 16))}
               </div>
             ))}
+            {points && (
+              <div className="flex justify-between gap-4">
+                <div className="flex items-end gap-1 font-light">
+                  <Sparkles size={16} />
+                  Solon Points
+                </div>
+                <span>+1 / USDG·day {mode === "owe" ? "borrowed" : "supplied"}</span>
+              </div>
+            )}
             {fee > 0n || mode === "earn" ? (
               <div className="flex justify-between">
                 <div className="flex items-end font-light">

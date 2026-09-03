@@ -23,6 +23,7 @@ import { useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
 import { useTopNCurators } from "@/hooks/use-top-n-curators";
 import { type DisplayableCurators, getDisplayableCurators } from "@/lib/curators";
 import { getDeploylessMode, getShouldEnforceDeadDeposit } from "@/lib/overrides";
+import { SOLON_MARKET_IDS } from "@/lib/solon-markets";
 import { getTokenURI } from "@/lib/tokens";
 
 const STALE_TIME = 5 * 60 * 1000;
@@ -110,7 +111,9 @@ export function BorrowSubPage() {
         })
         .map((alloc) => alloc.id),
     );
-    return [...new Set(filteredAllocationMarketIds)];
+    // Solon: also surface the curated direct-market list (Robinhood Chain has no v1.1 vaults, so
+    // allocation-derived ids alone would leave the table empty).
+    return [...new Set([...filteredAllocationMarketIds, ...SOLON_MARKET_IDS])];
   }, [shouldEnforceDeadDeposit, vaultsData]);
   const markets = useMarkets({ chainId, marketIds, staleTime: STALE_TIME, fetchPrices: true });
   const marketsArr = useMemo(() => {
@@ -238,13 +241,9 @@ export function BorrowSubPage() {
       {status === "disconnected" ? (
         <div className="bg-linear-to-b flex w-full flex-col from-transparent to-white/[0.03] px-8 pb-20 pt-8">
           <CtaCard
-            className="md:w-7xl flex flex-col gap-4 md:mx-auto md:max-w-full md:flex-row md:items-center md:justify-between"
-            bigText="Provide collateral to borrow any asset"
+            className="md:w-7xl w-full md:mx-auto md:max-w-full"
+            bigText="Hold the stock. Borrow the cash."
             littleText="Connect wallet to get started"
-            videoSrc={{
-              mov: "https://cdn.morpho.org/v2/assets/videos/borrow-animation.mov",
-              webm: "https://cdn.morpho.org/v2/assets/videos/borrow-animation.webm",
-            }}
           />
         </div>
       ) : (

@@ -1,5 +1,5 @@
 import { blo } from "blo";
-import { ExternalLink, LoaderCircle, PowerOff } from "lucide-react";
+import { LoaderCircle, PowerOff } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { type Address } from "viem";
@@ -13,7 +13,6 @@ import {
   useSwitchChain,
 } from "wagmi";
 
-import MorphoSvg from "@/assets/morpho.svg?react";
 import { ChainIcon } from "@/components/chain-icon";
 import { Avatar, AvatarImage } from "@/components/shadcn/avatar";
 import { Button } from "@/components/shadcn/button";
@@ -32,7 +31,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectSeparator,
   SelectTrigger,
   SelectValue,
@@ -229,13 +227,6 @@ export function WalletMenu({
                     ))}
                 </>
               )}
-              <SelectSeparator />
-              <SelectLabel
-                className="bg-tertiary hover:bg-morpho-brand flex cursor-pointer items-center gap-2 rounded-sm font-normal"
-                onClick={() => window.open("https://app.morpho.org/", "_blank", "noopener,noreferrer")}
-              >
-                <MorphoSvg height={16} width={16} /> Full App <ExternalLink className="h-4 w-4" />
-              </SelectLabel>
             </SelectGroup>
           )}
         </SelectContent>
