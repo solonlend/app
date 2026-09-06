@@ -13,6 +13,14 @@
   --morpho-valid: hsl(172.8, 48.9%, 43.7%);
   --morpho-banner: var(--morpho-active);
 
+  /* Farm semantic palette: shared by light and dark themes. */
+  --farm-safe: #4ade80;
+  --farm-warning: #fbbf24;
+  --farm-danger: #f87171;
+  --farm-safe-subtle: rgba(74, 222, 128, 0.12);
+  --farm-warning-subtle: rgba(251, 191, 36, 0.12);
+  --farm-danger-subtle: rgba(248, 113, 113, 0.12);
+
   --morpho-pearl: hsl(0, 0%, 100%);
   --morpho-white: hsl(0, 0%, 98%);
   --morpho-gray: rgb(51, 54, 58);
@@ -132,6 +140,12 @@
 }
 
 @theme inline {
+  --color-farm-safe: var(--farm-safe);
+  --color-farm-warning: var(--farm-warning);
+  --color-farm-danger: var(--farm-danger);
+  --color-farm-safe-subtle: var(--farm-safe-subtle);
+  --color-farm-warning-subtle: var(--farm-warning-subtle);
+  --color-farm-danger-subtle: var(--farm-danger-subtle);
   --color-morpho-brand: var(--morpho-brand);
   --color-morpho-active: var(--morpho-active);
   --color-morpho-error: var(--morpho-error);

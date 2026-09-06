@@ -17,6 +17,7 @@ import { useReadContracts } from "wagmi";
 import { FarmSheetContent } from "@/components/farm-sheet-content";
 import { PtsBadge } from "@/components/pts-badge";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
+import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { monogramURI } from "@/lib/monogram";
 import {
   SOLON_FARMS,
@@ -256,7 +257,9 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-morpho-brand underline decoration-dotted underline-offset-2">
+                              <span
+                                className={`${farmSignedColor(farm.feeAprSnapshot > 0 ? netApy : undefined)} underline decoration-dotted underline-offset-2`}
+                              >
                                 {netApy !== undefined && farm.feeAprSnapshot > 0 ? formatPct(netApy) : "－"}
                               </span>
                             </TooltipTrigger>

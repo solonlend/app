@@ -7,6 +7,7 @@ import { useReadContracts } from "wagmi";
 
 import { FarmTestnetPlayground } from "@/components/farm-testnet-playground";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
+import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import {
   netApyDual,
   blendedBorrowApr,
@@ -309,7 +310,9 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="text-morpho-brand underline decoration-dotted underline-offset-2">
+                    <span
+                      className={`${farmSignedColor(farm.feeAprSnapshot > 0 ? netApy : undefined)} underline decoration-dotted underline-offset-2`}
+                    >
                       {netApy !== undefined && farm.feeAprSnapshot > 0 ? `${(netApy * 100).toFixed(1)}%` : "－"}
                     </span>
                   </TooltipTrigger>

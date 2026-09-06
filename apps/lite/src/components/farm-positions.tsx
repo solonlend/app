@@ -93,15 +93,19 @@ type Pos = {
   healthy: boolean;
 };
 
-function HealthBar({ value, debt, lltv }: { value: number; debt: number; lltv: bigint | undefined }) {
-  if (lltv === undefined || lltv <= 0n) return <span className="text-xs">LLTV unavailable</span>;
-  const usage = value > 0 ? debt / (value * Number(formatUnits(lltv, 18))) : 0; // 1.0 = liquidation line
+function healthUsage(value: number, debt: number, lltv: bigint | undefined): number | undefined {
+  if (lltv === undefined || lltv <= 0n) return undefined;
+  return value > 0 ? debt / (value * Number(formatUnits(lltv, 18))) : 0; // 1.0 = liquidation line
+}
+
+function HealthBar({ usage }: { usage: number | undefined }) {
+  if (usage === undefined) return <span className="text-xs">LLTV unavailable</span>;
   const pct = Math.min(100, usage * 100);
-  const color = usage < 0.7 ? "bg-morpho-brand" : usage < 0.9 ? "bg-yellow-500" : "bg-morpho-error";
+  const color = usage < 0.8 ? "text-farm-safe" : usage <= 0.9 ? "text-farm-warning" : "text-farm-danger";
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-20 bg-white/[0.08]">
-        <div className={`h-1.5 ${color}`} style={{ width: `${pct}%` }} />
+    <div className={`flex items-center gap-2 ${color}`}>
+      <div className="bg-foreground/10 h-1.5 w-20">
+        <div className="h-1.5 bg-current" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs">{(usage * 100).toFixed(0)}%</span>
     </div>
@@ -937,27 +941,36 @@ export function FarmPositions() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {positions.map((pos) => (
-              <Sheet key={pos.id.toString()}>
-                <SheetTrigger asChild>
-                  <TableRow className="bg-primary hover:bg-secondary">
-                    <TableCell className="rounded-l-lg py-3 pl-4">#{pos.id.toString()}</TableCell>
-                    <TableCell>{fmt(pos.value)} USDG</TableCell>
-                    <TableCell>{fmt(pos.debt)} USDG</TableCell>
-                    <TableCell>
-                      {pos.value > pos.debt ? `${(pos.value / (pos.value - pos.debt)).toFixed(2)}x` : "－"}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {priceRange(pos.tickLower, pos.tickUpper, loanIsC0)}
-                    </TableCell>
-                    <TableCell className="rounded-r-lg">
-                      <HealthBar value={pos.value} debt={pos.debt} lltv={lltv} />
-                    </TableCell>
-                  </TableRow>
-                </SheetTrigger>
-                <PositionSheet pos={pos} refetch={refetch} />
-              </Sheet>
-            ))}
+            {positions.map((pos) => {
+              const usage = healthUsage(pos.value, pos.debt, lltv);
+              return (
+                <Sheet key={pos.id.toString()}>
+                  <SheetTrigger asChild>
+                    <TableRow
+                      className={
+                        usage !== undefined && usage > 0.9
+                          ? "bg-farm-danger-subtle hover:bg-farm-danger-subtle"
+                          : "bg-primary hover:bg-secondary"
+                      }
+                    >
+                      <TableCell className="rounded-l-lg py-3 pl-4">#{pos.id.toString()}</TableCell>
+                      <TableCell>{fmt(pos.value)} USDG</TableCell>
+                      <TableCell>{fmt(pos.debt)} USDG</TableCell>
+                      <TableCell>
+                        {pos.value > pos.debt ? `${(pos.value / (pos.value - pos.debt)).toFixed(2)}x` : "－"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {priceRange(pos.tickLower, pos.tickUpper, loanIsC0)}
+                      </TableCell>
+                      <TableCell className="rounded-r-lg">
+                        <HealthBar usage={usage} />
+                      </TableCell>
+                    </TableRow>
+                  </SheetTrigger>
+                  <PositionSheet pos={pos} refetch={refetch} />
+                </Sheet>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
