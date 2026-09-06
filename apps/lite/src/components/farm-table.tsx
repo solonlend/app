@@ -16,7 +16,9 @@ import { useReadContracts } from "wagmi";
 
 import { FarmSheetContent } from "@/components/farm-sheet-content";
 import { PtsBadge } from "@/components/pts-badge";
+import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
+import { farmAssets } from "@/lib/farm-protocol";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { monogramURI } from "@/lib/monogram";
 import {
@@ -28,7 +30,6 @@ import {
   estimateNetApy,
   type FarmPool,
 } from "@/lib/solon-farms";
-import { getTokenURI } from "@/lib/tokens";
 
 const chainlinkAggregatorAbi = [
   {
@@ -59,29 +60,27 @@ function formatUsdCompact(v: number): string {
 }
 
 function PairCell({ farm, chain }: { farm: FarmPool; chain: Chain | undefined }) {
-  const chainId = chain?.id;
   const explorer = chain?.blockExplorers?.default.url;
-  const ethLogo = `${import.meta.env.BASE_URL}eth-logo.svg`;
+  const assets = farmAssets(farm.token0Symbol, farm.token1Symbol, farm.loanIsC0)!;
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex w-min items-center gap-2 p-2">
             <div className="flex -space-x-2">
-              <Avatar className="z-10 h-6 w-6">
-                <AvatarImage src={ethLogo} alt="ETH" />
-                <AvatarFallback delayMs={500}>
-                  <img src={monogramURI("ETH")} />
-                </AvatarFallback>
-              </Avatar>
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={getTokenURI({ symbol: "USDG", address: USDG_RH, chainId })} alt="USDG" />
-                <AvatarFallback delayMs={500}>
-                  <img src={monogramURI("USDG")} />
-                </AvatarFallback>
-              </Avatar>
+              {[farm.token0Symbol, farm.token1Symbol].map((symbol, i) => (
+                <Avatar key={i} className="h-6 w-6">
+                  <AvatarImage src={monogramURI(symbol)} alt={symbol} />
+                  <AvatarFallback>{symbol.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+              ))}
             </div>
-            <span className="whitespace-nowrap">{farm.pair}</span>
+            <div className="whitespace-nowrap">
+              <span>{farm.pair}</span>
+              <p className="text-secondary-foreground text-[10px]">
+                风险 {assets.risk} / 计价 {assets.quote}
+              </p>
+            </div>
             <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
               {farm.dex.replace("Uniswap ", "")} · {farm.feeLabel ?? `${(farm.feeTierBps / 10000).toFixed(2)}%`}
             </span>
@@ -117,29 +116,21 @@ function PairCell({ farm, chain }: { farm: FarmPool; chain: Chain | undefined })
           )}
           <br />
           <p className="underline">Tokens (canonical, verified on-chain)</p>
-          <div className="flex items-center gap-1">
-            <p>
-              WETH: <code>{abbreviateAddress(WETH_RH)}</code>
-            </p>
-            {explorer && (
-              <a href={`${explorer}/address/${WETH_RH}`} rel="noopener noreferrer" target="_blank">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <p>
-              USDG: <code>{abbreviateAddress(USDG_RH)}</code>
-            </p>
-            {explorer && (
-              <a href={`${explorer}/address/${USDG_RH}`} rel="noopener noreferrer" target="_blank">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
-          </div>
-          <p className="text-secondary-foreground pt-1 italic">
-            Cross-checked against the router&apos;s WETH9() binding — impostor tokens cannot pass this.
-          </p>
+          {[
+            { symbol: farm.token0Symbol, address: farm.token0Address },
+            { symbol: farm.token1Symbol, address: farm.token1Address },
+          ].map(({ symbol, address }, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <p>
+                {symbol}: <code>{address ? abbreviateAddress(address) : "—"}</code>
+              </p>
+              {explorer && address && (
+                <a href={`${explorer}/address/${address}`} rel="noopener noreferrer" target="_blank">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          ))}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -149,6 +140,9 @@ function PairCell({ farm, chain }: { farm: FarmPool; chain: Chain | undefined })
 export function FarmTable({ chain }: { chain: Chain | undefined }) {
   const chainId = chain?.id;
 
+  const protocol = useFarmProtocol();
+  const capacityLabel = fullCapacityLabel(protocol.fullReserve);
+  const capacityBlocked = !!protocol.fullReserve || protocol.capacityUnknown;
   const rates = useReserveRates();
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
@@ -211,8 +205,14 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
               const tvl = farm.dex === "Uniswap V3" ? v3TvlUsd : undefined;
               return (
                 <Sheet key={farm.id}>
-                  <SheetTrigger asChild>
-                    <TableRow className="bg-primary hover:bg-secondary">
+                  <SheetTrigger asChild disabled={capacityBlocked}>
+                    <TableRow
+                      aria-disabled={capacityBlocked}
+                      onClick={(event) => {
+                        if (capacityBlocked) event.preventDefault();
+                      }}
+                      className="bg-primary hover:bg-secondary"
+                    >
                       <TableCell className="rounded-l-lg py-3">
                         <PairCell farm={farm} chain={chain} />
                       </TableCell>
@@ -288,10 +288,16 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                       </TableCell>
                       <TableCell className="rounded-r-lg">
                         <div className="flex flex-col items-start gap-1">
-                          <button className="bg-primary-foreground text-primary px-4 py-1.5 text-xs font-medium hover:opacity-80">
+                          <button
+                            disabled={capacityBlocked}
+                            className="bg-primary-foreground text-primary px-4 py-1.5 text-xs font-medium hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
                             Farm
                           </button>
-                          <span className="text-secondary-foreground text-[10px]">testnet live · mainnet soon</span>
+                          <span className="text-secondary-foreground text-[10px]">
+                            {capacityLabel ??
+                              (protocol.capacityUnknown ? "容量读取中 / 暂不可用" : "testnet live · mainnet soon")}
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>

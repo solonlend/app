@@ -25,8 +25,11 @@ import { readContract } from "wagmi/actions";
 import { FarmPauseBanner } from "@/components/farm-pause-banner";
 import { useBusy } from "@/hooks/use-busy";
 import { useFarmPaused } from "@/hooks/use-farm-paused";
+import { useFarmProtocol } from "@/hooks/use-farm-protocol";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
 import { ensureFarmAllowances } from "@/lib/farm-allowance";
+import { marginDebt, increaseEstimate, liquidationPrices } from "@/lib/farm-manage-projection";
+import { riskPriceAtTick } from "@/lib/farm-protocol";
 import { closeMinimums, mintMinimums, poolStateAbi, slippageBps } from "@/lib/farm-slippage";
 import { farmVaultAbi } from "@/lib/farm-vault-abi";
 import { borrowCostDual, blendedBorrowApr, SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
@@ -47,15 +50,14 @@ const MAX_SCAN = 50n; // scan the most recent ids (testnet scale)
 const ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";
 const CARD = "bg-primary flex flex-col gap-3 rounded-2xl p-4";
 
-/** token1/token0 raw-unit price; WETH has 18 decimals and USDG has 6. */
-function tickToEthPx(tick: number, loanIsC0: boolean): number {
-  return loanIsC0 ? 1e12 / Math.pow(1.0001, tick) : 1e12 * Math.pow(1.0001, tick);
-}
-
-function priceRange(lower: number, upper: number, loanIsC0: boolean | undefined): string {
-  if (loanIsC0 === undefined) return "Price direction unavailable";
-  const prices = [tickToEthPx(lower, loanIsC0), tickToEthPx(upper, loanIsC0)].sort((a, b) => a - b);
-  return `$${fmt(prices[0], 0)} – $${fmt(prices[1], 0)}`;
+function priceRange(lower: number, upper: number, protocol: ReturnType<typeof useFarmProtocol>): string {
+  const { loanIsC0, decimals0, decimals1, symbols } = protocol;
+  if (loanIsC0 === undefined || decimals0 === undefined || decimals1 === undefined || !symbols)
+    return "Price data unavailable";
+  const prices = [lower, upper]
+    .map((tick) => riskPriceAtTick(tick, loanIsC0, decimals0, decimals1))
+    .sort((a, b) => a - b);
+  return `$${fmt(prices[0], 4)} – $${fmt(prices[1], 4)} ${symbols.risk}/${symbols.quote}`;
 }
 
 function useVaultDisplay() {
@@ -98,23 +100,44 @@ function healthUsage(value: number, debt: number, lltv: bigint | undefined): num
   return value > 0 ? debt / (value * Number(formatUnits(lltv, 18))) : 0; // 1.0 = liquidation line
 }
 
-function HealthBar({ usage }: { usage: number | undefined }) {
+function HealthBar({ usage, hero = false }: { usage: number | undefined; hero?: boolean }) {
   if (usage === undefined) return <span className="text-xs">LLTV unavailable</span>;
   const pct = Math.min(100, usage * 100);
   const color = usage < 0.8 ? "text-farm-safe" : usage <= 0.9 ? "text-farm-warning" : "text-farm-danger";
   return (
-    <div className={`flex items-center gap-2 ${color}`}>
-      <div className="bg-foreground/10 h-1.5 w-20">
-        <div className="h-1.5 bg-current" style={{ width: `${pct}%` }} />
+    <div className={`${hero ? "flex flex-col gap-2" : "flex items-center gap-2"} ${color}`}>
+      <div className={`bg-foreground/10 relative ${hero ? "h-2 w-full rounded" : "h-1.5 w-20"}`}>
+        <div className="h-full rounded-[inherit] bg-current" style={{ width: `${pct}%` }} />
+        {hero &&
+          [80, 90].map((mark) => (
+            <span
+              key={mark}
+              className="bg-secondary-foreground absolute -top-1 h-4 w-px"
+              style={{ left: `${mark}%` }}
+              title={`${mark}%`}
+            />
+          ))}
       </div>
-      <span className="text-xs">{(usage * 100).toFixed(0)}%</span>
+      {hero && (
+        <div className="text-secondary-foreground relative h-3 text-[9px]">
+          <span>0</span>
+          <span className="absolute -translate-x-1/2" style={{ left: "80%" }}>
+            80
+          </span>
+          <span className="absolute -translate-x-1/2" style={{ left: "90%" }}>
+            90
+          </span>
+          <span className="float-right">100</span>
+        </div>
+      )}
+      <span className={hero ? "text-3xl font-semibold tabular-nums" : "text-xs"}>{(usage * 100).toFixed(0)}%</span>
     </div>
   );
 }
 
 function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
   const { address: user } = useAccount();
-  const { loanIsC0 } = useVaultDisplay();
+  const protocol = useFarmProtocol();
   const { paused, blocked, assertActive } = useFarmPaused();
   const [slippage, setSlippage] = useState("1");
   const [approvalStep, setApprovalStep] = useState<string | undefined>();
@@ -130,7 +153,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
   const rates = useReserveRates();
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
-  const [tab, setTab] = useState("Close");
+  const [tab, setTab] = useState("Overview");
   const [lastTx, setLastTx] = useState<`0x${string}` | undefined>();
   const [txError, setTxError] = useState<string | undefined>();
 
@@ -189,8 +212,6 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
     args: [pos.id, pct],
     query: { staleTime: 15_000, refetchInterval: 15_000 },
   });
-  const shortRisk = preview ? Number(formatUnits(preview[4], 18)) : undefined;
-  const shortLoan = preview ? Number(formatUnits(preview[5], 6)) : undefined;
   const hasGap = !!preview && (preview[4] > 0n || preview[5] > 0n);
 
   const deadline = () => BigInt(Math.floor(Date.now() / 1000) + 1800);
@@ -488,311 +509,607 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
       ? blendedBorrowApr(debtRiskValue, riskApr, debtLoanValue, loanApr)
       : 0;
 
+  const riskSymbol = protocol.symbols?.risk ?? "—";
+  const loanSymbol = protocol.symbols?.quote ?? "—";
+  const riskDecimals = protocol.reserves[1].decimals;
+  const loanDecimals = protocol.reserves[0].decimals;
+  const riskPrice = ethPx6 === undefined ? undefined : Number(formatUnits(ethPx6, 6));
+  const quoteUsd = protocol.feeds[1].price;
+  const riskUsd = protocol.feeds[0].price;
+  const usd = (value: number | undefined, price: number | undefined) =>
+    value === undefined || price === undefined || !Number.isFinite(value) ? "≈ $—" : `≈ $${fmt(value * price)}`;
+  const riskAmount = (raw: bigint) => (riskDecimals === undefined ? undefined : Number(formatUnits(raw, riskDecimals)));
+  const loanAmount = (raw: bigint) => (loanDecimals === undefined ? undefined : Number(formatUnits(raw, loanDecimals)));
+  const pairAmount = (risk: bigint, loan: bigint) => {
+    const r = riskAmount(risk),
+      l = loanAmount(loan);
+    return `${r === undefined ? "—" : fmt(r, 5)} ${riskSymbol} + ${l === undefined ? "—" : fmt(l)} ${loanSymbol}`;
+  };
+  const pairUsd = (risk: bigint, loan: bigint) => {
+    const r = riskAmount(risk),
+      l = loanAmount(loan);
+    return usd(
+      r === undefined || l === undefined || riskUsd === undefined || quoteUsd === undefined
+        ? undefined
+        : r * riskUsd + l * quoteUsd,
+      1,
+    );
+  };
+  const { data: balances } = useReadContracts({
+    contracts: [P.weth, P.usdg].map((address) => ({
+      chainId: P.chainId,
+      address,
+      abi: erc20Abi,
+      functionName: "balanceOf" as const,
+      args: [user!] as const,
+    })),
+    allowFailure: true,
+    query: { enabled: !!user, staleTime: 15_000, refetchInterval: 15_000 },
+  });
+  const walletRisk = balances?.[0]?.result;
+  const walletLoan = balances?.[1]?.result;
+  const maxRisk =
+    walletRisk === undefined || !debtsLoaded ? undefined : walletRisk < debtRiskAmt ? walletRisk : debtRiskAmt;
+  const maxLoan =
+    walletLoan === undefined || !debtsLoaded ? undefined : walletLoan < debtLoanAmt ? walletLoan : debtLoanAmt;
+  const parsedAmount = (value: string, decimals: number | undefined) => {
+    if (decimals === undefined || (value && !/^\d+(?:\.\d*)?$/.test(value))) return undefined;
+    if ((value.split(".")[1]?.length ?? 0) > decimals) return undefined;
+    try {
+      return parseUnits(value || "0", decimals);
+    } catch {
+      return undefined;
+    }
+  };
+  const marginRisk = parsedAmount(amEth, riskDecimals),
+    marginLoan = parsedAmount(amUsdg, loanDecimals);
+  const marginValid =
+    marginRisk !== undefined &&
+    marginLoan !== undefined &&
+    maxRisk !== undefined &&
+    maxLoan !== undefined &&
+    marginRisk <= maxRisk &&
+    marginLoan <= maxLoan;
+  const currentUsage = healthUsage(pos.value, pos.debt, protocol.lltv);
+  const range =
+    protocol.loanIsC0 === undefined || protocol.decimals0 === undefined || protocol.decimals1 === undefined
+      ? undefined
+      : [pos.tickLower, pos.tickUpper]
+          .map((tick) => riskPriceAtTick(tick, protocol.loanIsC0!, protocol.decimals0!, protocol.decimals1!))
+          .sort((a, b) => a - b);
+  const liqPrices =
+    range && debtsLoaded && riskPrice !== undefined && protocol.lltv !== undefined
+      ? liquidationPrices(
+          pos.value,
+          Number(formatUnits(debtRiskAmt, 18)),
+          debtLoanValue,
+          riskPrice,
+          range[0],
+          range[1],
+          Number(formatUnits(protocol.lltv, 18)),
+        )
+      : undefined;
+  let nextUsage: number | undefined;
+  let projectionNote = "输入金额查看操作后健康度";
+  let closeLimits: ReturnType<typeof closeMinimums> | undefined;
+  let closeEstimateError: string | undefined;
+  if (preview && !previewFailed && !previewLoading && validSlippage) {
+    try {
+      if (hasGap && !useTopUp && (!slot0 || protocol.loanIsC0 === undefined)) throw new Error("等待换币价格");
+      closeLimits = closeMinimums({
+        preview,
+        sqrtPriceX96: slot0?.[0] ?? 1n,
+        loanIsC0: protocol.loanIsC0 ?? false,
+        slippageBps: slippageBps(slippage),
+        useTopUp,
+      });
+    } catch {
+      closeEstimateError = "暂无法估算到手；可尝试自补缺口或刷新价格";
+    }
+  }
+  if (tab === "Add margin" && marginValid && debtsLoaded && riskPrice !== undefined) {
+    nextUsage = healthUsage(
+      pos.value,
+      marginDebt(
+        Number(formatUnits(debtRiskAmt, 18)),
+        debtLoanValue,
+        Number(amEth || 0),
+        Number(amUsdg || 0),
+        riskPrice,
+      ),
+      protocol.lltv,
+    );
+    projectionNote = "按实际还债估算；超额资金不增加 LP";
+  } else if (
+    tab === "Increase" &&
+    range &&
+    slot0 &&
+    riskPrice &&
+    debtsLoaded &&
+    parsedAmount(incUsdg, loanDecimals) !== undefined &&
+    Number.isFinite(Number(incUsdg)) &&
+    Number(incUsdg) > 0
+  ) {
+    const poolPrice = riskPriceAtTick(Number(slot0[1]), protocol.loanIsC0!, protocol.decimals0!, protocol.decimals1!);
+    const added = increaseEstimate(
+      Number(incUsdg),
+      incLev,
+      riskPrice,
+      poolPrice,
+      range[0],
+      range[1],
+      Number(formatUnits(debtRiskAmt, 18)),
+      debtLoanValue,
+    );
+    if (added) nextUsage = healthUsage(pos.value + added.value, added.debt, protocol.lltv);
+    projectionNote = added
+      ? "按当前区间用币估算，剩余资金先还债；成交后以链上为准"
+      : "当前价格不在区间内，无法估算加仓";
+  } else if (
+    tab === "Close" &&
+    preview &&
+    !previewFailed &&
+    !previewLoading &&
+    closeLimits &&
+    riskPrice !== undefined
+  ) {
+    nextUsage =
+      pct === 10000
+        ? 0
+        : healthUsage(
+            pos.value * (1 - pct / 10000),
+            Math.max(
+              0,
+              pos.debt - Number(formatUnits(preview[2], 18)) * riskPrice - Number(formatUnits(preview[3], 6)),
+            ),
+            protocol.lltv,
+          );
+    projectionNote = pct === 10000 ? "还清双腿债务后，此仓关闭" : "按比例撤出 LP 并还债；健康度通常基本不变";
+  }
+  const changed = currentUsage !== undefined && nextUsage !== undefined ? nextUsage - currentUsage : undefined;
+  const projection = (
+    <div
+      role="status"
+      aria-live="polite"
+      className="border-foreground/10 bg-primary flex flex-col gap-2 rounded-lg border p-3 text-xs"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={
+            changed === undefined || Math.abs(changed) < 1e-8 ? "" : changed < 0 ? "text-farm-safe" : "text-farm-danger"
+          }
+        >
+          {changed === undefined ? "—" : Math.abs(changed) < 1e-8 ? "=" : changed < 0 ? "↓" : "↑"}
+        </span>
+        <span>{tab === "Add margin" ? "补仓" : tab === "Increase" ? "加仓" : "平仓"}后健康度</span>
+        <span className="text-secondary-foreground">
+          {currentUsage === undefined ? "—" : `${(currentUsage * 100).toFixed(0)}%`} →
+        </span>
+        {nextUsage === undefined ? (
+          <span>待估算</span>
+        ) : tab === "Close" && pct === 10000 ? (
+          <span>0% · 仓位关闭</span>
+        ) : (
+          <HealthBar usage={nextUsage} />
+        )}
+      </div>
+      <p className="text-secondary-foreground text-[11px]">{projectionNote}</p>
+    </div>
+  );
+  const repayFirst =
+    marginRisk && marginRisk > 0n
+      ? riskSymbol
+      : marginLoan && marginLoan > 0n
+        ? loanSymbol
+        : debtRiskAmt > 0n
+          ? riskSymbol
+          : loanSymbol;
+
   return (
-    <SheetContent className="bg-background z-[9999] w-full gap-3 overflow-y-scroll sm:w-[480px] sm:max-w-[480px]">
+    <SheetContent className="bg-background z-[9999] w-full gap-3 overflow-y-auto font-mono sm:w-[520px] sm:max-w-[520px]">
       <SheetHeader>
-        <SheetTitle>Position #{pos.id.toString()}</SheetTitle>
+        <SheetTitle>
+          pos #{pos.id.toString()} · {riskSymbol} / {loanSymbol}
+        </SheetTitle>
         <SheetDescription>
-          Value {fmt(pos.value)} USDG · Debt {fmt(pos.debt)} USDG ·{" "}
-          {pos.value > pos.debt ? `${(pos.value / (pos.value - pos.debt)).toFixed(2)}x leverage` : "leverage n/a"} ·
-          Equity {fmt(Math.max(0, pos.value - pos.debt))} USDG
-          <br />
-          Debt breakdown: {debtsLoaded ? fmt(Number(formatUnits(debtRiskAmt, 18)), 5) : "－"} WETH
-          {riskApr !== undefined ? ` @ ${(riskApr * 100).toFixed(2)}%` : ""} +{" "}
-          {debtsLoaded ? fmt(Number(formatUnits(debtLoanAmt, 6))) : "－"} USDG
-          {loanApr !== undefined ? ` @ ${(loanApr * 100).toFixed(2)}%` : ""}
-          <br />
-          {borrowCost !== undefined ? (
-            <>
-              Interest: {fmt(borrowCost)} USDG / year ({(blendedApr * 100).toFixed(2)}% blended) ·{" "}
-              {fmt(borrowCost / 365, 4)} / day
-              <br />
-            </>
-          ) : null}
-          Range {priceRange(pos.tickLower, pos.tickUpper, loanIsC0)}{" "}
-          {curTick >= pos.tickLower && curTick <= pos.tickUpper ? "· in range" : "· OUT OF RANGE"}
+          {pos.value > pos.debt ? `${(pos.value / (pos.value - pos.debt)).toFixed(2)}x` : "杠杆 —"} · 仓位管理
         </SheetDescription>
       </SheetHeader>
+      <div className="bg-background sticky top-0 z-10 px-4 pb-2">
+        <section aria-label="当前仓位健康度" className="border-foreground/10 bg-primary rounded-xl border p-4">
+          <div className="text-secondary-foreground mb-3 flex flex-wrap justify-between gap-2 text-[11px]">
+            <span>HEALTH · 100% = 清算</span>
+            <span>
+              清算价 {riskSymbol}{" "}
+              {currentUsage !== undefined && currentUsage >= 1
+                ? "已达清算线"
+                : liqPrices === undefined || quoteUsd === undefined
+                  ? "—"
+                  : liqPrices.length
+                    ? liqPrices
+                        .map((price) => `${price < (riskPrice ?? 0) ? "↓" : "↑"} ≈ $${fmt(price * quoteUsd)}`)
+                        .join(" / ")
+                    : "无有限清算价"}
+            </span>
+          </div>
+          <HealthBar usage={currentUsage} hero />
+          <p className="text-secondary-foreground mt-2 text-[10px]">
+            清算价为区间 LP 情景估算：计价币价格不变，未计后续利息与费用。
+          </p>
+        </section>
+      </div>
       <div className="flex flex-col gap-3 px-4 pb-6">
+        <div className="border-foreground/10 grid grid-cols-2 gap-px overflow-hidden rounded-lg border sm:grid-cols-4">
+          {[
+            ["价值", pos.value],
+            ["权益", Math.max(0, pos.value - pos.debt)],
+            ["债务", pos.debt],
+            ["利息/年", borrowCost],
+          ].map(([label, value]) => (
+            <div key={label as string} className="bg-primary min-w-0 p-3">
+              <div className="text-secondary-foreground text-[10px]">{label}</div>
+              <div className="mt-1 text-sm tabular-nums">{value === undefined ? "—" : fmt(value as number)}</div>
+              <div className="text-secondary-foreground text-[10px]">{usd(value as number | undefined, quoteUsd)}</div>
+            </div>
+          ))}
+        </div>
         <FarmPauseBanner paused={paused} />
-        <label className={ROW}>
-          <span>Slippage tolerance (close / increase)</span>
-          <span>
-            <input
-              aria-label="Slippage tolerance percent"
-              type="number"
-              min="0.1"
-              max="5"
-              step="0.1"
-              className="w-16 bg-transparent text-right"
-              value={slippage}
-              onChange={(e) => setSlippage(e.target.value)}
-            />{" "}
-            %
-          </span>
-        </label>
-        {!validSlippage && <p className="text-morpho-error text-xs">Enter slippage between 0.1% and 5%.</p>}
         {approvalStep && (
           <p role="status" className="text-xs">
             {approvalStep}
           </p>
         )}
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full">
-            <TabsTrigger value="Close" className="grow">
-              Close
-            </TabsTrigger>
-            <TabsTrigger value="Add margin" className="grow">
-              Add margin
-            </TabsTrigger>
-            <TabsTrigger value="Rebalance" className="grow">
-              Rebalance
-            </TabsTrigger>
-            <TabsTrigger value="Harvest" className="grow">
-              Harvest
-            </TabsTrigger>
-            <TabsTrigger value="Increase" className="grow">
-              Increase
-            </TabsTrigger>
+          <TabsList className="grid h-auto w-full grid-cols-6">
+            {[
+              ["Overview", "概览"],
+              ["Add margin", "补仓"],
+              ["Increase", "加仓"],
+              ["Rebalance", "调仓"],
+              ["Harvest", "收获"],
+              ["Close", "平仓"],
+            ].map(([value, label]) => (
+              <TabsTrigger key={value} value={value} className="min-w-0 px-1 text-xs">
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
-
-          <TabsContent value="Close" className="flex flex-col gap-3 pt-3">
+          <TabsContent value="Overview" className="flex flex-col gap-3 pt-3">
             <div className={CARD}>
               <div className={ROW}>
-                <span>Close amount</span>
-                <span>{(pct / 100).toFixed(0)}%</span>
+                <span>现债 · {riskSymbol}</span>
+                <span>{debtsLoaded ? pairAmount(debtRiskAmt, 0n) : "—"}</span>
               </div>
-              <div className="flex gap-2">
-                {[2500, 5000, 7500, 10000].map((p) => (
-                  <Button
-                    key={p}
-                    variant={p === pct ? "blue" : "secondary"}
-                    className="h-7 grow rounded-full text-xs"
-                    onClick={() => setPct(p)}
-                  >
-                    {p / 100}%
-                  </Button>
-                ))}
+              <div className="text-secondary-foreground text-right text-[11px]">
+                {debtsLoaded ? usd(riskAmount(debtRiskAmt), riskUsd) : "≈ $—"} · 年利率{" "}
+                {riskApr === undefined ? "—" : `${(riskApr * 100).toFixed(2)}%`}
               </div>
-            </div>
-            <div className={CARD}>
               <div className={ROW}>
-                <span>Settlement preview</span>
-                <span>live from previewClose()</span>
+                <span>现债 · {loanSymbol}</span>
+                <span>{debtsLoaded ? `${fmt(debtLoanValue)} ${loanSymbol}` : "—"}</span>
               </div>
-              {preview && !previewFailed ? (
-                <>
-                  <div className={ROW}>
-                    <span>LP proceeds before debt / swap</span>
-                    <span className="text-primary-foreground">
-                      {fmt(Number(formatUnits(preview[0], 18)), 4)} WETH + {fmt(Number(formatUnits(preview[1], 6)))}{" "}
-                      USDG
-                    </span>
-                  </div>
-                  <div className={ROW}>
-                    <span>Debt due</span>
-                    <span className="text-primary-foreground">
-                      {fmt(Number(formatUnits(preview[2], 18)), 4)} WETH + {fmt(Number(formatUnits(preview[3], 6)))}{" "}
-                      USDG
-                    </span>
-                  </div>
-                  {hasGap ? (
-                    <div className="flex flex-col gap-2 border border-white/[0.12] p-3">
-                      <p className="text-primary-foreground text-xs">
-                        Gap: short {(shortRisk ?? 0) > 1e-9 ? `${fmt(shortRisk ?? 0, 5)} WETH` : ""}
-                        {(shortRisk ?? 0) > 1e-9 && (shortLoan ?? 0) > 1e-3 ? " + " : ""}
-                        {(shortLoan ?? 0) > 1e-3 ? `${fmt(shortLoan ?? 0)} USDG` : ""}
-                      </p>
-                      <label className="text-secondary-foreground flex items-center gap-2 text-xs">
-                        <input type="checkbox" checked={useTopUp} onChange={(e) => setUseTopUp(e.target.checked)} />
-                        Top up the gap myself — lossless exit, skips the swap (only pulls what is actually needed)
-                      </label>
-                      {!useTopUp && (
-                        <p className="text-secondary-foreground text-[11px]">
-                          Otherwise the surplus leg buys the gap via exactOutput (slippage-fused, oracle-floored).
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-secondary-foreground text-[11px]">No gap — both legs repay in kind, no swap.</p>
-                  )}
-                </>
-              ) : previewFailed ? (
-                <p role="alert" className="text-morpho-error text-xs">
-                  Close preview failed. Submission blocked; retry when available.
-                </p>
-              ) : (
-                <p className="text-xs">Loading close preview — submission blocked.</p>
-              )}
+              <div className="text-secondary-foreground text-right text-[11px]">
+                {debtsLoaded ? usd(debtLoanValue, quoteUsd) : "≈ $—"} · 年利率{" "}
+                {loanApr === undefined ? "—" : `${(loanApr * 100).toFixed(2)}%`}
+              </div>
+              <div className={ROW}>
+                <span>加权借款年利率</span>
+                <span>{borrowCost === undefined ? "—" : `${(blendedApr * 100).toFixed(2)}%`}</span>
+              </div>
+              <div className={ROW}>
+                <span>每日利息</span>
+                <span>
+                  {borrowCost === undefined ? "—" : fmt(borrowCost / 365, 4)} {loanSymbol} ·{" "}
+                  {usd(borrowCost === undefined ? undefined : borrowCost / 365, quoteUsd)}
+                </span>
+              </div>
+              <p className="text-xs">区间 {priceRange(pos.tickLower, pos.tickUpper, protocol)}</p>
+              <p className="text-secondary-foreground text-xs">
+                {slot0
+                  ? curTick >= pos.tickLower && curTick <= pos.tickUpper
+                    ? "当前价格在区间内"
+                    : "当前价格已超出区间"
+                  : "正在读取当前价格"}
+              </p>
             </div>
-            <Button
-              className="h-10 w-full rounded-full text-xs"
-              variant="blue"
-              disabled={isPending || busy || !preview || previewFailed || previewLoading || !validSlippage}
-              onClick={() => void guard(() => doClose())}
-            >
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null} Close {pct / 100}%
-            </Button>
           </TabsContent>
-
           <TabsContent value="Add margin" className="flex flex-col gap-3 pt-3">
             <div className={CARD}>
-              <div className={ROW}>
-                <span>Amounts (either or both)</span>
-                <span>repays debt legs first</span>
-              </div>
-              <div className={ROW}>
-                <span>Current debt · WETH leg</span>
-                <span className={debtRiskAmt === 0n ? "text-secondary-foreground" : "text-primary-foreground"}>
-                  {debtsLoaded ? fmt(Number(formatUnits(debtRiskAmt, 18)), 5) : "－"} WETH
-                  {debtsLoaded && debtRiskAmt === 0n ? " (nothing to repay)" : ""}
-                </span>
-              </div>
-              <div className={ROW}>
-                <span>Current debt · USDG leg</span>
-                <span className={debtLoanAmt === 0n ? "text-secondary-foreground" : "text-primary-foreground"}>
-                  {debtsLoaded ? fmt(Number(formatUnits(debtLoanAmt, 6))) : "－"} USDG
-                  {debtsLoaded && debtLoanAmt === 0n ? " (nothing to repay)" : ""}
-                </span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <input
-                  className="text-primary-foreground grow bg-transparent text-xl font-light outline-none"
-                  inputMode="decimal"
-                  placeholder="0"
-                  value={amEth}
-                  onChange={(e) => setAmEth(e.target.value.replace(/[^0-9.]/g, ""))}
-                />
-                <span className="text-secondary-foreground text-xs">WETH</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <input
-                  className="text-primary-foreground grow bg-transparent text-xl font-light outline-none"
-                  inputMode="decimal"
-                  placeholder="0"
-                  value={amUsdg}
-                  onChange={(e) => setAmUsdg(e.target.value.replace(/[^0-9.]/g, ""))}
-                />
-                <span className="text-secondary-foreground text-xs">USDG</span>
-              </div>
+              {[
+                {
+                  symbol: riskSymbol,
+                  decimals: riskDecimals,
+                  debt: debtRiskAmt,
+                  max: maxRisk,
+                  value: amEth,
+                  set: setAmEth,
+                  price: riskUsd,
+                },
+                {
+                  symbol: loanSymbol,
+                  decimals: loanDecimals,
+                  debt: debtLoanAmt,
+                  max: maxLoan,
+                  value: amUsdg,
+                  set: setAmUsdg,
+                  price: quoteUsd,
+                },
+              ].map((field, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <div className={ROW}>
+                    <label htmlFor={`margin-${i}`}>
+                      {field.symbol} · 现债{" "}
+                      {debtsLoaded && field.decimals !== undefined
+                        ? fmt(Number(formatUnits(field.debt, field.decimals)), 5)
+                        : "—"}
+                    </label>
+                    <button
+                      type="button"
+                      className="text-primary-foreground rounded px-2 py-1 focus-visible:outline disabled:opacity-40"
+                      disabled={field.max === undefined || field.decimals === undefined || busy || isPending}
+                      onClick={() => field.set(formatUnits(field.max!, field.decimals!))}
+                    >
+                      MAX{" "}
+                      {field.max === undefined || field.decimals === undefined
+                        ? "—"
+                        : fmt(Number(formatUnits(field.max, field.decimals)), 5)}
+                    </button>
+                  </div>
+                  <div className="border-foreground/10 flex items-center gap-2 rounded-lg border p-3">
+                    <input
+                      id={`margin-${i}`}
+                      className="min-w-0 grow bg-transparent text-lg outline-none focus-visible:ring-1"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={field.value}
+                      onChange={(e) => field.set(e.target.value.replace(/[^0-9.]/g, ""))}
+                    />
+                    <span className="text-secondary-foreground text-xs">{field.symbol}</span>
+                  </div>
+                  <p className="text-secondary-foreground text-right text-[11px]">
+                    {usd(Number(field.value || 0), field.price)}
+                  </p>
+                </div>
+              ))}
+              <p className="text-secondary-foreground text-[11px]">
+                可补上限 = 钱包余额与现债的较小值。先还 {repayFirst} 腿，按各币种实际所需还债。
+              </p>
+              {!marginValid && (amEth || amUsdg) && (
+                <p className="text-xs">请等待余额/现债读取完成，并输入不超过 MAX 的有效金额。</p>
+              )}
             </div>
+            {projection}
             <Button
-              className="h-10 w-full rounded-full text-xs"
+              className="h-10 w-full rounded-lg text-xs"
               variant="blue"
-              disabled={isPending || busy || (!amEth && !amUsdg)}
+              disabled={isPending || busy || !marginValid || (marginRisk === 0n && marginLoan === 0n)}
               onClick={() => void guard(() => doAddMargin())}
             >
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null} Add margin
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 补仓 · 先还 {repayFirst} 腿
             </Button>
           </TabsContent>
-
-          <TabsContent value="Rebalance" className="flex flex-col gap-3 pt-3">
-            <div className={CARD}>
-              <div className={ROW}>
-                <span>New range (around current price)</span>
-                <span>debts untouched</span>
-              </div>
-              <div className="flex gap-2">
-                {[2, 5, 10].map((p) => (
-                  <Button
-                    key={p}
-                    variant={p === rangePct ? "blue" : "secondary"}
-                    className="h-7 grow rounded-full text-xs"
-                    onClick={() => setRangePct(p)}
-                  >
-                    ±{p}%
-                  </Button>
-                ))}
-              </div>
-              <p className="text-secondary-foreground text-[11px]">
-                Withdraw-all → re-mint at the new range. Net delta swap (swapAmount) is auto-0 here; set it off-chain
-                for asymmetric moves.
-              </p>
-            </div>
-            <Button
-              className="h-10 w-full rounded-full text-xs"
-              variant="blue"
-              disabled={isPending || busy}
-              onClick={() => void guard(() => doRebalance(curTick))}
-            >
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null} Rebalance to ±{rangePct}%
-            </Button>
-          </TabsContent>
-
-          <TabsContent value="Harvest" className="flex flex-col gap-3 pt-3">
-            <div className={CARD}>
-              <div className={ROW}>
-                <span>Accrued LP fees</span>
-                <span>10% protocol harvest fee applies</span>
-              </div>
-              <p className="text-secondary-foreground text-[11px] font-light">
-                Claim sends the net fees (both tokens) to your wallet. Compound rolls them straight back into the
-                position — no swap either way.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  className="h-10 grow rounded-full text-xs"
-                  variant="blue"
-                  disabled={isPending || busy}
-                  onClick={() => void guard(() => doHarvest(false))}
-                >
-                  {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null} Claim fees
-                </Button>
-                <Button
-                  className="h-10 grow rounded-full text-xs"
-                  variant="secondary"
-                  disabled={isPending || busy}
-                  onClick={() => void guard(() => doHarvest(true))}
-                >
-                  Compound
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-
           <TabsContent value="Increase" className="flex flex-col gap-3 pt-3">
             <div className={CARD}>
-              <div className={ROW}>
-                <span>Add margin (USDG) + leverage it</span>
-                <span>{incLev}x on the added margin</span>
-              </div>
-              <div className="flex items-baseline gap-2">
+              <label htmlFor="increase-amount" className={ROW}>
+                <span>追加 {loanSymbol} 保证金</span>
+                <span>{incLev}x 追加杠杆</span>
+              </label>
+              <div className="border-foreground/10 flex items-center gap-2 rounded-lg border p-3">
                 <input
-                  className="text-primary-foreground grow bg-transparent text-xl font-light outline-none"
+                  id="increase-amount"
+                  className="min-w-0 grow bg-transparent text-lg outline-none focus-visible:ring-1"
                   inputMode="decimal"
                   placeholder="0"
                   value={incUsdg}
                   onChange={(e) => setIncUsdg(e.target.value.replace(/[^0-9.]/g, ""))}
                 />
-                <span className="text-secondary-foreground text-xs">USDG</span>
+                <span className="text-secondary-foreground text-xs">{loanSymbol}</span>
               </div>
+              <p className="text-secondary-foreground text-right text-[11px]">{usd(Number(incUsdg || 0), quoteUsd)}</p>
               <div className="flex gap-2">
                 {[1.5, 2, 3, 4].map((l) => (
                   <Button
                     key={l}
                     variant={l === incLev ? "blue" : "secondary"}
-                    className="h-7 grow rounded-full text-xs"
+                    className="h-8 grow rounded-md text-xs"
                     onClick={() => setIncLev(l)}
                   >
                     {l}x
                   </Button>
                 ))}
               </div>
-              <p className="text-secondary-foreground text-[11px] font-light">
-                Borrows both legs against your existing position (same range, zero-swap) — unused borrow auto-repays.
-                Position must stay healthy after.
+              <p className="text-secondary-foreground text-[11px]">
+                在当前区间借入两币增加 LP，不换币；未用资金先还债。操作后须保持健康。
               </p>
             </div>
+            {projection}
             <Button
-              className="h-10 w-full rounded-full text-xs"
+              className="h-10 w-full rounded-lg text-xs"
               variant="blue"
               disabled={isPending || busy || blocked || !validSlippage || !incUsdg || ethPx6 === undefined}
               onClick={() => void guard(() => doIncrease())}
             >
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null} Increase position
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 加仓
             </Button>
           </TabsContent>
+          <TabsContent value="Close" className="flex flex-col gap-3 pt-3">
+            <div className="grid grid-cols-4 gap-2">
+              {[2500, 5000, 7500, 10000].map((p) => (
+                <Button
+                  key={p}
+                  variant={p === pct ? "blue" : "secondary"}
+                  className="h-8 rounded-md text-xs"
+                  onClick={() => setPct(p)}
+                >
+                  {p / 100}%
+                </Button>
+              ))}
+            </div>
+            <p className="text-secondary-foreground text-[11px]">
+              {pct === 10000
+                ? "平掉整个仓位，还清双腿债务，余额回到钱包。"
+                : `平掉 ${pct / 100}% 仓位，按比例还债，保留剩余 LP。`}
+            </p>
+            <div className="border-foreground/10 flex flex-col gap-3 rounded-lg border border-dashed p-3">
+              <div className={ROW}>
+                <span>结算预览</span>
+                <span>链上实时读取</span>
+              </div>
+              {preview && !previewFailed && !previewLoading ? (
+                <>
+                  {[
+                    ["LP 拆出", preview[0], preview[1]],
+                    ["还债", preview[2], preview[3]],
+                    ...(hasGap ? [["待补缺口", preview[4], preview[5]]] : []),
+                  ].map(([label, risk, loan]) => (
+                    <div key={label as string} className="text-xs">
+                      <div className={ROW}>
+                        <span>{label as string}</span>
+                        <span className="text-primary-foreground text-right">
+                          {pairAmount(risk as bigint, loan as bigint)}
+                        </span>
+                      </div>
+                      <p className="text-secondary-foreground mt-1 text-right text-[11px]">
+                        {pairUsd(risk as bigint, loan as bigint)}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="border-foreground/10 border-t pt-3 text-xs">
+                    <div className={ROW}>
+                      <span>预计到手下限</span>
+                      <span className="text-primary-foreground text-right">
+                        {closeLimits ? pairAmount(closeLimits.minOutRisk, closeLimits.minOutLoan) : "—"}
+                      </span>
+                    </div>
+                    <p className="text-secondary-foreground mt-1 text-right text-[11px]">
+                      {closeLimits ? pairUsd(closeLimits.minOutRisk, closeLimits.minOutLoan) : "≈ $—"}
+                    </p>
+                    <p className="text-secondary-foreground mt-2 text-[10px]">
+                      已计滑点保护，未计待收手续费；最终以成交为准。{useTopUp ? "自补金额由钱包另付。" : ""}
+                    </p>
+                    {closeEstimateError && <p className="mt-2 text-[11px]">{closeEstimateError}</p>}
+                  </div>
+                  {hasGap ? (
+                    <fieldset className="border-foreground/10 flex flex-col gap-3 rounded-lg border p-3 text-xs">
+                      <legend className="text-secondary-foreground px-1">补缺口方式</legend>
+                      <label className="flex items-start gap-2">
+                        <input type="radio" name="gap-mode" checked={useTopUp} onChange={() => setUseTopUp(true)} />
+                        <span>
+                          自补缺口
+                          <span className="text-secondary-foreground"> — 精确还债，不动市场（只拉实际所需）</span>
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-2">
+                        <input type="radio" name="gap-mode" checked={!useTopUp} onChange={() => setUseTopUp(false)} />
+                        <span>
+                          自动换币补缺口
+                          <span className="text-secondary-foreground">
+                            {" "}
+                            — 盈余腿换所缺币，滑点 ≤ {validSlippage ? slippage : "—"}%，预言机兜底价
+                          </span>
+                        </span>
+                      </label>
+                    </fieldset>
+                  ) : (
+                    <p className="text-secondary-foreground text-[11px]">无需补缺口 · 两币各自还债，不换币。</p>
+                  )}
+                </>
+              ) : previewFailed ? (
+                <p role="alert" className="text-morpho-error text-xs">
+                  平仓预览失败，暂不可提交；请稍后重试。
+                </p>
+              ) : (
+                <p role="status" className="text-xs">
+                  正在更新平仓预览，暂不可提交。
+                </p>
+              )}
+            </div>
+            {projection}
+            <Button
+              className="h-10 w-full rounded-lg text-xs"
+              variant="blue"
+              disabled={isPending || busy || !preview || previewFailed || previewLoading || !validSlippage}
+              onClick={() => void guard(() => doClose())}
+            >
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 平仓 {pct / 100}%
+            </Button>
+          </TabsContent>
+          <TabsContent value="Rebalance" className="flex flex-col gap-3 pt-3">
+            <div className={CARD}>
+              <div className={ROW}>
+                <span>新区间 · 围绕当前价格</span>
+                <span>债务不变</span>
+              </div>
+              <div className="flex gap-2">
+                {[2, 5, 10].map((p) => (
+                  <Button
+                    key={p}
+                    variant={p === rangePct ? "blue" : "secondary"}
+                    className="h-8 grow rounded-md text-xs"
+                    onClick={() => setRangePct(p)}
+                  >
+                    ±{p}%
+                  </Button>
+                ))}
+              </div>
+              <p className="text-secondary-foreground text-[11px]">撤出全部 LP 后在新区间重新添加；当前操作不换币。</p>
+            </div>
+            <Button
+              className="h-10 w-full rounded-lg text-xs"
+              variant="blue"
+              disabled={isPending || busy}
+              onClick={() => void guard(() => doRebalance(curTick))}
+            >
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 调仓至 ±{rangePct}%
+            </Button>
+          </TabsContent>
+          <TabsContent value="Harvest" className="flex flex-col gap-3 pt-3">
+            <div className={CARD}>
+              <div className={ROW}>
+                <span>已累积 LP 手续费</span>
+                <span>领取 / 复投均扣除收获费</span>
+              </div>
+              <p className="text-secondary-foreground text-[11px]">
+                领取：扣费后两币回钱包。复投：两币直接加回仓位。两种方式均不换币。
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  className="h-10 grow rounded-lg text-xs"
+                  variant="blue"
+                  disabled={isPending || busy}
+                  onClick={() => void guard(() => doHarvest(false))}
+                >
+                  {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 领取手续费
+                </Button>
+                <Button
+                  className="h-10 grow rounded-lg text-xs"
+                  variant="secondary"
+                  disabled={isPending || busy}
+                  onClick={() => void guard(() => doHarvest(true))}
+                >
+                  复投
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
+        <label className={`${ROW} border-foreground/10 border-t pt-3`}>
+          <span>滑点容忍（平仓换币 / 加仓铸造）</span>
+          <span className="border-foreground/10 rounded-md border px-2 py-1">
+            <input
+              aria-label="滑点容忍百分比"
+              type="number"
+              min="0.1"
+              max="5"
+              step="0.1"
+              className="w-12 bg-transparent text-right"
+              value={slippage}
+              onChange={(e) => setSlippage(e.target.value)}
+            />{" "}
+            %
+          </span>
+        </label>
+        {!validSlippage && <p className="text-morpho-error text-xs">请输入 0.1% 至 5% 的滑点容忍。</p>}
         {txError && <p className="text-morpho-error text-[11px]">{txError}</p>}
         {lastTx && (
           <a
@@ -801,7 +1118,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
             rel="noopener noreferrer"
             target="_blank"
           >
-            View last transaction <ExternalLink className="h-3 w-3" />
+            查看最近交易 <ExternalLink className="h-3 w-3" />
           </a>
         )}
       </div>
@@ -810,7 +1127,8 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
 }
 
 export function FarmPositions() {
-  const { lltv, loanIsC0 } = useVaultDisplay();
+  const { lltv } = useVaultDisplay();
+  const protocol = useFarmProtocol();
   const { address: user, isConnected } = useAccount();
 
   const { data: nextId, refetch: r0 } = useReadContract({
@@ -933,7 +1251,7 @@ export function FarmPositions() {
               <TableHead className="text-secondary-foreground text-xs font-light">Debt</TableHead>
               <TableHead className="text-secondary-foreground text-xs font-light">Leverage</TableHead>
               <TableHead className="text-secondary-foreground hidden text-xs font-light md:table-cell">
-                Range (ETH price)
+                区间 · 价格(风险/计价)
               </TableHead>
               <TableHead className="text-secondary-foreground rounded-r-lg text-xs font-light">
                 Health (100% = liquidation)
@@ -960,7 +1278,7 @@ export function FarmPositions() {
                         {pos.value > pos.debt ? `${(pos.value / (pos.value - pos.debt)).toFixed(2)}x` : "－"}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {priceRange(pos.tickLower, pos.tickUpper, loanIsC0)}
+                        {priceRange(pos.tickLower, pos.tickUpper, protocol)}
                       </TableCell>
                       <TableCell className="rounded-r-lg">
                         <HealthBar usage={usage} />

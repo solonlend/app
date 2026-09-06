@@ -3,6 +3,7 @@ import { type Chain } from "viem";
 import { useAccount } from "wagmi";
 
 import { FarmPositions } from "@/components/farm-positions";
+import { FarmProtocolPanel } from "@/components/farm-protocol-panel";
 import { FarmTable } from "@/components/farm-table";
 import { PageHeader } from "@/components/page-header";
 
@@ -19,6 +20,7 @@ export function FarmSubPage() {
       />
       <div className="flex grow flex-col bg-white/[0.03]">
         <div className="bg-linear-to-b from-background to-primary flex h-full grow flex-col items-center rounded-t-xl pb-16 pt-8">
+          <FarmProtocolPanel />
           <FarmTable chain={chain} />
           <FarmPositions />
         </div>

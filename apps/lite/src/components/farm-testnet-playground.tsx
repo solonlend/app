@@ -8,6 +8,7 @@ import { readContract } from "wagmi/actions";
 import { FarmPauseBanner } from "@/components/farm-pause-banner";
 import { useBusy } from "@/hooks/use-busy";
 import { useFarmPaused } from "@/hooks/use-farm-paused";
+import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
 import { mintMinimums, slippageBps } from "@/lib/farm-slippage";
 import { farmVaultAbi } from "@/lib/farm-vault-abi";
 import { SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
@@ -128,6 +129,7 @@ export function FarmTestnetPlayground({
   const { address: user, isConnected } = useAccount();
   const [txs, setTxs] = useState<{ mint?: `0x${string}`; approve?: `0x${string}`; open?: `0x${string}` }>({});
 
+  const protocol = useFarmProtocol();
   const config = useConfig();
   const { paused, blocked, assertActive } = useFarmPaused();
   const [slippage, setSlippage] = useState("1");
@@ -252,6 +254,7 @@ export function FarmTestnetPlayground({
       } else {
         const tolerance = slippageBps(slippage);
         await assertActive();
+        await protocol.assertCapacity();
         const [slot0, loanIsC0] = await Promise.all([
           readContract(config, { chainId: P.chainId, address: P.pool, abi: poolAbi, functionName: "slot0" }),
           readContract(config, { chainId: P.chainId, address: P.vault, abi: farmVaultAbi, functionName: "LOAN_IS_C0" }),
@@ -342,10 +345,21 @@ export function FarmTestnetPlayground({
             done={approved}
           />
           <StepButton
-            label="3 · Open position (real tx)"
+            label={
+              fullCapacityLabel(protocol.fullReserve) ??
+              (protocol.capacityUnknown ? "容量暂不可用" : "3 · Open position (real tx)")
+            }
             doneLabel="Position opened"
             onClick={() => void guard(() => run("open"))}
-            disabled={busy || !plan || !approved || blocked || !!slippageError}
+            disabled={
+              busy ||
+              !plan ||
+              !approved ||
+              blocked ||
+              !!slippageError ||
+              !!protocol.fullReserve ||
+              protocol.capacityUnknown
+            }
             pending={pendingStep === "open" && (isPending || busy)}
             done={openStatus === "success"}
           />

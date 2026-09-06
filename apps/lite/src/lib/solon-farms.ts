@@ -13,6 +13,9 @@ export type FarmPool = {
   pair: string;
   token0Symbol: string;
   token1Symbol: string;
+  loanIsC0: boolean; // quote is token0 when true; the other token is the risk asset
+  token0Address?: Address;
+  token1Address?: Address;
   dex: "Uniswap V3" | "Uniswap V4";
   feeTierBps: number; // e.g. 100 = 0.01%
   feeLabel?: string; // overrides the % label (e.g. dynamic-fee v4 pools)
@@ -48,6 +51,9 @@ export const SOLON_FARMS: FarmPool[] = [
     pair: "ETH / USDG",
     token0Symbol: "WETH",
     token1Symbol: "USDG",
+    loanIsC0: false,
+    token0Address: WETH_RH,
+    token1Address: USDG_RH,
     dex: "Uniswap V3",
     feeTierBps: 100,
     poolAddress: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as Address,
@@ -63,6 +69,9 @@ export const SOLON_FARMS: FarmPool[] = [
     pair: "ETH / USDG",
     token0Symbol: "WETH",
     token1Symbol: "USDG",
+    loanIsC0: false,
+    token0Address: WETH_RH,
+    token1Address: USDG_RH,
     dex: "Uniswap V4",
     feeTierBps: 100,
     feeLabel: "dyn",
