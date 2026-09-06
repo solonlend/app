@@ -23,8 +23,9 @@ import { useOutletContext } from "react-router";
 import { type Address, type Chain, erc20Abi, zeroAddress } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
-import { CtaCard } from "@/components/cta-card";
 import { EarnTable } from "@/components/earn-table";
+import { FarmLendingVaults } from "@/components/farm-lending-vaults";
+import { PageHeader } from "@/components/page-header";
 import { useMarkets } from "@/hooks/use-markets";
 import * as Merkl from "@/hooks/use-merkl-campaigns";
 import { useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
@@ -39,7 +40,7 @@ import { getTokenURI } from "@/lib/tokens";
 const STALE_TIME = 5 * 60 * 1000;
 
 export function EarnSubPage() {
-  const { status, address: userAddress } = useAccount();
+  const { status, isConnected, address: userAddress } = useAccount();
   const { chain } = useOutletContext() as { chain?: Chain };
   const chainId = chain?.id;
 
@@ -265,24 +266,95 @@ export function EarnSubPage() {
   // Live Solon Vault V2 row (genesis 2026-09-03) — read straight from chain.
   const solon = useSolonVault({ chainId, userAddress });
   const solonRow = useMemo(() => {
-    const AAPL = "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9" as Address;
     const vaultDuck = {
       address: SOLON_VAULT.address,
       owner: SOLON_VAULT.owner,
       name: solon.name,
       asset: "0x5fc5360d0400a0fd4f2af552add042d716f1d168" as Address,
-      timelock: 0n,
+      timelock: 259200n,
       totalAssets: solon.totalAssets,
       apy: solon.apy,
       fee: SOLON_VAULT.performanceFeeWad,
       allocations: new Map(),
       collateralAllocations: new Map([
         [
-          AAPL,
+          "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9" as Address,
           {
-            proportion: 10n ** 18n,
+            proportion: 803212851405622528n,
             lltvs: new Set([385000000000000000n]),
             oracles: new Set(["0x4f6185269EbcAD4cFA0371d63b29d923956E60AC"]),
+          },
+        ],
+        [
+          "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0xfA6e814Ab26b459C909F86C9650D433D5330B86D"]),
+          },
+        ],
+        [
+          "0xd5f3879160bc7c32ebb4dc785f8a4f505888de68" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([625000000000000000n]),
+            oracles: new Set(["0x10AC7506227bD990C898b9BF59afaf0e04E1568B"]),
+          },
+        ],
+        [
+          "0x117cc2133c37b721f49de2a7a74833232b3b4c0c" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([625000000000000000n]),
+            oracles: new Set(["0xA6aAebAE5833776DaD374DbB4A3caBb9F2a39C22"]),
+          },
+        ],
+        [
+          "0x322f0929c4625ed5bad873c95208d54e1c003b2d" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0xEb247f0Ab23fbFA2409e4997Fd2e521c63b7A0DC"]),
+          },
+        ],
+        [
+          "0xff080c8ce2e5feadaca0da81314ae59d232d4afd" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0xc4E6f466e9e69334Cc9A32E120D42AE9A21Ca4E4"]),
+          },
+        ],
+        [
+          "0x1b0e319c6a659f002271b69db8a7df2f911c153e" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0x2599449F32D6845789fAE5a6FD646971AE0D18b9"]),
+          },
+        ],
+        [
+          "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0x244C80f271952d2CB5F005bEe56dDE0dFEA6De50"]),
+          },
+        ],
+        [
+          "0xdf0992e440dd0be65bd8439b609d6d4366bf1cb5" as Address,
+          {
+            proportion: 22088353413654620n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0x721314Bf05e4736fF21A9f6BE83f47dff3eF95F8"]),
+          },
+        ],
+        [
+          "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344" as Address,
+          {
+            proportion: 20080321285140564n,
+            lltvs: new Set([385000000000000000n]),
+            oracles: new Set(["0xA563885F7dE7757A6A1451729fe23e51196232c7"]),
           },
         ],
       ]),
@@ -329,34 +401,29 @@ export function EarnSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5 pt-16">
-      {status === "disconnected" ? (
-        <div className="bg-linear-to-b flex w-full flex-col from-transparent to-white/[0.03] px-8 pb-20 pt-8">
-          <CtaCard
-            className="md:w-7xl w-full md:mx-auto md:max-w-full"
-            bigText="Earn on your terms"
-            littleText="Connect wallet to get started"
+      <PageHeader
+        title="Earn"
+        subtitle="The other side of the farm. Supply USDG or ETH to the reserves that fund leveraged positions, and accrue the interest those positions pay. Redeemable against whatever the reserve has not lent out."
+        hint={isConnected ? undefined : "Connect wallet to get started"}
+      />
+      {status !== "disconnected" && userRows.length > 0 && (
+        <div className="bg-linear-to-b lg:pt-22 flex h-fit w-full flex-col items-center from-transparent to-white/[0.03] pb-20">
+          <EarnTable
+            chain={chain}
+            rows={userRows}
+            depositsMode="userAssets"
+            tokens={displayTokens}
+            lendingRewards={lendingRewards}
+            refetchPositions={refetchBalanceOf}
           />
         </div>
-      ) : (
-        userRows.length > 0 && (
-          <div className="bg-linear-to-b lg:pt-22 flex h-fit w-full flex-col items-center from-transparent to-white/[0.03] pb-20">
-            <EarnTable
-              chain={chain}
-              rows={userRows}
-              depositsMode="userAssets"
-              tokens={displayTokens}
-              lendingRewards={lendingRewards}
-              refetchPositions={refetchBalanceOf}
-            />
-          </div>
-        )
       )}
       {/*
       Outer div ensures background color matches the end of the gradient from the div above,
       allowing rounded corners to show correctly. Inner div defines rounded corners and table background.
       */}
       <div className="flex grow flex-col bg-white/[0.03]">
-        <div className="bg-linear-to-b from-background to-primary flex h-full grow justify-center rounded-t-xl pb-16 pt-8">
+        <div className="bg-linear-to-b from-background to-primary flex h-full grow flex-col items-center rounded-t-xl pb-16 pt-8">
           <EarnTable
             chain={chain}
             rows={displayRows}
@@ -365,6 +432,7 @@ export function EarnSubPage() {
             lendingRewards={lendingRewards}
             refetchPositions={refetchBalanceOf}
           />
+          <FarmLendingVaults />
         </div>
       </div>
     </div>

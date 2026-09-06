@@ -23,7 +23,7 @@ import { type useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
 import { SHARED_LIQUIDITY_DOCUMENTATION } from "@/lib/constants";
 import { type DisplayableCurators } from "@/lib/curators";
 import { monogramURI } from "@/lib/monogram";
-import { SOLON_CREATED_MARKETS } from "@/lib/solon-markets";
+import { isSolonCreated } from "@/lib/solon-markets";
 
 function TokenTableCell({ address, symbol, imageSrc, chain }: Token & { chain: Chain | undefined }) {
   return (
@@ -271,7 +271,7 @@ export function BorrowTable({
   const hasVaultListings = [...marketVaults.values()].some((v) => v.length > 0);
   // Vault-funded markets first — traffic goes to the pools that feed our depositors.
   const solonRank = (m: Market) =>
-    (SOLON_CREATED_MARKETS.includes(m.id) ? 2 : 0) + ((marketVaults.get(m.params.id) ?? []).length > 0 ? 1 : 0);
+    (isSolonCreated(m.id) ? 2 : 0) + ((marketVaults.get(m.params.id) ?? []).length > 0 ? 1 : 0);
   const orderedMarkets = [...markets].sort((a, b) => solonRank(b) - solonRank(a));
   return (
     <Table className="border-separate border-spacing-y-3">
@@ -279,8 +279,8 @@ export function BorrowTable({
         <TableRow>
           <TableHead className="text-secondary-foreground rounded-l-lg pl-4 text-xs font-light">Collateral</TableHead>
           <TableHead className="text-secondary-foreground text-xs font-light">Loan</TableHead>
-          <TableHead className="text-secondary-foreground text-xs font-light">LLTV</TableHead>
-          <TableHead className="text-secondary-foreground text-xs font-light">
+          <TableHead className="text-secondary-foreground hidden text-xs font-light md:table-cell">LLTV</TableHead>
+          <TableHead className="text-secondary-foreground hidden text-xs font-light md:table-cell">
             <div className="flex items-center gap-1">
               Liquidity
               <TooltipProvider>
@@ -308,7 +308,9 @@ export function BorrowTable({
           {hasVaultListings && (
             <TableHead className="text-secondary-foreground text-xs font-light">Vault Listing</TableHead>
           )}
-          <TableHead className="text-secondary-foreground rounded-r-lg text-xs font-light">ID</TableHead>
+          <TableHead className="text-secondary-foreground hidden rounded-r-lg text-xs font-light md:table-cell">
+            ID
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -325,7 +327,7 @@ export function BorrowTable({
                 <TableCell className="rounded-l-lg py-3">
                   <div className="flex items-center gap-2">
                     <TokenTableCell {...tokens.get(market.params.collateralToken)!} chain={chain} />
-                    {SOLON_CREATED_MARKETS.includes(market.id) && (
+                    {isSolonCreated(market.id) && (
                       <span
                         title="Solon-certified market — created and funded by the Solon vault. Borrowing here earns points."
                         className="bg-foreground text-background px-1.5 py-0.5 text-[10px] font-semibold tracking-widest"
@@ -338,8 +340,8 @@ export function BorrowTable({
                 <TableCell>
                   <TokenTableCell {...tokens.get(market.params.loanToken)!} chain={chain} />
                 </TableCell>
-                <TableCell>{formatLtv(market.params.lltv)}</TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">{formatLtv(market.params.lltv)}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   {tokens.get(market.params.loanToken)?.decimals !== undefined
                     ? formatBalanceWithSymbol(
                         market.liquidity,
@@ -357,9 +359,7 @@ export function BorrowTable({
                     mode="owe"
                     // Borrowing only earns points when the liquidity comes from a Solon vault —
                     // external markets don't accrue pts (policy: 2026-09-03).
-                    points={
-                      SOLON_CREATED_MARKETS.includes(market.id) || (marketVaults.get(market.params.id) ?? []).length > 0
-                    }
+                    points={isSolonCreated(market.id) || (marketVaults.get(market.params.id) ?? []).length > 0}
                   />
                 </TableCell>
                 {hasVaultListings && (
@@ -371,7 +371,7 @@ export function BorrowTable({
                     />
                   </TableCell>
                 )}
-                <TableCell className="rounded-r-lg">
+                <TableCell className="hidden rounded-r-lg md:table-cell">
                   <IdTableCell marketId={market.id} />
                 </TableCell>
               </TableRow>
@@ -407,7 +407,9 @@ export function BorrowPositionTable({
           <TableHead className="text-secondary-foreground text-xs font-light">Loan</TableHead>
           <TableHead className="text-secondary-foreground text-xs font-light">Rate</TableHead>
           <TableHead className="text-secondary-foreground text-xs font-light">Health</TableHead>
-          <TableHead className="text-secondary-foreground rounded-r-lg text-xs font-light">ID</TableHead>
+          <TableHead className="text-secondary-foreground hidden rounded-r-lg text-xs font-light md:table-cell">
+            ID
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

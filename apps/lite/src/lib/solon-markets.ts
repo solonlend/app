@@ -12,6 +12,17 @@ import { type Hex } from "viem";
  * removed by this check). Loan token is always canonical USDG 0x5fc5360d...d168.
  */
 export const SOLON_MARKET_IDS: Hex[] = [
+  // Solon batch-1 own markets (2026-09-03)
+  "0xf54d700dd3fe889872bfc868788de849e8a5b1adfd73bb3d983c8e264e970604", // NVDA/USDG 38.5% (batch-1 2026-09-03)
+  "0xb6befab1632196d5c55ccf320cca0e56f6331548ace2bd8ae11b5130d7db52c5", // QQQ/USDG 62.5% (batch-1 2026-09-03)
+  "0x34e22aabcc39112dafb870cd7626a3d7f6ebdfbb3436eba34c23e4f26604b783", // SPY/USDG 62.5% (batch-1 2026-09-03)
+  "0x5aa5f8658d66626c3640fee26fa655c66116e9626fb3ebfdd83da00772161b91", // TSLA/USDG 38.5% (batch-1 2026-09-03)
+  "0x3a102899ece6ef59195b5621897486f074ad98db36e8fabbec50195b0760ab86", // MU/USDG 38.5% (batch-1 2026-09-03)
+  "0x29bb3cb1a28dd968ef42292f3817b702e3400f8d877e76af1c1bbadaa7021f37", // GME/USDG 38.5% (batch-1 2026-09-03)
+  "0x48524bc435f468489472b207d60557c7637a241d4ba971a6c9cca5468c8e5d61", // SPCX/USDG 38.5% (batch-1 2026-09-03)
+  "0x6278621c30bb6006fa661cb9354ccf3fc40261eacb30f6a9278e9e6506acb07e", // CRCL/USDG 38.5% (batch-1 2026-09-03)
+  "0x6ec35438fc89648e0d269863633189aca4426e89e05565b9111a7e69643c5b1d", // USO/USDG 38.5% (batch-1 2026-09-03)
+
   "0x3b788195cc0f5eb987e14d91d9b8875cf742c55faf9822ae25701f71a3ed7133", // AAPL / USDG - lltv 38.5% (SOLON market, our adapter)
   "0x0d6e009807341aae5d0ccc3fbdc506fce77012603e96aec3fc44785942e7cf65", // AAPL / USDG - lltv 62.5%
   "0x30a2a5f1a098b23ed91eadc4529a8d1c967f2cdc2e40a709f3a5992004b01ac0", // AAPL / USDG - lltv 62.5%
@@ -101,4 +112,16 @@ export const SOLON_VAULT = {
 // Markets created and certified by Solon (our oracle adapter + conservative LLTV).
 export const SOLON_CREATED_MARKETS: Hex[] = [
   "0x3b788195cc0f5eb987e14d91d9b8875cf742c55faf9822ae25701f71a3ed7133", // AAPL/USDG 38.5%
+  "0xf54d700dd3fe889872bfc868788de849e8a5b1adfd73bb3d983c8e264e970604", // NVDA/USDG 38.5% (batch-1 2026-09-03)
+  "0xb6befab1632196d5c55ccf320cca0e56f6331548ace2bd8ae11b5130d7db52c5", // QQQ/USDG 62.5% (batch-1 2026-09-03)
+  "0x34e22aabcc39112dafb870cd7626a3d7f6ebdfbb3436eba34c23e4f26604b783", // SPY/USDG 62.5% (batch-1 2026-09-03)
+  "0x5aa5f8658d66626c3640fee26fa655c66116e9626fb3ebfdd83da00772161b91", // TSLA/USDG 38.5% (batch-1 2026-09-03)
+  "0x3a102899ece6ef59195b5621897486f074ad98db36e8fabbec50195b0760ab86", // MU/USDG 38.5% (batch-1 2026-09-03)
+  "0x29bb3cb1a28dd968ef42292f3817b702e3400f8d877e76af1c1bbadaa7021f37", // GME/USDG 38.5% (batch-1 2026-09-03)
+  "0x48524bc435f468489472b207d60557c7637a241d4ba971a6c9cca5468c8e5d61", // SPCX/USDG 38.5% (batch-1 2026-09-03)
+  "0x6278621c30bb6006fa661cb9354ccf3fc40261eacb30f6a9278e9e6506acb07e", // CRCL/USDG 38.5% (batch-1 2026-09-03)
+  "0x6ec35438fc89648e0d269863633189aca4426e89e05565b9111a7e69643c5b1d", // USO/USDG 38.5% (batch-1 2026-09-03)
 ];
+
+export const SOLON_CREATED_SET = new Set(SOLON_CREATED_MARKETS.map((m) => m.toLowerCase()));
+export const isSolonCreated = (id: string) => SOLON_CREATED_SET.has(id.toLowerCase());

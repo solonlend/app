@@ -342,7 +342,7 @@
   --font-pixel: "Silkscreen", "Geist Mono", monospace;
 }
 html {
-  font-size: 14px; /* match the main site's denser type scale */
+  font-size: 16px; /* readability pass 2026-09-04: match Uniswap's base scale (was 14px, too dense on black) */
 }
 .dark body,
 .dark button,

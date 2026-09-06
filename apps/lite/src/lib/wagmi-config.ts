@@ -3,6 +3,7 @@ import { getDefaultConfig as createConnectKitConfigParams } from "connectkit";
 import type { Chain, HttpTransportConfig } from "viem";
 import { CreateConnectorFn, createConfig as createWagmiConfig, fallback, http, type Transport } from "wagmi";
 import {
+  sepolia,
   abstract,
   arbitrum,
   base,
@@ -61,11 +62,16 @@ function createPrivateProxyHttp(chainId: number): ({ url: string } & HttpTranspo
 }
 
 // Solon: single-chain deployment on Robinhood Chain.
-const chains = [customChains.robinhood] as const;
+// Sepolia is wallet-reachable (not routed in the UI) so the Farm testnet playground can send real txs.
+const chains = [customChains.robinhood, sepolia] as const;
 
 const transports: { [K in (typeof chains)[number]["id"]]: Transport } & { [k: number]: Transport } = {
   [customChains.robinhood.id]: createFallbackTransport([
     { url: "https://rpc.mainnet.chain.robinhood.com/rpc", batch: { batchSize: 10 } },
+  ]),
+  [sepolia.id]: createFallbackTransport([
+    { url: "https://ethereum-sepolia-rpc.publicnode.com", batch: { batchSize: 10 } },
+    { url: "https://sepolia.drpc.org", batch: false },
   ]),
   // full support
   [mainnet.id]: createFallbackTransport([

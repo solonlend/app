@@ -16,7 +16,7 @@ import { type Address, erc20Abi, type Chain, zeroAddress, type Hex } from "viem"
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
 import { BorrowPositionTable, BorrowTable } from "@/components/borrow-table";
-import { CtaCard } from "@/components/cta-card";
+import { PageHeader } from "@/components/page-header";
 import { useMarkets } from "@/hooks/use-markets";
 import * as Merkl from "@/hooks/use-merkl-campaigns";
 import { useMerklOpportunities } from "@/hooks/use-merkl-opportunities";
@@ -34,7 +34,7 @@ function restructurePositions(data: (readonly [bigint, bigint, bigint])[]) {
 }
 
 export function BorrowSubPage() {
-  const { status, address: userAddress } = useAccount();
+  const { status, isConnected, address: userAddress } = useAccount();
   const { chain } = useOutletContext() as { chain?: Chain };
   const chainId = chain?.id;
 
@@ -238,29 +238,24 @@ export function BorrowSubPage() {
 
   return (
     <div className="flex min-h-screen flex-col px-2.5 pt-16">
-      {status === "disconnected" ? (
-        <div className="bg-linear-to-b flex w-full flex-col from-transparent to-white/[0.03] px-8 pb-20 pt-8">
-          <CtaCard
-            className="md:w-7xl w-full md:mx-auto md:max-w-full"
-            bigText="Hold the stock. Borrow the cash."
-            littleText="Connect wallet to get started"
-          />
-        </div>
-      ) : (
-        userMarkets.length > 0 && (
-          <div className="bg-linear-to-b lg:pt-22 flex h-fit w-full flex-col items-center from-transparent to-white/[0.03] pb-20">
-            <div className="text-primary-foreground w-full max-w-7xl px-2 lg:px-8">
-              <BorrowPositionTable
-                chain={chain}
-                markets={userMarkets}
-                tokens={tokens}
-                positions={positions}
-                borrowingRewards={borrowingRewards}
-                refetchPositions={refetchPositionsRaw}
-              />
-            </div>
+      <PageHeader
+        title="Borrow"
+        subtitle="Tokenized US stocks as collateral, USDG as the loan. Fixed LLTVs on immutable Morpho markets, liquidated by anyone who can repay. The interface can be replaced; the position cannot."
+        hint={isConnected ? undefined : "Connect wallet to get started"}
+      />
+      {status !== "disconnected" && userMarkets.length > 0 && (
+        <div className="bg-linear-to-b lg:pt-22 flex h-fit w-full flex-col items-center from-transparent to-white/[0.03] pb-20">
+          <div className="text-primary-foreground w-full max-w-7xl px-2 lg:px-8">
+            <BorrowPositionTable
+              chain={chain}
+              markets={userMarkets}
+              tokens={tokens}
+              positions={positions}
+              borrowingRewards={borrowingRewards}
+              refetchPositions={refetchPositionsRaw}
+            />
           </div>
-        )
+        </div>
       )}
       {/*
       Outer div ensures background color matches the end of the gradient from the div above,

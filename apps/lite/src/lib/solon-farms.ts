@@ -1,0 +1,161 @@
+import { type Address } from "viem";
+
+/**
+ * Solon leveraged-LP farm pools (dual-borrow vaults on Uniswap V3/V4, Robinhood Chain).
+ *
+ * Vault contracts are audited-in-house & battle-tested on Sepolia (see leverage/RED-TEAM-2026-09-04.md);
+ * mainnet deployment is gated on DEPLOY-CHECKLIST sign-off, so `vault` stays undefined until launch.
+ * `feeAprSnapshot` is a manually refreshed 24h snapshot from the DEX interface — NOT live data;
+ * refresh `snapshotDate` whenever it's updated. Everything marked estimate is labeled in the UI.
+ */
+export type FarmPool = {
+  id: string;
+  pair: string;
+  token0Symbol: string;
+  token1Symbol: string;
+  dex: "Uniswap V3" | "Uniswap V4";
+  feeTierBps: number; // e.g. 100 = 0.01%
+  feeLabel?: string; // overrides the % label (e.g. dynamic-fee v4 pools)
+  poolAddress?: Address; // V3 pool (readable TVL); V4 sits inside the singleton PoolManager
+  v4PoolId?: `0x${string}`;
+  maxLeverage: number; // display cap (LLTV 80% theoretical max 5x, shipped cap 4x)
+  lltvPercent: number;
+  feeAprSnapshot: number; // fraction, e.g. 0.9427
+  snapshotDate: string;
+  vault?: Address; // leverage vault once deployed on mainnet
+  status: "soon" | "live";
+  flagship?: boolean;
+  note?: string; // honest caveat shown in the row tooltip
+};
+
+/** Candidate pools (new assets, no Chainlink feed yet — oracle design pending, own red-team round required). */
+export type CandidatePool = {
+  pair: string;
+  dexLabel: string;
+  tvlSnapshot: string; // manual snapshot from DEX interface
+  feeAprSnapshot: string;
+  blocker: string;
+};
+
+/** Robinhood Chain (4663) — addresses verified on-chain, see leverage OPS BOARD §06. */
+export const WETH_RH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73" as Address;
+export const USDG_RH = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as Address;
+export const ETH_USD_FEED_RH = "0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9" as Address;
+
+export const SOLON_FARMS: FarmPool[] = [
+  {
+    id: "eth-usdg-v3-100",
+    pair: "ETH / USDG",
+    token0Symbol: "WETH",
+    token1Symbol: "USDG",
+    dex: "Uniswap V3",
+    feeTierBps: 100,
+    poolAddress: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as Address,
+    maxLeverage: 4,
+    lltvPercent: 80,
+    feeAprSnapshot: 0.9427,
+    snapshotDate: "2026-09-04",
+    status: "soon",
+    flagship: true,
+  },
+  {
+    id: "eth-usdg-v4-100",
+    pair: "ETH / USDG",
+    token0Symbol: "WETH",
+    token1Symbol: "USDG",
+    dex: "Uniswap V4",
+    feeTierBps: 100,
+    feeLabel: "dyn",
+    v4PoolId: "0x0000000000000000000000000000000000000000000000000000000000000000",
+    maxLeverage: 4,
+    lltvPercent: 80,
+    feeAprSnapshot: 0,
+    snapshotDate: "2026-09-04",
+    status: "soon",
+    note: "WETH/USDG fee-100 v4 pool is initialized on mainnet but holds zero liquidity today; the $8M v4 ETH/USDG pool uses native ETH + a dynamic-fee hook, which the vault does not support yet (v1.5).",
+  },
+];
+
+/**
+ * 新兴资产候选(用户点名 PONS/CASHCAT/AI 等,meme 生态 TVL 与深度已可观)。
+ * 硬闸:这些对没有 Chainlink 喂价 —— 清算估值只能依赖池价(可操纵),正是主推池在结构上免疫
+ * 的攻击面。上线前置:长窗口 TWAP 预言机 + 保守 LLTV(~38.5%) + 小额度上限 + 独立红队轮。
+ * 数字为 DEX 界面人工快照(2026-09-04),仅供评估。
+ */
+export const CANDIDATE_POOLS: CandidatePool[] = [
+  { pair: "PONS / ETH", dexLabel: "V3 · 1%", tvlSnapshot: "$6.23M", feeAprSnapshot: "438%", blocker: "no price feed" },
+  {
+    pair: "CASHCAT / ETH",
+    dexLabel: "V3 · 1%",
+    tvlSnapshot: "$5.37M",
+    feeAprSnapshot: "392%",
+    blocker: "no price feed",
+  },
+  { pair: "PONS / USDG", dexLabel: "V3 · 1%", tvlSnapshot: "$3.52M", feeAprSnapshot: "263%", blocker: "no price feed" },
+  {
+    pair: "CASHCAT / ETH",
+    dexLabel: "V3 · 0.3%",
+    tvlSnapshot: "$3.34M",
+    feeAprSnapshot: "629%",
+    blocker: "no price feed",
+  },
+  {
+    pair: "AI / NVDA",
+    dexLabel: "V4 · dyn · Doppler",
+    tvlSnapshot: "$5.61M",
+    feeAprSnapshot: "179%",
+    blocker: "no feed + hook",
+  },
+];
+
+/** Rough borrow cost assumption for the net-APY estimate until the dual-reserve pool is live on mainnet. */
+export const EST_BORROW_APR = 0.08;
+
+/** feeApr·L − borrowApr·(L−1); labeled as estimate in the UI. */
+export function estimateNetApy(feeApr: number, leverage: number, borrowApr = EST_BORROW_APR): number {
+  return feeApr * leverage - borrowApr * (leverage - 1);
+}
+
+/**
+ * 双借的年化借款成本(USDG 计价):两条腿各按各自储备的 borrow APR 计息,不能用一个混合利率反推。
+ * riskValue/loanValue = 各腿借款折成 USDG 的价值。
+ */
+export function borrowCostDual(riskValue: number, riskApr: number, loanValue: number, loanApr: number): number {
+  return riskValue * riskApr + loanValue * loanApr;
+}
+
+/** 借款构成加权后的等效利率,仅用于展示"整体借款成本相当于百分之几"。 */
+export function blendedBorrowApr(riskValue: number, riskApr: number, loanValue: number, loanApr: number): number {
+  const total = riskValue + loanValue;
+  return total > 0 ? borrowCostDual(riskValue, riskApr, loanValue, loanApr) / total : 0;
+}
+
+/**
+ * 权益口径净 APY:(费用收入 − 两腿利息) / 权益。
+ * 与 estimateNetApy 的区别是借款成本按实际两腿构成算,所以单币/双币保证金会给出不同的数 —— 这正是应有的。
+ */
+export function netApyDual(args: {
+  feeApr: number;
+  positionValue: number;
+  equity: number;
+  riskValue: number;
+  riskApr: number;
+  loanValue: number;
+  loanApr: number;
+}): number {
+  const { feeApr, positionValue, equity, riskValue, riskApr, loanValue, loanApr } = args;
+  if (equity <= 0) return 0;
+  return (feeApr * positionValue - borrowCostDual(riskValue, riskApr, loanValue, loanApr)) / equity;
+}
+
+/** Sepolia testnet playground — deployment recorded in leverage/deployments/sepolia-2026-09-06.md. Mock tokens are open-mint. */
+export const SEPOLIA_PLAYGROUND = {
+  chainId: 11155111,
+  vault: "0x76C3F4730098dfAc400125E7ae16636C566B8009" as Address,
+  weth: "0x5Fb4b5AA8f408389cA96E7e5B9cFF014A8176563" as Address,
+  usdg: "0xB89b8f4d12bDFf564FF475832DE683dAF0911cDb" as Address,
+  oracle: "0xd68B55abA9BF89094035fcB0A1dc0585A85c9fd4" as Address,
+  pool: "0x81ffB0C7127e90212f85cc825e9ecA8056A28A02" as Address,
+  lending: "0x1C8331c1DE3BF11CCc68Fb763b1054e891BF450e" as Address,
+  explorer: "https://sepolia.etherscan.io",
+};

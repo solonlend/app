@@ -252,8 +252,10 @@ export function EarnTable({
           <TableRow>
             <TableHead className="text-secondary-foreground rounded-l-lg pl-4 text-xs font-light">Vault</TableHead>
             <TableHead className="text-secondary-foreground text-xs font-light">Deposits</TableHead>
-            <TableHead className="text-secondary-foreground text-xs font-light">Curator</TableHead>
-            <TableHead className="text-secondary-foreground text-xs font-light">Collateral</TableHead>
+            <TableHead className="text-secondary-foreground hidden text-xs font-light md:table-cell">Curator</TableHead>
+            <TableHead className="text-secondary-foreground hidden text-xs font-light md:table-cell">
+              Collateral
+            </TableHead>
             <TableHead className="text-secondary-foreground rounded-r-lg text-xs font-light">APY</TableHead>
           </TableRow>
         </TableHeader>
@@ -308,7 +310,7 @@ export function EarnTable({
                         ? formatBalanceWithSymbol(deposits, row.asset.decimals, row.asset.symbol, 5, true)
                         : "－"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex w-min gap-2">
                         {Object.keys(row.curators).length > 0
                           ? Object.values(row.curators)
@@ -319,7 +321,7 @@ export function EarnTable({
                           : ownerText}
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[120px]">
+                    <TableCell className="hidden min-w-[120px] md:table-cell">
                       <CollateralsTableCell vault={row.vault} chain={chain} tokens={tokens} />
                     </TableCell>
                     <TableCell className="rounded-r-lg">

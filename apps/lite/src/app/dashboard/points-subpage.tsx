@@ -42,9 +42,11 @@ export function PointsSubPage() {
       <div className="text-primary-foreground mx-auto w-full max-w-7xl px-2 pb-24 pt-10 lg:px-8">
         <h1 className="font-pixel text-3xl tracking-wide md:text-4xl">Points</h1>
         <p className="text-secondary-foreground mt-3 max-w-2xl font-light">
-          Points reward the users who generate Solon&apos;s revenue: depositing into Solon vaults, and borrowing from
-          markets those vaults fund — accrued as shares × time held, so wash loops earn nothing. The indexer is open
-          source — recompute the whole board yourself.
+          Points reward the users who generate Solon&apos;s revenue, on three sides: depositing into Solon vaults,
+          borrowing from the markets those vaults fund, and — once the farm reaches mainnet — supplying the lending
+          reserves or carrying leveraged LP debt. All four accrue the same way, as shares × time held, so wash loops
+          earn nothing and letting debt grow earns nothing. The indexer is open source — recompute the whole board
+          yourself.
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">

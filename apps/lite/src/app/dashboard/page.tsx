@@ -19,6 +19,7 @@ import { APP_DETAILS, SHOW_REWARDS, SITE_URL, WORDMARK } from "@/lib/constants";
 
 enum SubPage {
   Earn = "earn",
+  Farm = "farm",
   Borrow = "borrow",
   Points = "points",
   Liquidations = "liquidations",
@@ -48,15 +49,17 @@ export default function Page() {
   const location = useLocation();
   const locationSegments = location.pathname.toLowerCase().split("/").slice(1);
   const selectedSubPage =
-    locationSegments.at(1) === SubPage.Borrow
-      ? SubPage.Borrow
-      : locationSegments.at(1) === SubPage.Points
-        ? SubPage.Points
-        : locationSegments.at(1) === SubPage.Liquidations
-          ? SubPage.Liquidations
-          : locationSegments.at(1) === SubPage.Rewards
-            ? SubPage.Rewards
-            : SubPage.Earn;
+    locationSegments.at(1) === SubPage.Farm
+      ? SubPage.Farm
+      : locationSegments.at(1) === SubPage.Borrow
+        ? SubPage.Borrow
+        : locationSegments.at(1) === SubPage.Points
+          ? SubPage.Points
+          : locationSegments.at(1) === SubPage.Liquidations
+            ? SubPage.Liquidations
+            : locationSegments.at(1) === SubPage.Rewards
+              ? SubPage.Rewards
+              : SubPage.Earn;
 
   const chains = useChains();
   const chain = useMemo(
@@ -96,6 +99,15 @@ export default function Page() {
             <MorphoMenu />
           )}
           <div className="hidden items-center gap-0.5 rounded-full bg-transparent p-1 md:flex md:gap-2">
+            <Link to={SubPage.Farm} relative="path">
+              <Button
+                variant={selectedSubPage === SubPage.Farm ? "tertiary" : "secondaryTab"}
+                size="lg"
+                className="rounded-full px-3 font-light md:px-6"
+              >
+                Farm
+              </Button>
+            </Link>
             <Link to={SubPage.Earn} relative="path">
               <Button
                 variant={selectedSubPage === SubPage.Earn ? "tertiary" : "secondaryTab"}
@@ -170,6 +182,7 @@ export default function Page() {
           <div className="border-border bg-background/95 order-last -mx-3 w-screen border-b backdrop-blur-md md:hidden">
             <div className="flex flex-col gap-1 px-4 py-4">
               {[
+                { to: SubPage.Farm, label: "FARM" },
                 { to: SubPage.Earn, label: "EARN" },
                 { to: SubPage.Borrow, label: "BORROW" },
                 { to: SubPage.Points, label: "POINTS" },
