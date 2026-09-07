@@ -27,7 +27,7 @@ import { FarmPauseBanner } from "@/components/farm-pause-banner";
 import { PtsBadge } from "@/components/pts-badge";
 import { useBusy } from "@/hooks/use-busy";
 import { useFarmPaused } from "@/hooks/use-farm-paused";
-import { SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
+import { RH_FARM_LENDING as P } from "@/lib/solon-farms";
 import { runTx } from "@/lib/tx-toast";
 
 /** Solon dual-reserve LendingPool (ExtraFi-style) — the funding side of the leveraged-LP farm. */
@@ -315,8 +315,8 @@ function LendingSheet({
       <SheetHeader>
         <SheetTitle>{r.name}</SheetTitle>
         <SheetDescription>
-          Lend {r.symbol}, earn the interest leveraged farmers pay. Withdraw any time liquidity allows. Sepolia testnet
-          · mock tokens.
+          Lend {r.symbol}, earn the interest leveraged farmers pay. Withdraw any time liquidity allows. Live on
+          Robinhood Chain — scaled soft launch, small caps to start.
         </SheetDescription>
       </SheetHeader>
       <div className="flex flex-col gap-3 px-4 pb-6">
@@ -351,14 +351,16 @@ function LendingSheet({
                 <span className="text-secondary-foreground text-xs">{r.symbol}</span>
               </div>
             </div>
-            <Button
-              className="h-9 w-full rounded-full text-xs"
-              variant="secondary"
-              disabled={isPending || busy}
-              onClick={() => void guard(() => doMint())}
-            >
-              Get {r.mintAmount} test {r.symbol}
-            </Button>
+            {P.testnet && (
+              <Button
+                className="h-9 w-full rounded-full text-xs"
+                variant="secondary"
+                disabled={isPending || busy}
+                onClick={() => void guard(() => doMint())}
+              >
+                Get {r.mintAmount} test {r.symbol}
+              </Button>
+            )}
             <Button
               className="h-10 w-full rounded-full text-xs"
               variant="blue"

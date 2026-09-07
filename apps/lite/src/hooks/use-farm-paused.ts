@@ -1,7 +1,7 @@
 import { useConfig, useReadContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 
-import { SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
+import { RH_MAINNET as P } from "@/lib/solon-farms";
 
 const pausedContract = {
   chainId: P.chainId,

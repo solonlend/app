@@ -189,6 +189,7 @@ export function netApyDual(args: {
 /** Sepolia testnet playground — deployment recorded in leverage/deployments/sepolia-2026-09-06.md. Mock tokens are open-mint. */
 export const SEPOLIA_PLAYGROUND = {
   chainId: 11155111,
+  testnet: true,
   vault: "0x76C3F4730098dfAc400125E7ae16636C566B8009" as Address,
   weth: "0x5Fb4b5AA8f408389cA96E7e5B9cFF014A8176563" as Address,
   usdg: "0xB89b8f4d12bDFf564FF475832DE683dAF0911cDb" as Address,
@@ -197,3 +198,28 @@ export const SEPOLIA_PLAYGROUND = {
   lending: "0x1C8331c1DE3BF11CCc68Fb763b1054e891BF450e" as Address,
   explorer: "https://sepolia.etherscan.io",
 };
+
+/**
+ * Robinhood Chain mainnet farm config, live 2026-09-07. Drop-in shape-compatible with
+ * SEPOLIA_PLAYGROUND (so the interactive components can repoint by swapping the import), plus a
+ * `vaults` map for the two-vault mainnet reality. `vault` defaults to the flagship dual-borrow vault;
+ * per-vault code should read `vaults.dual` / `vaults.single`. Real USDG/WETH — no mock mint.
+ */
+export const RH_MAINNET = {
+  chainId: 4663,
+  testnet: false,
+  vault: "0x9Db7aDa64D1E8b856E15D916d886797501F28ce0" as Address, // flagship = dual
+  vaults: {
+    dual: "0x9Db7aDa64D1E8b856E15D916d886797501F28ce0" as Address, // vaultId 1
+    single: "0x9e100d524DFEa1Aa76286A7F00682e72F79aC3aE" as Address, // vaultId 2, borrows USDG only
+  },
+  weth: WETH_RH,
+  usdg: USDG_RH,
+  oracle: "0x52b5728D1086b0B68d98DD51ee6544d87062Ef0f" as Address,
+  pool: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as Address,
+  lending: "0xA4af5515A7DE8E1661C92d3246296Ff3a48791Dd" as Address,
+  explorer: "https://robinhoodchain.blockscout.com",
+};
+
+/** Back-compat alias: the funding side reads the same mainnet config. */
+export const RH_FARM_LENDING = RH_MAINNET;

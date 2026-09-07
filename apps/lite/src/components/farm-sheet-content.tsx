@@ -363,7 +363,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
           Open position · Mainnet soon
         </Button>
 
-        {farm.flagship && (
+        {farm.flagship && chainId === 11155111 && (
           <FarmTestnetPlayground
             marginUsdg={mUsdg}
             marginEth={mEthAmt}
@@ -372,8 +372,9 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
           />
         )}
         <p className="text-secondary-foreground text-center text-[11px] font-light">
-          Vaults are live and battle-tested on Sepolia (350+ txs: dual-direction liquidations, bad-debt drills,
-          adversarial paths). Mainnet launch is gated on the deploy checklist + external audit.
+          Live on Robinhood Chain (2026-09-07): V3 dual-borrow + V3 single-borrow vaults, on-chain verified. A scaled
+          soft launch — small reserve caps, single operator key, external audit still pending. Size accordingly and
+          verify on-chain.
         </p>
       </div>
     </SheetContent>

@@ -1,7 +1,7 @@
 import { formatUnits } from "viem";
 import { useReadContracts } from "wagmi";
 
-import { SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
+import { RH_MAINNET as P } from "@/lib/solon-farms";
 
 /**
  * 双借金库的两条腿各挂各的储备,各按自己的 borrow APR 计息。

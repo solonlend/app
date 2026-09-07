@@ -3,7 +3,7 @@ import { useReadContracts } from "wagmi";
 
 import { capacityState, farmAssets } from "@/lib/farm-protocol";
 import { farmReserveAbi } from "@/lib/farm-protocol-abi";
-import { SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
+import { RH_MAINNET as P } from "@/lib/solon-farms";
 
 const vaultAbi = parseAbi([
   "function LLTV() view returns (uint256)",

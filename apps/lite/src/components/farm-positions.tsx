@@ -32,7 +32,7 @@ import { marginDebt, increaseEstimate, liquidationPrices } from "@/lib/farm-mana
 import { riskPriceAtTick } from "@/lib/farm-protocol";
 import { closeMinimums, mintMinimums, poolStateAbi, slippageBps } from "@/lib/farm-slippage";
 import { farmVaultAbi } from "@/lib/farm-vault-abi";
-import { borrowCostDual, blendedBorrowApr, SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
+import { borrowCostDual, blendedBorrowApr, RH_MAINNET as P } from "@/lib/solon-farms";
 import { runTx } from "@/lib/tx-toast";
 
 const lendingDebtAbi = [
