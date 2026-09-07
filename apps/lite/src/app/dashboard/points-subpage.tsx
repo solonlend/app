@@ -28,10 +28,37 @@ export function PointsSubPage() {
   const [data, setData] = useState<PointsData | null>(null);
 
   useEffect(() => {
-    void fetch(`${import.meta.env.BASE_URL}points.json`)
-      .then((res) => res.json())
-      .then(setData)
-      .catch(() => setData(null));
+    // Two boards on the same chain (both USDG-day units, identical row shape): the Morpho markets
+    // board (points.json) and the Solon farm/lending board (data/farm-points.json). Merge by address.
+    const grab = (url: string) =>
+      fetch(url)
+        .then((res) => (res.ok ? (res.json() as Promise<PointsData>) : null))
+        .catch(() => null);
+    void Promise.all([
+      grab(`${import.meta.env.BASE_URL}points.json`),
+      grab(`${import.meta.env.BASE_URL}data/farm-points.json`),
+    ]).then(([base, farm]) => {
+      if (!base && !farm) return setData(null);
+      const byAddr = new Map<string, PointsData["leaderboard"][number]>();
+      for (const src of [base, farm]) {
+        for (const row of src?.leaderboard ?? []) {
+          const key = row.address.toLowerCase();
+          const cur = byAddr.get(key) ?? { address: key, supply_points: 0, borrow_points: 0, total: 0 };
+          cur.supply_points += row.supply_points ?? 0;
+          cur.borrow_points += row.borrow_points ?? 0;
+          cur.total += row.total ?? 0;
+          byAddr.set(key, cur);
+        }
+      }
+      const leaderboard = [...byAddr.values()].sort((a, b) => b.total - a.total);
+      setData({
+        generated_at: Math.max(base?.generated_at ?? 0, farm?.generated_at ?? 0),
+        block: Math.max(base?.block ?? 0, farm?.block ?? 0),
+        params: base?.params ??
+          farm?.params ?? { supply_weight: 1, borrow_weight: 1, point_scale: "1 USDG-day", markets: 0 },
+        leaderboard,
+      });
+    });
   }, []);
 
   const me = userAddress ? data?.leaderboard.find((r) => r.address === userAddress.toLowerCase()) : undefined;
