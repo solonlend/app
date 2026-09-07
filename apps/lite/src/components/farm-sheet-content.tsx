@@ -59,9 +59,17 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
   const [marginEth, setMarginEth] = useState("0.5");
   const [leverage, setLeverage] = useState(2);
   const [rangeIdx, setRangeIdx] = useState(1);
+  // Borrow mode: dual (both legs borrowed, zero-swap) or single (USDG-only margin + USDG borrow,
+  // vault zaps). The single-borrow vault only exists on mainnet.
+  const [borrowMode, setBorrowMode] = useState<"dual" | "single">("dual");
 
   // Match the open panel's config so the preview reads the same oracle the execution uses.
   const cfg = chainId === SEPOLIA_PLAYGROUND.chainId ? SEPOLIA_PLAYGROUND : RH_MAINNET;
+  const singleAvailable = chainId === RH_MAINNET.chainId; // single-borrow vault is mainnet-only
+  // Gate `single` on availability so the preview can never render single math off mainnet (e.g. if
+  // the wallet switches to Sepolia with the sheet open, where the panel is hard-forced to dual).
+  const single = borrowMode === "single" && singleAvailable;
+  const effMarginMode: MarginMode = single ? "usdg" : marginMode; // single forces USDG-only margin
 
   const { data } = useReadContracts({
     contracts: [
@@ -83,8 +91,9 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
     return px !== undefined ? Number(formatUnits(px, 6)) : undefined;
   }, [data]);
 
-  const mUsdg = marginMode === "eth" ? 0 : Number(margin) || 0;
-  const mEthAmt = marginMode === "usdg" ? 0 : Number(marginEth) || 0;
+  // Single-borrow is USDG-only margin; dual honours the margin-mode toggle.
+  const mUsdg = single ? Number(margin) || 0 : marginMode === "eth" ? 0 : Number(margin) || 0;
+  const mEthAmt = single ? 0 : marginMode === "usdg" ? 0 : Number(marginEth) || 0;
   // Do not treat ETH margin as zero before the price loads: equity, debt mix, interest and net APY would omit the ETH leg
   // while still looking valid. Treat all derived values as unloaded until the price is available.
   const pxLoaded = ethPx !== undefined;
@@ -95,10 +104,13 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
   // A symmetric range requires equal leg values: each needs positionValue/2. Borrowing per leg = required value minus user margin in that leg.
   // (Earlier versions split total borrowing in half, underborrowing WETH with single-asset margin and opening only half the previewed position.)
   const perLeg = positionValue / 2;
-  const borrowWethValue = Math.max(0, perLeg - mEthValue);
-  const borrowUsdg = Math.max(0, perLeg - mUsdg);
-  const unusedMargin = Math.max(0, mUsdg - perLeg) + Math.max(0, mEthValue - perLeg);
-  const borrowWethAmount = ethPx ? borrowWethValue / ethPx : undefined;
+  // Single-borrow borrows USDG only for the extra (L−1)x and borrows no WETH; dual borrows each leg
+  // up to positionValue/2 minus that leg's margin. (borrowCostDual with a zero WETH leg then yields
+  // the correct single-borrow interest = borrowUsdg·loanApr.)
+  const borrowWethValue = single ? 0 : Math.max(0, perLeg - mEthValue);
+  const borrowUsdg = single ? Math.max(0, m * (leverage - 1)) : Math.max(0, perLeg - mUsdg);
+  const unusedMargin = single ? 0 : Math.max(0, mUsdg - perLeg) + Math.max(0, mEthValue - perLeg);
+  const borrowWethAmount = single ? 0 : ethPx ? borrowWethValue / ethPx : undefined;
   // Each leg accrues at its reserve's live rate: USDG-only margin mainly borrows WETH; ETH-only margin mainly borrows USDG.
   // Borrowing costs can differ by an order of magnitude, so a single fixed rate is unsuitable.
   const rates = useReserveRates(cfg);
@@ -111,8 +123,12 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
     ratesLive && derivedLoaded ? blendedBorrowApr(borrowWethValue, riskApr, borrowUsdg, loanApr) : undefined;
   // Do not show a number when rates are unavailable: the previous 8% fallback could show a precise-looking but incorrect yield
   // when the actual USDG rate could be 149%. Show a placeholder instead.
-  const netApy =
-    ratesLive && derivedLoaded
+  const netApy = single
+    ? // Single-borrow: USDG-only equity, borrow USDG for the extra (L−1)x → feeApr·L − loanApr·(L−1).
+      loanApr !== undefined
+      ? farm.feeAprSnapshot * leverage - loanApr * (leverage - 1)
+      : undefined
+    : ratesLive && derivedLoaded
       ? netApyDual({
           feeApr: farm.feeAprSnapshot,
           positionValue,
@@ -140,30 +156,59 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
           )}
         </SheetTitle>
         <SheetDescription>
-          Leveraged concentrated LP: both legs are borrowed in LP ratio, so opening needs no swap and price drift is
-          largely self-hedged.
+          {single
+            ? "Single-borrow leveraged LP (classic leverage): USDG-only margin, borrow USDG, and the vault zaps part of it to WETH to build the position — one leg of directional exposure."
+            : "Leveraged concentrated LP: both legs are borrowed in LP ratio, so opening needs no swap and price drift is largely self-hedged."}
         </SheetDescription>
       </SheetHeader>
 
       <div className="flex flex-col gap-3 px-4 pb-6">
         <div className={CARD}>
+          {singleAvailable && (
+            <>
+              <div className={ROW}>
+                <span>Borrow mode</span>
+                <span>
+                  {single ? "USDG-only margin · borrow USDG · vault zaps" : "both legs borrowed · zero-swap entry"}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={!single ? "blue" : "secondary"}
+                  className="h-7 grow rounded-full text-xs"
+                  onClick={() => setBorrowMode("dual")}
+                >
+                  Dual-borrow
+                </Button>
+                <Button
+                  variant={single ? "blue" : "secondary"}
+                  className="h-7 grow rounded-full text-xs"
+                  onClick={() => setBorrowMode("single")}
+                >
+                  Single-borrow
+                </Button>
+              </div>
+            </>
+          )}
           <div className={ROW}>
             <span>Margin</span>
-            <span>single- or dual-sided, your choice</span>
+            <span>{single ? "USDG only" : "single- or dual-sided, your choice"}</span>
           </div>
-          <div className="flex gap-2">
-            {MARGIN_MODES.map((mm) => (
-              <Button
-                key={mm.key}
-                variant={mm.key === marginMode ? "blue" : "secondary"}
-                className="h-7 grow rounded-full text-xs"
-                onClick={() => setMarginMode(mm.key)}
-              >
-                {mm.label}
-              </Button>
-            ))}
-          </div>
-          {marginMode !== "eth" && (
+          {!single && (
+            <div className="flex gap-2">
+              {MARGIN_MODES.map((mm) => (
+                <Button
+                  key={mm.key}
+                  variant={mm.key === marginMode ? "blue" : "secondary"}
+                  className="h-7 grow rounded-full text-xs"
+                  onClick={() => setMarginMode(mm.key)}
+                >
+                  {mm.label}
+                </Button>
+              ))}
+            </div>
+          )}
+          {effMarginMode !== "eth" && (
             <div className="flex items-baseline gap-2">
               <input
                 className="text-primary-foreground grow bg-transparent text-2xl font-light outline-none"
@@ -175,7 +220,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
               <span className="text-secondary-foreground text-xs">USDG</span>
             </div>
           )}
-          {marginMode !== "usdg" && (
+          {effMarginMode !== "usdg" && (
             <div className="flex items-baseline gap-2">
               <input
                 className="text-primary-foreground grow bg-transparent text-2xl font-light outline-none"
@@ -187,7 +232,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
               <span className="text-secondary-foreground text-xs">ETH</span>
             </div>
           )}
-          {marginMode !== "usdg" && (
+          {effMarginMode !== "usdg" && (
             <p className="text-secondary-foreground text-[11px] font-light">
               {ethPx && mEthAmt > 0 ? `≈ ${fmt(mEthValue)} USDG · ` : ""}ETH margin joins the WETH leg directly — less
               to borrow on that side, same zero-swap entry.
@@ -247,21 +292,23 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
               <span>LP position value</span>
               <span className="text-primary-foreground">{derivedLoaded ? `${fmt(positionValue)} USDG` : "－"}</span>
             </div>
-            <div className={ROW}>
-              <span className="shrink-0">
-                Borrow · WETH leg
-                {riskApr !== undefined && (
-                  <span className="text-secondary-foreground"> @ {(riskApr * 100).toFixed(2)}% APR</span>
-                )}
-              </span>
-              <span className="text-primary-foreground text-right">
-                {derivedLoaded && borrowWethAmount !== undefined ? `${fmt(borrowWethAmount, 4)} WETH` : "－"}
-                {derivedLoaded && <span className="text-secondary-foreground"> ≈ {fmt(borrowWethValue)} USDG</span>}
-              </span>
-            </div>
+            {!single && (
+              <div className={ROW}>
+                <span className="shrink-0">
+                  Borrow · WETH leg
+                  {riskApr !== undefined && (
+                    <span className="text-secondary-foreground"> @ {(riskApr * 100).toFixed(2)}% APR</span>
+                  )}
+                </span>
+                <span className="text-primary-foreground text-right">
+                  {derivedLoaded && borrowWethAmount !== undefined ? `${fmt(borrowWethAmount, 4)} WETH` : "－"}
+                  {derivedLoaded && <span className="text-secondary-foreground"> ≈ {fmt(borrowWethValue)} USDG</span>}
+                </span>
+              </div>
+            )}
             <div className={ROW}>
               <span>
-                Borrow · USDG leg
+                {single ? "Borrow · USDG" : "Borrow · USDG leg"}
                 {loanApr !== undefined && (
                   <span className="text-secondary-foreground"> @ {(loanApr * 100).toFixed(2)}% APR</span>
                 )}
@@ -349,8 +396,10 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
                   <TooltipContent className="text-primary-foreground max-w-80 rounded-3xl p-4 shadow-2xl">
                     <p>
                       Liquidation triggers when position value falls this far relative to debt (LLTV {farm.lltvPercent}
-                      %). Because both legs are borrowed, moderate price moves are largely self-hedged — the main risks
-                      are drifting far out of range and fee droughts.
+                      %).{" "}
+                      {single
+                        ? "Single-borrow holds one-sided directional exposure (only USDG is borrowed), so price moves hit health more directly than the dual-borrow mode — plus out-of-range drift and fee droughts."
+                        : "Because both legs are borrowed, moderate price moves are largely self-hedged — the main risks are drifting far out of range and fee droughts."}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -364,6 +413,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
           (chainId === 11155111 ? (
             <FarmTestnetPlayground
               cfg={SEPOLIA_PLAYGROUND}
+              borrowMode="dual"
               marginUsdg={mUsdg}
               marginEth={mEthAmt}
               leverage={leverage}
@@ -372,6 +422,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
           ) : (
             <FarmTestnetPlayground
               cfg={RH_MAINNET}
+              borrowMode={borrowMode}
               marginUsdg={mUsdg}
               marginEth={mEthAmt}
               leverage={leverage}
