@@ -77,7 +77,7 @@ export function FarmProtocolPanel() {
           {protocol.reserves.map((reserve, i) => (
             <div key={i} className="min-w-0 overflow-hidden">
               <div className="mb-2 flex min-w-0 flex-wrap justify-between gap-2">
-                <span className="text-secondary-foreground">{reserve.symbol} reserve · supply cap</span>
+                <span className="text-secondary-foreground">{reserve.symbol} reserve · deposit cap</span>
                 <span className="min-w-0 max-w-full tabular-nums [overflow-wrap:anywhere]">
                   {reserve.unlimited ? (
                     "unlimited"
@@ -106,20 +106,20 @@ export function FarmProtocolPanel() {
                     />
                   </div>
                   <p className="text-secondary-foreground mt-2 text-[11px]">
-                    Remaining: {reserveAmount(reserve.remaining, reserve.decimals)} {reserve.symbol} available to
-                    deposit
-                    {reserve.full ? " · capacity reached" : reserve.near ? " · near capacity" : ""}
+                    {reserve.full
+                      ? "Deposit cap reached — no new deposits (this does NOT close opens; opening a position borrows, see utilization below)"
+                      : `Remaining: ${reserveAmount(reserve.remaining, reserve.decimals)} ${reserve.symbol} available to deposit${reserve.near ? " · near cap" : ""}`}
                   </p>
                 </>
               )}
               <p className="text-secondary-foreground mt-1 text-[11px]">
                 Borrow utilization{" "}
-                {reserve.utilization === undefined ? "—" : `${(reserve.utilization * 100).toFixed(2)}%`} ·{" "}
+                {reserve.utilization === undefined ? "—" : `${(reserve.utilization * 100).toFixed(2)}%`}
                 {reserve.utilization === undefined
-                  ? "Distance to 90% kink —"
+                  ? " · —"
                   : reserve.utilization <= 0.9
-                    ? `${((0.9 - reserve.utilization) * 100).toFixed(2)} percentage points below the 90% kink`
-                    : `${((reserve.utilization - 0.9) * 100).toFixed(2)} percentage points above the 90% kink`}
+                    ? ` · room to open (${((0.9 - reserve.utilization) * 100).toFixed(2)} pts below the 90% rate kink)`
+                    : ` · ${((reserve.utilization - 0.9) * 100).toFixed(2)} pts above the 90% rate kink`}
               </p>
             </div>
           ))}

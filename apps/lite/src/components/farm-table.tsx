@@ -331,9 +331,7 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
       </div>
 
       <div className="flex flex-col gap-1 px-2 pb-1 pt-6 sm:flex-row sm:items-baseline sm:justify-between">
-        <h3 className="text-secondary-foreground text-xs font-light tracking-wide">
-          Observation pools · top 10 by TVL
-        </h3>
+        <h3 className="text-secondary-foreground text-xs font-light tracking-wide">Observation pools · top by TVL</h3>
         <span className="text-secondary-foreground text-[11px] font-light">
           Feed-backed pools can become leverage farms; the rest need a TWAP oracle + red-team round first
         </span>
@@ -345,50 +343,63 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
               <TableHead className="text-secondary-foreground pl-4 text-[10px] font-light">Pool</TableHead>
               <TableHead className="text-secondary-foreground text-[10px] font-light">TVL</TableHead>
               <TableHead className="text-secondary-foreground hidden text-[10px] font-light md:table-cell">
-                Fee APR
+                Fee APR (gross est.)
               </TableHead>
               <TableHead className="text-secondary-foreground text-[10px] font-light">Feed</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(observationData?.pools ?? []).map((c) => (
-              <TableRow key={`${c.dex}-${c.label}-${c.fee_tier_label}`} className="bg-primary">
-                <TableCell className="rounded-l-lg py-2 pl-4">
-                  <span className="whitespace-nowrap">{c.label}</span>
-                  <span className="text-secondary-foreground ml-2 whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
-                    {c.dex} · {c.fee_tier_label}
-                  </span>
-                </TableCell>
-                <TableCell>{formatUsdCompact(c.tvl_usd)}</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {c.fee_apr !== null ? formatPct(c.fee_apr) : "—"}
-                </TableCell>
-                <TableCell className="rounded-r-lg">
-                  {c.has_feed ? (
-                    <span className="text-farm-safe bg-farm-safe-subtle whitespace-nowrap rounded-sm px-2 py-0.5 text-[10px]">
-                      feed · eligible
+            {(observationData?.pools ?? [])
+              .filter(
+                // Drop pools already listed as a live farm above — their row shows a realized (feeGrowth)
+                // APR, so listing them here again with the gross volume estimate would contradict it.
+                (c) =>
+                  !SOLON_FARMS.some(
+                    (f) =>
+                      f.status === "live" &&
+                      (f.dex.includes("V4") ? "v4" : "v3") === c.dex &&
+                      f.pair === c.label &&
+                      Math.abs(f.feeTierBps / 10000 - parseFloat(c.fee_tier_label)) < 1e-6,
+                  ),
+              )
+              .map((c) => (
+                <TableRow key={`${c.dex}-${c.label}-${c.fee_tier_label}`} className="bg-primary">
+                  <TableCell className="rounded-l-lg py-2 pl-4">
+                    <span className="whitespace-nowrap">{c.label}</span>
+                    <span className="text-secondary-foreground ml-2 whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
+                      {c.dex} · {c.fee_tier_label}
                     </span>
-                  ) : (
-                    <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-2 py-0.5 text-[10px]">
-                      no feed
-                    </span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell>{formatUsdCompact(c.tvl_usd)}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {c.fee_apr !== null ? formatPct(c.fee_apr) : "—"}
+                  </TableCell>
+                  <TableCell className="rounded-r-lg">
+                    {c.has_feed ? (
+                      <span className="text-farm-safe bg-farm-safe-subtle whitespace-nowrap rounded-sm px-2 py-0.5 text-[10px]">
+                        feed · eligible
+                      </span>
+                    ) : (
+                      <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-2 py-0.5 text-[10px]">
+                        no feed
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </div>
       <p className="text-secondary-foreground px-2 pt-1 text-[11px] font-light">
         {observationData
-          ? `Live top-10 by TVL from the Uniswap interface (as of ${new Date(observationData.generated_at * 1000)
+          ? `Live top pools by TVL from the Uniswap interface (as of ${new Date(observationData.generated_at * 1000)
               .toISOString()
               .slice(0, 16)
               .replace(
                 "T",
                 " ",
-              )} UTC). Fee APR = annualized 24h volume × fee ÷ TVL; unavailable (—) where the source omits v4 volume.`
-          : "Loading live top-10 pools by TVL…"}
+              )} UTC), excluding pools already listed above. Fee APR here is a GROSS estimate (annualized 24h volume × fee ÷ TVL) that runs above the realized/DEX-UI figure because it credits the whole TVL; — where the source omits v4 volume.`
+          : "Loading live top pools by TVL…"}
       </p>
     </div>
   );
