@@ -14,25 +14,20 @@ import {
   borrowCostDual,
   WETH_RH,
   USDG_RH,
-  ETH_USD_FEED_RH,
   RH_MAINNET,
   SEPOLIA_PLAYGROUND,
   type FarmPool,
 } from "@/lib/solon-farms";
 
-const chainlinkAggregatorAbi = [
+// Preview uses the vault's own oracle (riskValueInLoan = USDG per 1 WETH, 6dp) — the same price
+// basis the open() flow uses at execution — so the previewed position size matches what executes.
+const farmOracleAbi = [
   {
     type: "function",
-    name: "latestRoundData",
+    name: "riskValueInLoan",
     stateMutability: "view",
-    inputs: [],
-    outputs: [
-      { name: "roundId", type: "uint80" },
-      { name: "answer", type: "int256" },
-      { name: "startedAt", type: "uint256" },
-      { name: "updatedAt", type: "uint256" },
-      { name: "answeredInRound", type: "uint80" },
-    ],
+    inputs: [{ name: "riskAmount", type: "uint256" }],
+    outputs: [{ name: "valueInLoan", type: "uint256" }],
   },
 ] as const;
 
@@ -65,9 +60,12 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
   const [leverage, setLeverage] = useState(2);
   const [rangeIdx, setRangeIdx] = useState(1);
 
+  // Match the open panel's config so the preview reads the same oracle the execution uses.
+  const cfg = chainId === SEPOLIA_PLAYGROUND.chainId ? SEPOLIA_PLAYGROUND : RH_MAINNET;
+
   const { data } = useReadContracts({
     contracts: [
-      { chainId, address: ETH_USD_FEED_RH, abi: chainlinkAggregatorAbi, functionName: "latestRoundData" },
+      { chainId, address: cfg.oracle, abi: farmOracleAbi, functionName: "riskValueInLoan", args: [10n ** 18n] },
       ...(farm.poolAddress
         ? ([
             { chainId, address: WETH_RH, abi: erc20Abi, functionName: "balanceOf", args: [farm.poolAddress] },
@@ -81,8 +79,8 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
   });
 
   const ethPx = useMemo(() => {
-    const round = data?.[0]?.result as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
-    return round ? Number(formatUnits(round[1], 8)) : undefined;
+    const px = data?.[0]?.result as bigint | undefined; // USDG (6dp) per 1 WETH, from the vault oracle
+    return px !== undefined ? Number(formatUnits(px, 6)) : undefined;
   }, [data]);
 
   const mUsdg = marginMode === "eth" ? 0 : Number(margin) || 0;
@@ -103,7 +101,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
   const borrowWethAmount = ethPx ? borrowWethValue / ethPx : undefined;
   // Each leg accrues at its reserve's live rate: USDG-only margin mainly borrows WETH; ETH-only margin mainly borrows USDG.
   // Borrowing costs can differ by an order of magnitude, so a single fixed rate is unsuitable.
-  const rates = useReserveRates();
+  const rates = useReserveRates(cfg);
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
   const ratesLive = riskApr !== undefined && loanApr !== undefined;

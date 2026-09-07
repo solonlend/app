@@ -1,7 +1,7 @@
 import { formatUnits } from "viem";
 import { useReadContracts } from "wagmi";
 
-import { RH_MAINNET as P } from "@/lib/solon-farms";
+import { RH_MAINNET, SEPOLIA_PLAYGROUND } from "@/lib/solon-farms";
 
 /**
  * Each leg of the dual-borrow vault uses its own reserve and accrues interest at that reserve's borrow APR.
@@ -35,7 +35,8 @@ export type ReserveRates = {
   loaded: boolean;
 };
 
-export function useReserveRates(): ReserveRates {
+export function useReserveRates(cfg: typeof RH_MAINNET | typeof SEPOLIA_PLAYGROUND = RH_MAINNET): ReserveRates {
+  const P = cfg; // default mainnet; the Sepolia playground passes its own config
   const { data } = useReadContracts({
     contracts: [
       { chainId: P.chainId, address: P.lending, abi: rateAbi, functionName: "borrowingRateOfReserve", args: [1n] },

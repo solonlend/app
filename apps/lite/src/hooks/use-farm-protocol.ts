@@ -3,7 +3,7 @@ import { useReadContracts } from "wagmi";
 
 import { capacityState, farmAssets } from "@/lib/farm-protocol";
 import { farmReserveAbi } from "@/lib/farm-protocol-abi";
-import { RH_MAINNET as P } from "@/lib/solon-farms";
+import { RH_MAINNET, SEPOLIA_PLAYGROUND } from "@/lib/solon-farms";
 
 const vaultAbi = parseAbi([
   "function LLTV() view returns (uint256)",
@@ -29,7 +29,8 @@ const feedAbi = parseAbi([
 const query = { staleTime: 15_000, refetchInterval: 30_000 };
 
 /** Reads the mainnet vault used by the farm entry points. */
-export function useFarmProtocol() {
+export function useFarmProtocol(cfg: typeof RH_MAINNET | typeof SEPOLIA_PLAYGROUND = RH_MAINNET) {
+  const P = cfg; // default mainnet; the Sepolia playground passes its own config
   const { data: config } = useReadContracts({
     contracts: [
       ...(

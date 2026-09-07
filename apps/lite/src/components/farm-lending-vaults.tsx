@@ -371,7 +371,7 @@ function LendingSheet({
             )}
             {remainingN !== undefined && (
               <div className="text-secondary-foreground flex items-center justify-between px-1 text-[11px] font-light">
-                <span>Reserve capacity remaining</span>
+                <span>Deposit cap remaining</span>
                 <span className={capacityFull ? "text-farm-warning" : "text-primary-foreground"}>
                   {capacityFull ? "Full · soft-launch cap" : `${fmt(remainingN, r.decimals === 6 ? 2 : 4)} ${r.symbol}`}
                 </span>
@@ -390,7 +390,7 @@ function LendingSheet({
               onClick={() => void guard(() => doDeposit())}
             >
               {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}{" "}
-              {capacityFull ? "Capacity reached" : "Approve + Deposit"}
+              {capacityFull ? "Deposit cap reached" : "Approve + Deposit"}
             </Button>
           </TabsContent>
           <TabsContent value="Withdraw" className="flex flex-col gap-3 pt-3">

@@ -2,7 +2,14 @@ import { Button } from "@morpho-org/uikit/components/shadcn/button";
 import { CircleCheck, ExternalLink, LoaderCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { erc20Abi, formatUnits, parseUnits } from "viem";
-import { useAccount, useConfig, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useConfig,
+  useReadContracts,
+  useSwitchChain,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
 import { readContract } from "wagmi/actions";
 
 import { FarmPauseBanner } from "@/components/farm-pause-banner";
@@ -131,12 +138,13 @@ export function FarmTestnetPlayground({
   // One config drives every read/write: SEPOLIA_PLAYGROUND (mock tokens, mint step) on testnet,
   // RH_MAINNET (real USDG/WETH, no mint) on mainnet. Same vault ABI and open() flow either way.
   const P = cfg;
-  const { address: user, isConnected } = useAccount();
+  const { address: user, isConnected, chainId: walletChainId } = useAccount();
+  const { switchChain, isPending: switching } = useSwitchChain();
   const [txs, setTxs] = useState<{ mint?: `0x${string}`; approve?: `0x${string}`; open?: `0x${string}` }>({});
 
-  const protocol = useFarmProtocol();
+  const protocol = useFarmProtocol(P);
   const config = useConfig();
-  const { paused, blocked, assertActive } = useFarmPaused();
+  const { paused, blocked, assertActive } = useFarmPaused(P);
   const [slippage, setSlippage] = useState("1");
   let slippageError: string | undefined;
   try {
@@ -333,6 +341,16 @@ export function FarmTestnetPlayground({
       {slippageError && <p className="text-morpho-error text-[11px]">{slippageError}</p>}
       {!isConnected ? (
         <p className="text-secondary-foreground text-center text-xs">Connect a wallet to try it.</p>
+      ) : walletChainId !== P.chainId ? (
+        <Button
+          variant="blue"
+          className="h-10 w-full rounded-full text-xs"
+          disabled={switching}
+          onClick={() => switchChain({ chainId: P.chainId })}
+        >
+          {switching ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null} Switch to{" "}
+          {P.testnet ? "Sepolia" : "Robinhood Chain"}
+        </Button>
       ) : (
         <>
           {P.testnet && (
