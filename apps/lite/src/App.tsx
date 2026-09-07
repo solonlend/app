@@ -46,8 +46,8 @@ function App({ children, wagmiConfig = defaultWagmiConfig }: { children: ReactNo
         <ConnectKitProvider
           theme="auto"
           mode="dark"
-          language="en-US"
           options={{
+            language: "en-US",
             disclaimer: (
               <span>
                 By connecting, you agree you have read the{" "}
