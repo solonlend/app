@@ -8,7 +8,7 @@ import { readContract } from "wagmi/actions";
 import { FarmPauseBanner } from "@/components/farm-pause-banner";
 import { useBusy } from "@/hooks/use-busy";
 import { useFarmPaused } from "@/hooks/use-farm-paused";
-import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
+import { useFarmProtocol } from "@/hooks/use-farm-protocol";
 import { mintMinimums, slippageBps } from "@/lib/farm-slippage";
 import { farmVaultAbi } from "@/lib/farm-vault-abi";
 import { SEPOLIA_PLAYGROUND, RH_MAINNET } from "@/lib/solon-farms";
@@ -259,7 +259,8 @@ export function FarmTestnetPlayground({
       } else {
         const tolerance = slippageBps(slippage);
         await assertActive();
-        await protocol.assertCapacity();
+        // No supply-capacity assert here: opening BORROWS from the reserve, so a fully-supplied
+        // reserve must not block it. The on-chain open() reverts if the borrow exceeds credit/LLTV.
         const [slot0, loanIsC0] = await Promise.all([
           readContract(config, { chainId: P.chainId, address: P.pool, abi: poolAbi, functionName: "slot0" }),
           readContract(config, { chainId: P.chainId, address: P.vault, abi: farmVaultAbi, functionName: "LOAN_IS_C0" }),
@@ -359,12 +360,13 @@ export function FarmTestnetPlayground({
           />
           <StepButton
             label={
-              fullCapacityLabel(protocol.fullReserve) ??
-              (protocol.capacityUnknown
+              protocol.capacityUnknown
                 ? "Capacity unavailable"
-                : P.testnet
-                  ? "3 · Open position (real tx)"
-                  : "Open position (real tx)")
+                : needsUsdg || needsWeth
+                  ? "Insufficient balance"
+                  : P.testnet
+                    ? "3 · Open position (real tx)"
+                    : "Open position (real tx)"
             }
             doneLabel="Position opened"
             onClick={() => void guard(() => run("open"))}
@@ -374,7 +376,8 @@ export function FarmTestnetPlayground({
               !approved ||
               blocked ||
               !!slippageError ||
-              !!protocol.fullReserve ||
+              needsUsdg ||
+              needsWeth ||
               protocol.capacityUnknown
             }
             pending={pendingStep === "open" && (isPending || busy)}

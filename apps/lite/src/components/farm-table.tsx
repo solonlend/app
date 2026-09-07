@@ -16,7 +16,8 @@ import { useReadContracts } from "wagmi";
 
 import { FarmSheetContent } from "@/components/farm-sheet-content";
 import { PtsBadge } from "@/components/pts-badge";
-import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
+import { useFarmProtocol } from "@/hooks/use-farm-protocol";
+import { useLiveFeeApr, effectiveFeeApr } from "@/hooks/use-live-fee-apr";
 import { useObservationPools } from "@/hooks/use-observation-pools";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
 import { farmAssets } from "@/lib/farm-protocol";
@@ -150,28 +151,17 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
   const chainId = chain?.id;
 
   const protocol = useFarmProtocol();
-  const capacityLabel = fullCapacityLabel(protocol.fullReserve);
-  const capacityBlocked = !!protocol.fullReserve || protocol.capacityUnknown;
+  // Opening a position BORROWS from the reserve — a fully-supplied reserve (supplied == capacity,
+  // the normal soft-launch seed state) must NOT block opens; only an unreadable state is cautious.
+  // On-chain borrow credit / LLTV is the real limit and reverts if a borrow can't fit. Supply
+  // capacity still gates DEPOSITS in the lending panel (separate, correct).
+  const capacityBlocked = protocol.capacityUnknown;
   const rates = useReserveRates();
   const { data: observationData } = useObservationPools();
-
-  // Fee APR comes from ONE source: the Uniswap interface gateway (via the observation-pools feed),
-  // so a farm row and its pool in the observation table below always show the same number. Match
-  // the farm's pool by dex + pair + fee tier; fall back to the dated snapshot only if the feed is
-  // unavailable.
-  const uniAprFor = (farm: FarmPool): number | undefined => {
-    if (!observationData) return undefined;
-    const dexShort = farm.dex.includes("V4") ? "v4" : "v3";
-    const farmFeePct = farm.feeTierBps / 10000; // 100 bps-hundredths => 0.01(%)
-    const m = observationData.pools.find(
-      (p) =>
-        p.dex === dexShort &&
-        p.label === farm.pair &&
-        p.fee_apr !== null &&
-        Math.abs(parseFloat(p.fee_tier_label) - farmFeePct) < 1e-6,
-    );
-    return m?.fee_apr ?? undefined;
-  };
+  // Flagship fee APR uses the on-chain feeGrowth indexer (realized fees ÷ TVL), which tracks the
+  // DEX UI's pool APR closely (~60%). The observation table's volume×fee estimate runs high (~80%)
+  // because it credits the whole TVL, not just in-range liquidity — do NOT use it for the farm row.
+  const { data: liveFeeApr } = useLiveFeeApr();
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
   const ratesLive = riskApr !== undefined && loanApr !== undefined;
@@ -226,10 +216,9 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
               // The table has no margin breakdown, so average both reserve rates assuming equal borrowing across the legs.
               // The opening panel calculates each position's cost per leg using its actual borrowing mix.
               // Hide net APY when rates are unavailable; do not use a fixed 8% rate to produce a plausible-looking number.
-              // Fee APR: live from the Uniswap gateway (observation feed), else the dated snapshot.
-              const uniApr = uniAprFor(farm);
-              const feeApr = uniApr !== undefined ? uniApr : farm.feeAprSnapshot > 0 ? farm.feeAprSnapshot : 0;
-              const feeAprLive = uniApr !== undefined;
+              // Fee APR: on-chain feeGrowth indexer once warmed up (realized fees ÷ TVL, tracks the DEX UI), else the dated snapshot.
+              const { value: feeApr, live: feeAprLive } =
+                farm.feeAprSnapshot > 0 ? effectiveFeeApr(liveFeeApr, farm.feeAprSnapshot) : { value: 0, live: false };
               const netApy =
                 tableBorrowApr !== undefined ? estimateNetApy(feeApr, farm.maxLeverage, tableBorrowApr) : undefined;
               const tvl = farm.dex === "Uniswap V3" ? v3TvlUsd : undefined;
@@ -258,11 +247,13 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                             <TooltipContent className="text-primary-foreground max-w-96 rounded-3xl p-4 shadow-2xl">
                               {feeAprLive ? (
                                 <p>
-                                  Live fee APR from the Uniswap interface (annualized 24h volume × fee ÷ TVL) — the same
-                                  figure shown for this pool in the observation table below.
+                                  Live 24h fee APR, computed on-chain from realized fees (pool feeGrowth over the
+                                  trailing window ÷ TVL) — the realized-yield basis the DEX UI uses.
                                 </p>
                               ) : (
-                                <p>Fee APR snapshot ({farm.snapshotDate}); the live Uniswap feed is unavailable.</p>
+                                <p>
+                                  24h fee APR snapshot ({farm.snapshotDate}); the on-chain live indexer is warming up.
+                                </p>
                               )}
                             </TooltipContent>
                           </Tooltip>
@@ -325,8 +316,7 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                             Farm
                           </button>
                           <span className="text-secondary-foreground text-[10px]">
-                            {capacityLabel ??
-                              (protocol.capacityUnknown ? "Capacity loading / unavailable" : "soft launch")}
+                            {protocol.capacityUnknown ? "Capacity loading / unavailable" : "soft launch"}
                           </span>
                         </div>
                       </TableCell>
