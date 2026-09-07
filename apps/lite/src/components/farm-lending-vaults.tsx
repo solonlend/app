@@ -156,7 +156,7 @@ function LendingSheet({
   eToken: `0x${string}` | undefined;
   exchangeRate: number;
   myShares: bigint;
-  availableCash: bigint; // 池中未被借走的底层币(出借人当下能提走的上限)
+  availableCash: bigint; // Unborrowed underlying tokens in the pool (the current withdrawal limit for lenders)
   refetch: () => void;
 }) {
   const { address: user } = useAccount();
@@ -165,8 +165,8 @@ function LendingSheet({
   const { writeContractAsync, isPending } = useWriteContract();
   const [busy, guard] = useBusy();
   const [amount, setAmount] = useState("");
-  // 仅等回执还不够:公共 RPC 是多副本的,回执可见的节点未必是估算命中的节点(实测仍会 STF)。
-  // 轮询到"授权确实可读"为止,才发第二笔——真实用户用公共 RPC 时同样会踩到这个。
+  // A receipt alone is insufficient: public RPC replicas serving estimates may not yet see it (STF still occurred in testing).
+  // Poll until the allowance is readable before sending the second transaction; public RPC users face the same issue.
   const awaitAllowance = async (token: `0x${string}`, spender: `0x${string}`, need: bigint) => {
     for (let i = 0; i < 12; i++) {
       const cur = (await readContract(config, {
@@ -222,7 +222,7 @@ function LendingSheet({
         }),
       );
       if (!_tx2) return;
-      // runTx 已等到授权回执,但公共 RPC 是多副本的:回执可见的节点未必是估算命中的节点,仍要轮询到授权可读
+      // runTx has awaited the approval receipt, but public RPC replicas serving estimates may lag; still poll until the allowance is readable.
       if (!(await awaitAllowance(r.underlying, LENDING, parseUnits(amount, r.decimals)))) {
         setTxError("Approval not visible on the RPC yet — try again in a moment.");
         return;
@@ -256,7 +256,7 @@ function LendingSheet({
       // partial: underlying → eToken shares via exchangeRate; cap at balance (redeem is share-denominated)
       let shares: bigint;
       if (all) {
-        // 不能盲目传 max:被借走的部分提不出来(合约 error 3)。收敛到"我的份额"与"池中可用"的较小者。
+        // Do not blindly pass max: borrowed assets cannot be withdrawn (contract error 3). Cap at the lower of owned shares and available pool funds.
         const cashShares =
           exchangeRate > 0
             ? parseUnits(
@@ -519,7 +519,7 @@ export function FarmLendingVaults() {
       <div className="flex flex-col gap-1 px-2 pb-1 pt-8 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 className="text-sm font-light tracking-wide">Lending vaults · funding the farm</h2>
         <span className="text-secondary-foreground text-xs font-light">
-          Sepolia testnet · lend a leg, earn what leveraged farmers pay
+          Lend a leg, earn what leveraged farmers pay
         </span>
       </div>
       <FarmPauseBanner paused={paused} />
@@ -562,7 +562,7 @@ export function FarmLendingVaults() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
-                                  Sepolia
+                                  Mainnet
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="text-primary-foreground max-w-80 rounded-3xl p-4 shadow-2xl">

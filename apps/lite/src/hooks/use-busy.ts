@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * 写操作防重。
+ * Write-action re-entrancy guard.
  *
- * `useWriteContract().isPending` 在拿到交易哈希那一刻就结束,而 runTx 此时还在等回执 ——
- * 中间这段窗口按钮会重新变成可点,用户能再点一次,造成重复加仓/重复还款/重复存款。
- * 用它包住整个异步处理函数,直到回执回来为止都保持 busy。
+ * `useWriteContract().isPending` ends the moment a tx hash arrives, but runTx is still awaiting the receipt —
+ * in that window the button becomes clickable again and the user can double-submit (duplicate add/repay/deposit).
+ * wrap the whole async handler with it so it stays busy until the receipt returns.
  *
- * 用 ref 上锁而不只靠 state:同一次渲染里的连续两次点击看到的 state 是同一个值,拦不住。
+ * lock with a ref, not just state: two clicks in the same render see the same state value and slip through.
  */
 export function useBusy(): [boolean, <T>(fn: () => Promise<T>) => Promise<T | undefined>] {
   const [busy, setBusy] = useState(false);

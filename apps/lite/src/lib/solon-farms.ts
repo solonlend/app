@@ -25,7 +25,7 @@ export type FarmPool = {
   v4PoolId?: `0x${string}`;
   maxLeverage: number; // display cap (shipped 4x at LLTV 77%)
   lltvPercent: number;
-  feeAprSnapshot: number; // fraction, e.g. 0.9427
+  feeAprSnapshot: number; // fraction, e.g. 0.6279
   snapshotDate: string;
   vault?: Address; // leverage vault (set once deployed on mainnet)
   vaultId?: number; // SolonVaultRegistry id
@@ -63,8 +63,8 @@ export const SOLON_FARMS: FarmPool[] = [
     poolAddress: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as Address,
     maxLeverage: 4,
     lltvPercent: 77,
-    feeAprSnapshot: 0.9427,
-    snapshotDate: "2026-09-04",
+    feeAprSnapshot: 0.6279,
+    snapshotDate: "2026-09-07",
     vault: "0x9Db7aDa64D1E8b856E15D916d886797501F28ce0" as Address,
     vaultId: 1,
     status: "live",
@@ -85,8 +85,8 @@ export const SOLON_FARMS: FarmPool[] = [
     poolAddress: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as Address,
     maxLeverage: 4,
     lltvPercent: 77,
-    feeAprSnapshot: 0.9427,
-    snapshotDate: "2026-09-04",
+    feeAprSnapshot: 0.6279,
+    snapshotDate: "2026-09-07",
     vault: "0x9e100d524DFEa1Aa76286A7F00682e72F79aC3aE" as Address,
     vaultId: 2,
     status: "live",
@@ -115,10 +115,10 @@ export const SOLON_FARMS: FarmPool[] = [
 ];
 
 /**
- * 新兴资产候选(用户点名 PONS/CASHCAT/AI 等,meme 生态 TVL 与深度已可观)。
- * 硬闸:这些对没有 Chainlink 喂价 —— 清算估值只能依赖池价(可操纵),正是主推池在结构上免疫
- * 的攻击面。上线前置:长窗口 TWAP 预言机 + 保守 LLTV(~38.5%) + 小额度上限 + 独立红队轮。
- * 数字为 DEX 界面人工快照(2026-09-04),仅供评估。
+ * Emerging asset candidates (requested examples include PONS/CASHCAT/AI; the meme ecosystem already has substantial TVL and depth).
+ * Hard blocker: these pairs have no Chainlink feeds, so liquidation valuation relies on manipulable pool prices, an attack surface
+ * the flagship pool structurally avoids. Launch prerequisites: a long-window TWAP oracle, conservative LLTV (~38.5%), small caps and an independent red-team round.
+ * Figures are manual DEX interface snapshots (2026-09-04), for evaluation only.
  */
 export const CANDIDATE_POOLS: CandidatePool[] = [
   { pair: "PONS / ETH", dexLabel: "V3 · 1%", tvlSnapshot: "$6.23M", feeAprSnapshot: "438%", blocker: "no price feed" },
@@ -155,22 +155,22 @@ export function estimateNetApy(feeApr: number, leverage: number, borrowApr = EST
 }
 
 /**
- * 双借的年化借款成本(USDG 计价):两条腿各按各自储备的 borrow APR 计息,不能用一个混合利率反推。
- * riskValue/loanValue = 各腿借款折成 USDG 的价值。
+ * Annual dual-borrow cost in USDG: each leg accrues at its reserve's borrow APR; do not infer costs from a single blended rate.
+ * riskValue/loanValue = borrowed value of each leg in USDG.
  */
 export function borrowCostDual(riskValue: number, riskApr: number, loanValue: number, loanApr: number): number {
   return riskValue * riskApr + loanValue * loanApr;
 }
 
-/** 借款构成加权后的等效利率,仅用于展示"整体借款成本相当于百分之几"。 */
+/** Effective rate weighted by the borrowing mix, used only to display the overall borrowing cost as a percentage. */
 export function blendedBorrowApr(riskValue: number, riskApr: number, loanValue: number, loanApr: number): number {
   const total = riskValue + loanValue;
   return total > 0 ? borrowCostDual(riskValue, riskApr, loanValue, loanApr) / total : 0;
 }
 
 /**
- * 权益口径净 APY:(费用收入 − 两腿利息) / 权益。
- * 与 estimateNetApy 的区别是借款成本按实际两腿构成算,所以单币/双币保证金会给出不同的数 —— 这正是应有的。
+ * Net APY on equity: (fee income minus interest on both legs) / equity.
+ * Unlike estimateNetApy, borrowing costs use the actual mix of both legs, so single-asset and dual-asset margin correctly yield different values.
  */
 export function netApyDual(args: {
   feeApr: number;

@@ -85,22 +85,22 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
 
   const mUsdg = marginMode === "eth" ? 0 : Number(margin) || 0;
   const mEthAmt = marginMode === "usdg" ? 0 : Number(marginEth) || 0;
-  // 价格没加载时不能把 ETH 保证金当 0:那会让权益/债务构成/利息/净 APY 全部漏掉 ETH 腿,
-  // 却仍然显示成一组看起来有效的数字。没价格就整块按"未加载"处理。
+  // Do not treat ETH margin as zero before the price loads: equity, debt mix, interest and net APY would omit the ETH leg
+  // while still looking valid. Treat all derived values as unloaded until the price is available.
   const pxLoaded = ethPx !== undefined;
   const derivedLoaded = pxLoaded;
   const mEthValue = pxLoaded ? mEthAmt * ethPx : 0;
-  const m = mUsdg + mEthValue; // equity in USDG terms (合约 open 的 investLoan+investRisk 同一口径)
+  const m = mUsdg + mEthValue; // equity in USDG terms (same basis as investLoan+investRisk in the contract's open function)
   const positionValue = m * leverage;
-  // 对称区间要求两腿等值:每腿需要 positionValue/2。各腿的借款 = 该腿所需 − 用户自带的这一腿。
-  // (早期版本把总借款简单对半分,导致单侧保证金时 WETH 腿借少了、仓位实际只有预览的一半)
+  // A symmetric range requires equal leg values: each needs positionValue/2. Borrowing per leg = required value minus user margin in that leg.
+  // (Earlier versions split total borrowing in half, underborrowing WETH with single-asset margin and opening only half the previewed position.)
   const perLeg = positionValue / 2;
   const borrowWethValue = Math.max(0, perLeg - mEthValue);
   const borrowUsdg = Math.max(0, perLeg - mUsdg);
   const unusedMargin = Math.max(0, mUsdg - perLeg) + Math.max(0, mEthValue - perLeg);
   const borrowWethAmount = ethPx ? borrowWethValue / ethPx : undefined;
-  // 两条腿各按各自储备的实时利率计息:USDG 单币保证金几乎只借 WETH 腿,ETH 单币保证金几乎只借 USDG 腿,
-  // 两者的借款成本可以差一个数量级,所以不能用一个常数利率。
+  // Each leg accrues at its reserve's live rate: USDG-only margin mainly borrows WETH; ETH-only margin mainly borrows USDG.
+  // Borrowing costs can differ by an order of magnitude, so a single fixed rate is unsuitable.
   const rates = useReserveRates();
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
@@ -109,8 +109,8 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
     ratesLive && derivedLoaded ? borrowCostDual(borrowWethValue, riskApr, borrowUsdg, loanApr) : undefined;
   const blendedApr =
     ratesLive && derivedLoaded ? blendedBorrowApr(borrowWethValue, riskApr, borrowUsdg, loanApr) : undefined;
-  // 利率读不到就不给数:此前回退到 8% 常数,在真实 USDG 利率可能是 149% 的情况下
-  // 会显示一个看似精确、实则完全错误的收益率。宁可显示占位符。
+  // Do not show a number when rates are unavailable: the previous 8% fallback could show a precise-looking but incorrect yield
+  // when the actual USDG rate could be 149%. Show a placeholder instead.
   const netApy =
     ratesLive && derivedLoaded
       ? netApyDual({
@@ -326,7 +326,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
                     <p>
                       Fee APR is a 24h snapshot.{" "}
                       {ratesLive
-                        ? "Borrow rates are read live from the Sepolia lending pool."
+                        ? "Borrow rates are read live from the on-chain lending pool."
                         : "Borrow rates are unavailable, so no net APY estimate is shown."}
                     </p>
                   </TooltipContent>

@@ -4,9 +4,9 @@ import { useReadContracts } from "wagmi";
 import { RH_MAINNET as P } from "@/lib/solon-farms";
 
 /**
- * 双借金库的两条腿各挂各的储备,各按自己的 borrow APR 计息。
- * 任何"借款成本"的展示都必须读这两个实时利率再按借款构成加权 —— 单一常数利率会算错一个数量级。
- * reserveId 1 = USDG(LOAN 腿),2 = WETH(RISK 腿)。
+ * Each leg of the dual-borrow vault uses its own reserve and accrues interest at that reserve's borrow APR.
+ * Every borrowing-cost display must read both live rates and weight them by the borrowing mix; a fixed rate can be off by an order of magnitude.
+ * reserveId 1 = USDG (LOAN leg), 2 = WETH (RISK leg).
  */
 const rateAbi = [
   {
@@ -26,9 +26,9 @@ const rateAbi = [
 ] as const;
 
 export type ReserveRates = {
-  /** USDG 储备(LOAN 腿)年化借款利率,小数;未加载为 undefined */
+  /** USDG reserve (LOAN leg) annual borrow rate as a fraction; undefined until loaded */
   loanBorrowApr: number | undefined;
-  /** WETH 储备(RISK 腿)年化借款利率,小数 */
+  /** WETH reserve (RISK leg) annual borrow rate as a fraction */
   riskBorrowApr: number | undefined;
   loanUtil: number | undefined;
   riskUtil: number | undefined;

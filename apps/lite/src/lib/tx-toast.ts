@@ -4,9 +4,9 @@ import type { Config } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 
 /**
- * 统一的交易反馈:发出即 loading toast → 上链后成功/失败,附区块浏览器链接。
- * 与 Morpho uikit 的 TransactionButton 同一套语义(sonner + useWaitForTransactionReceipt),
- * 我们的动作是多笔顺序交易,所以做成命令式工具函数复用。
+ * Unified transaction feedback: a loading toast on send, then success/failure once mined, with an explorer link.
+ * Same semantics as Morpho uikit's TransactionButton (sonner + useWaitForTransactionReceipt);
+ * our flows are multiple sequential txs, so this is an imperative helper we reuse.
  */
 export async function runTx(
   config: Config,
@@ -58,8 +58,8 @@ export async function runTx(
         duration: 12000,
         action: { label: "View", onClick: () => window.open(`${opts.explorer}/tx/${confirmedHash}`, "_blank") },
       });
-      // 上链但执行失败 = 失败。绝不能返回哈希:调用方一律用返回值判成功,
-      // 返回哈希会让多笔流程继续发下一笔、单笔流程把失败交易记成"最新成功交易"。
+      // Mined-but-reverted = failure. Never return a hash: callers judge success by the return value,
+      // returning a hash would let a multi-tx flow send the next tx, or a single-tx flow record a failed tx as the latest success.
       return undefined;
     }
     return confirmedHash;

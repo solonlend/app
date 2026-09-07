@@ -28,7 +28,7 @@ const feedAbi = parseAbi([
 ]);
 const query = { staleTime: 15_000, refetchInterval: 30_000 };
 
-/** This is the Sepolia vault all current Farm testnet entry points actually open. */
+/** Reads the mainnet vault used by the farm entry points. */
 export function useFarmProtocol() {
   const { data: config } = useReadContracts({
     contracts: [
@@ -151,8 +151,8 @@ export function useFarmProtocol() {
         const raw = fresh.data?.[i * 3]?.result as readonly unknown[] | undefined;
         const supplied = fresh.data?.[i * 3 + 1]?.result as bigint | undefined;
         const state = capacityState(supplied, raw?.[6] as bigint | undefined);
-        if (state.full === undefined) throw new Error("容量读取失败，请重试");
-        if (state.full) throw new Error("额度已满");
+        if (state.full === undefined) throw new Error("Unable to read capacity. Please try again.");
+        if (state.full) throw new Error("Capacity reached");
       }
     },
   };
@@ -165,6 +165,6 @@ export function reserveAmount(value: bigint | undefined, decimals: number | unde
 }
 export function fullCapacityLabel(reserve: ReturnType<typeof useFarmProtocol>["fullReserve"]) {
   return reserve
-    ? `额度已满 ${reserveAmount(reserve.supplied, reserve.decimals)}/${reserveAmount(reserve.capacity, reserve.decimals)} ${reserve.symbol}`
+    ? `Capacity reached ${reserveAmount(reserve.supplied, reserve.decimals)}/${reserveAmount(reserve.capacity, reserve.decimals)} ${reserve.symbol}`
     : undefined;
 }

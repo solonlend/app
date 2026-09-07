@@ -78,7 +78,7 @@ function PairCell({ farm, chain }: { farm: FarmPool; chain: Chain | undefined })
             <div className="whitespace-nowrap">
               <span>{farm.pair}</span>
               <p className="text-secondary-foreground text-[10px]">
-                风险 {assets.risk} / 计价 {assets.quote}
+                Risk {assets.risk} / quote {assets.quote}
               </p>
             </div>
             <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
@@ -195,9 +195,9 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
           </TableHeader>
           <TableBody>
             {SOLON_FARMS.map((farm) => {
-              // 表格里没有保证金构成,按"两腿各借一半"的均衡口径取两个储备利率的均值;
-              // 具体到一笔仓位的真实成本由开仓面板按实际构成逐腿算。
-              // 利率没读到就不显示净 APY,不再用 8% 常数凑一个像模像样的数
+              // The table has no margin breakdown, so average both reserve rates assuming equal borrowing across the legs.
+              // The opening panel calculates each position's cost per leg using its actual borrowing mix.
+              // Hide net APY when rates are unavailable; do not use a fixed 8% rate to produce a plausible-looking number.
               const netApy =
                 tableBorrowApr !== undefined
                   ? estimateNetApy(farm.feeAprSnapshot, farm.maxLeverage, tableBorrowApr)
@@ -296,7 +296,7 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                           </button>
                           <span className="text-secondary-foreground text-[10px]">
                             {capacityLabel ??
-                              (protocol.capacityUnknown ? "容量读取中 / 暂不可用" : "testnet live · mainnet soon")}
+                              (protocol.capacityUnknown ? "Capacity loading / unavailable" : "soft launch")}
                           </span>
                         </div>
                       </TableCell>

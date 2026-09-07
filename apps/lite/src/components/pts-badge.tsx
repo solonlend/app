@@ -1,8 +1,8 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@morpho-org/uikit/components/shadcn/tooltip";
 
 /**
- * 与 Morpho 侧同一枚 +PTS 徽标(样式沿用 apy-table-cell.tsx),用于 farm 与出借储备。
- * 计分口径与 points/farm_points.py 一一对应:出借=份额×时间,farm=本金债务(USDG 计价)×时间。
+ * The same +PTS badge as the Morpho side (styling from apy-table-cell.tsx), used for farm and lending reserves.
+ * Scoring matches points/farm_points.py: lending = shares x time, farm = principal debt (USDG-valued) x time.
  */
 export function PtsBadge({ side }: { side: "supply" | "farm" }) {
   return (

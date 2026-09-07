@@ -112,8 +112,8 @@ function StepButton({
 }
 
 /**
- * Sepolia 真交互试驾:领测试币 → 双币授权 → 真 open()。
- * 钱包在别的链时 wagmi 会自动请求切到 Sepolia。金额/杠杆/区间沿用面板上方的选择。
+ * Live Sepolia playground: mint test tokens → approve both tokens → call open().
+ * wagmi requests a switch to Sepolia if the wallet is on another chain. Amounts, leverage and range use the selections above.
  */
 export function FarmTestnetPlayground({
   marginUsdg,
@@ -179,7 +179,7 @@ export function FarmTestnetPlayground({
     const ethPx = Number(formatUnits(ethPx6, 6));
     const equity = marginUsdg + marginEth * ethPx;
     if (equity <= 0) return undefined;
-    // 每腿各需 positionValue/2;借款 = 该腿所需 − 用户自带(与面板预览同一公式)
+    // Each leg needs positionValue/2; borrowing = leg requirement minus user margin (same formula as the panel preview).
     const perLeg = (equity * leverage) / 2;
     const borrowLoanVal = Math.max(0, perLeg - marginUsdg);
     const borrowRiskVal = Math.max(0, perLeg - marginEth * ethPx);
@@ -215,7 +215,7 @@ export function FarmTestnetPlayground({
           }),
         );
         if (!h) return;
-        setTxs((t) => ({ ...t, mint: h })); // 第一笔已上链就记账,第二笔失败不应让整步看起来没发生
+        setTxs((t) => ({ ...t, mint: h })); // Record the first on-chain transaction; failure of the second should not hide the first.
         const hWeth = await runTx(config, { chainId: P.chainId, explorer: P.explorer, label: "Mint WETH" }, () =>
           writeContractAsync({
             chainId: P.chainId,
@@ -347,7 +347,7 @@ export function FarmTestnetPlayground({
           <StepButton
             label={
               fullCapacityLabel(protocol.fullReserve) ??
-              (protocol.capacityUnknown ? "容量暂不可用" : "3 · Open position (real tx)")
+              (protocol.capacityUnknown ? "Capacity unavailable" : "3 · Open position (real tx)")
             }
             doneLabel="Position opened"
             onClick={() => void guard(() => run("open"))}

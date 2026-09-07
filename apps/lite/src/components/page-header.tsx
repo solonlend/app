@@ -1,6 +1,6 @@
 /**
- * 三个主页面共用的标头。样式逐字沿用 Points / Liquidations 页:
- * font-pixel 标题 + max-w-2xl 说明段,左对齐在 max-w-7xl 容器内。
+ * Shared header for the three main pages. Styling copied verbatim from the Points / Liquidations pages:
+ * font-pixel title + max-w-2xl description, left-aligned within a max-w-7xl container.
  */
 export function PageHeader({ title, subtitle, hint }: { title: string; subtitle: string; hint?: string }) {
   return (

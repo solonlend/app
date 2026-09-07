@@ -45,7 +45,7 @@ const lendingDebtAbi = [
   },
 ] as const;
 
-const MAX_SCAN = 50n; // scan the most recent ids (testnet scale)
+const MAX_SCAN = 50n; // scan the most recent ids
 
 const ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";
 const CARD = "bg-primary flex flex-col gap-3 rounded-2xl p-4";
@@ -86,8 +86,8 @@ type Pos = {
   id: bigint;
   debtRisk: bigint;
   debtLoan: bigint;
-  debtRiskAmt: bigint; // WETH 腿欠款(18dp)
-  debtLoanAmt: bigint; // USDG 腿欠款(6dp)
+  debtRiskAmt: bigint; // WETH leg debt (18 decimals)
+  debtLoanAmt: bigint; // USDG leg debt (6 decimals)
   tickLower: number;
   tickUpper: number;
   value: number; // USDG
@@ -168,7 +168,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
   // Rebalance
   const [rangePct, setRangePct] = useState(5);
 
-  // Increase(加仓):追加 USDG 保证金 + 目标追加杠杆倍数
+  // Increase: additional USDG margin + target leverage for the added position
   const [incUsdg, setIncUsdg] = useState("");
   const [incLev, setIncLev] = useState(2);
 
@@ -193,7 +193,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
     allowFailure: true,
     query: { staleTime: 20_000 },
   });
-  // 读失败不能静默当 0:那会把有债仓位显示成零债务、零利息和错误的加权利率
+  // Do not silently treat failed reads as zero: that would show indebted positions with no debt or interest and an incorrect blended rate.
   const debtRiskRaw = (legDebts?.[0]?.result as readonly [bigint, bigint] | undefined)?.[0];
   const debtLoanRaw = (legDebts?.[1]?.result as readonly [bigint, bigint] | undefined)?.[0];
   const debtsLoaded = debtRiskRaw !== undefined && debtLoanRaw !== undefined;
@@ -340,7 +340,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
     }
   };
 
-  // harvest(id, compound):claim=净手续费直转持有人;compound=手续费两腿直接增铸回仓位(合约 v1.1)
+  // harvest(id, compound): claim sends net fees to the holder; compound adds both fee legs directly to the position (contract v1.1).
   const doHarvest = async (compound: boolean) => {
     setTxError(undefined);
     try {
@@ -447,7 +447,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
       const m = Number(incUsdg) || 0;
       if (m <= 0 || ethPx6 === undefined) return;
       const ethPx = Number(formatUnits(ethPx6, 6));
-      // 与开仓面板同一口径:每腿各需"新增仓位价值/2",借款 = 该腿所需 − 自带(此处自带全在 USDG 腿)
+      // Match the opening panel: each leg needs added position value / 2; borrowing = leg requirement minus margin (all USDG here).
       const perLeg = (m * incLev) / 2;
       const borrowLoanVal = Math.max(0, perLeg - m);
       const borrowRiskVal = perLeg;
@@ -496,7 +496,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
     }
   };
 
-  // 两腿各按各自储备的实时借款利率计息 —— 单一利率会把成本算错一个数量级
+  // Each leg accrues at its own reserve's live borrow rate; a single rate can misstate costs by an order of magnitude.
   const debtRiskValue =
     ethPx6 !== undefined ? Number(formatUnits(debtRiskAmt, 18)) * Number(formatUnits(ethPx6, 6)) : 0;
   const debtLoanValue = Number(formatUnits(debtLoanAmt, 6));
@@ -590,12 +590,12 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
         )
       : undefined;
   let nextUsage: number | undefined;
-  let projectionNote = "输入金额查看操作后健康度";
+  let projectionNote = "Enter an amount to preview health after the action";
   let closeLimits: ReturnType<typeof closeMinimums> | undefined;
   let closeEstimateError: string | undefined;
   if (preview && !previewFailed && !previewLoading && validSlippage) {
     try {
-      if (hasGap && !useTopUp && (!slot0 || protocol.loanIsC0 === undefined)) throw new Error("等待换币价格");
+      if (hasGap && !useTopUp && (!slot0 || protocol.loanIsC0 === undefined)) throw new Error("Waiting for swap price");
       closeLimits = closeMinimums({
         preview,
         sqrtPriceX96: slot0?.[0] ?? 1n,
@@ -604,7 +604,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
         useTopUp,
       });
     } catch {
-      closeEstimateError = "暂无法估算到手；可尝试自补缺口或刷新价格";
+      closeEstimateError = "Unable to estimate proceeds; try covering the shortfall from your wallet or refresh prices";
     }
   }
   if (tab === "Add margin" && marginValid && debtsLoaded && riskPrice !== undefined) {
@@ -619,7 +619,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
       ),
       protocol.lltv,
     );
-    projectionNote = "按实际还债估算；超额资金不增加 LP";
+    projectionNote = "Based on actual debt repaid; excess funds do not add liquidity";
   } else if (
     tab === "Increase" &&
     range &&
@@ -643,8 +643,8 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
     );
     if (added) nextUsage = healthUsage(pos.value + added.value, added.debt, protocol.lltv);
     projectionNote = added
-      ? "按当前区间用币估算，剩余资金先还债；成交后以链上为准"
-      : "当前价格不在区间内，无法估算加仓";
+      ? "Estimated from token amounts in the current range; unused funds repay debt first. Final values depend on on-chain execution"
+      : "Price is outside the range; unable to estimate the increase";
   } else if (
     tab === "Close" &&
     preview &&
@@ -664,7 +664,10 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
             ),
             protocol.lltv,
           );
-    projectionNote = pct === 10000 ? "还清双腿债务后，此仓关闭" : "按比例撤出 LP 并还债；健康度通常基本不变";
+    projectionNote =
+      pct === 10000
+        ? "The position closes after both debt legs are repaid"
+        : "Liquidity and debt are reduced proportionally; health usually stays about the same";
   }
   const changed = currentUsage !== undefined && nextUsage !== undefined ? nextUsage - currentUsage : undefined;
   const projection = (
@@ -681,14 +684,16 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
         >
           {changed === undefined ? "—" : Math.abs(changed) < 1e-8 ? "=" : changed < 0 ? "↓" : "↑"}
         </span>
-        <span>{tab === "Add margin" ? "补仓" : tab === "Increase" ? "加仓" : "平仓"}后健康度</span>
+        <span>
+          Health after {tab === "Add margin" ? "adding margin" : tab === "Increase" ? "increasing" : "closing"}
+        </span>
         <span className="text-secondary-foreground">
           {currentUsage === undefined ? "—" : `${(currentUsage * 100).toFixed(0)}%`} →
         </span>
         {nextUsage === undefined ? (
-          <span>待估算</span>
+          <span>Awaiting estimate</span>
         ) : tab === "Close" && pct === 10000 ? (
-          <span>0% · 仓位关闭</span>
+          <span>0% · position closed</span>
         ) : (
           <HealthBar usage={nextUsage} />
         )}
@@ -712,39 +717,41 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
           pos #{pos.id.toString()} · {riskSymbol} / {loanSymbol}
         </SheetTitle>
         <SheetDescription>
-          {pos.value > pos.debt ? `${(pos.value / (pos.value - pos.debt)).toFixed(2)}x` : "杠杆 —"} · 仓位管理
+          {pos.value > pos.debt ? `${(pos.value / (pos.value - pos.debt)).toFixed(2)}x` : "Leverage —"} · position
+          management
         </SheetDescription>
       </SheetHeader>
       <div className="bg-background sticky top-0 z-10 px-4 pb-2">
-        <section aria-label="当前仓位健康度" className="border-foreground/10 bg-primary rounded-xl border p-4">
+        <section aria-label="Current position health" className="border-foreground/10 bg-primary rounded-xl border p-4">
           <div className="text-secondary-foreground mb-3 flex flex-wrap justify-between gap-2 text-[11px]">
-            <span>HEALTH · 100% = 清算</span>
+            <span>HEALTH · 100% = liquidation</span>
             <span>
-              清算价 {riskSymbol}{" "}
+              Liquidation price {riskSymbol}{" "}
               {currentUsage !== undefined && currentUsage >= 1
-                ? "已达清算线"
+                ? "liquidation threshold reached"
                 : liqPrices === undefined || quoteUsd === undefined
                   ? "—"
                   : liqPrices.length
                     ? liqPrices
                         .map((price) => `${price < (riskPrice ?? 0) ? "↓" : "↑"} ≈ $${fmt(price * quoteUsd)}`)
                         .join(" / ")
-                    : "无有限清算价"}
+                    : "no finite liquidation price"}
             </span>
           </div>
           <HealthBar usage={currentUsage} hero />
           <p className="text-secondary-foreground mt-2 text-[10px]">
-            清算价为区间 LP 情景估算：计价币价格不变，未计后续利息与费用。
+            Liquidation prices are scenario estimates for the concentrated LP, with the quote price fixed and future
+            interest and fees excluded.
           </p>
         </section>
       </div>
       <div className="flex flex-col gap-3 px-4 pb-6">
         <div className="border-foreground/10 grid grid-cols-2 gap-px overflow-hidden rounded-lg border sm:grid-cols-4">
           {[
-            ["价值", pos.value],
-            ["权益", Math.max(0, pos.value - pos.debt)],
-            ["债务", pos.debt],
-            ["利息/年", borrowCost],
+            ["Value", pos.value],
+            ["Equity", Math.max(0, pos.value - pos.debt)],
+            ["Debt", pos.debt],
+            ["Interest/year", borrowCost],
           ].map(([label, value]) => (
             <div key={label as string} className="bg-primary min-w-0 p-3">
               <div className="text-secondary-foreground text-[10px]">{label}</div>
@@ -762,12 +769,12 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid h-auto w-full grid-cols-6">
             {[
-              ["Overview", "概览"],
-              ["Add margin", "补仓"],
-              ["Increase", "加仓"],
-              ["Rebalance", "调仓"],
-              ["Harvest", "收获"],
-              ["Close", "平仓"],
+              ["Overview", "Overview"],
+              ["Add margin", "Add margin"],
+              ["Increase", "Increase"],
+              ["Rebalance", "Rebalance"],
+              ["Harvest", "Harvest"],
+              ["Close", "Close"],
             ].map(([value, label]) => (
               <TabsTrigger key={value} value={value} className="min-w-0 px-1 text-xs">
                 {label}
@@ -777,39 +784,39 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
           <TabsContent value="Overview" className="flex flex-col gap-3 pt-3">
             <div className={CARD}>
               <div className={ROW}>
-                <span>现债 · {riskSymbol}</span>
+                <span>Current debt · {riskSymbol}</span>
                 <span>{debtsLoaded ? pairAmount(debtRiskAmt, 0n) : "—"}</span>
               </div>
               <div className="text-secondary-foreground text-right text-[11px]">
-                {debtsLoaded ? usd(riskAmount(debtRiskAmt), riskUsd) : "≈ $—"} · 年利率{" "}
+                {debtsLoaded ? usd(riskAmount(debtRiskAmt), riskUsd) : "≈ $—"} · APR{" "}
                 {riskApr === undefined ? "—" : `${(riskApr * 100).toFixed(2)}%`}
               </div>
               <div className={ROW}>
-                <span>现债 · {loanSymbol}</span>
+                <span>Current debt · {loanSymbol}</span>
                 <span>{debtsLoaded ? `${fmt(debtLoanValue)} ${loanSymbol}` : "—"}</span>
               </div>
               <div className="text-secondary-foreground text-right text-[11px]">
-                {debtsLoaded ? usd(debtLoanValue, quoteUsd) : "≈ $—"} · 年利率{" "}
+                {debtsLoaded ? usd(debtLoanValue, quoteUsd) : "≈ $—"} · APR{" "}
                 {loanApr === undefined ? "—" : `${(loanApr * 100).toFixed(2)}%`}
               </div>
               <div className={ROW}>
-                <span>加权借款年利率</span>
+                <span>Blended borrow APR</span>
                 <span>{borrowCost === undefined ? "—" : `${(blendedApr * 100).toFixed(2)}%`}</span>
               </div>
               <div className={ROW}>
-                <span>每日利息</span>
+                <span>Daily interest</span>
                 <span>
                   {borrowCost === undefined ? "—" : fmt(borrowCost / 365, 4)} {loanSymbol} ·{" "}
                   {usd(borrowCost === undefined ? undefined : borrowCost / 365, quoteUsd)}
                 </span>
               </div>
-              <p className="text-xs">区间 {priceRange(pos.tickLower, pos.tickUpper, protocol)}</p>
+              <p className="text-xs">Range {priceRange(pos.tickLower, pos.tickUpper, protocol)}</p>
               <p className="text-secondary-foreground text-xs">
                 {slot0
                   ? curTick >= pos.tickLower && curTick <= pos.tickUpper
-                    ? "当前价格在区间内"
-                    : "当前价格已超出区间"
-                  : "正在读取当前价格"}
+                    ? "Current price is in range"
+                    : "Current price is out of range"
+                  : "Loading current price"}
               </p>
             </div>
           </TabsContent>
@@ -838,7 +845,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                 <div key={i} className="flex flex-col gap-2">
                   <div className={ROW}>
                     <label htmlFor={`margin-${i}`}>
-                      {field.symbol} · 现债{" "}
+                      {field.symbol} · Current debt{" "}
                       {debtsLoaded && field.decimals !== undefined
                         ? fmt(Number(formatUnits(field.debt, field.decimals)), 5)
                         : "—"}
@@ -872,10 +879,11 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                 </div>
               ))}
               <p className="text-secondary-foreground text-[11px]">
-                可补上限 = 钱包余额与现债的较小值。先还 {repayFirst} 腿，按各币种实际所需还债。
+                Max margin is the lower of wallet balance and current debt. Repay the {repayFirst} leg first, using only
+                what each token debt requires.
               </p>
               {!marginValid && (amEth || amUsdg) && (
-                <p className="text-xs">请等待余额/现债读取完成，并输入不超过 MAX 的有效金额。</p>
+                <p className="text-xs">Wait for balances and debt to load, then enter a valid amount up to MAX.</p>
               )}
             </div>
             {projection}
@@ -885,14 +893,14 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
               disabled={isPending || busy || !marginValid || (marginRisk === 0n && marginLoan === 0n)}
               onClick={() => void guard(() => doAddMargin())}
             >
-              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 补仓 · 先还 {repayFirst} 腿
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} Add margin · repay {repayFirst} first
             </Button>
           </TabsContent>
           <TabsContent value="Increase" className="flex flex-col gap-3 pt-3">
             <div className={CARD}>
               <label htmlFor="increase-amount" className={ROW}>
-                <span>追加 {loanSymbol} 保证金</span>
-                <span>{incLev}x 追加杠杆</span>
+                <span>Add {loanSymbol} margin</span>
+                <span>{incLev}x leverage on added margin</span>
               </label>
               <div className="border-foreground/10 flex items-center gap-2 rounded-lg border p-3">
                 <input
@@ -919,7 +927,8 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                 ))}
               </div>
               <p className="text-secondary-foreground text-[11px]">
-                在当前区间借入两币增加 LP，不换币；未用资金先还债。操作后须保持健康。
+                Borrow both tokens to add liquidity in the current range without swaps. Unused funds repay debt first.
+                The position must remain healthy.
               </p>
             </div>
             {projection}
@@ -929,7 +938,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
               disabled={isPending || busy || blocked || !validSlippage || !incUsdg || ethPx6 === undefined}
               onClick={() => void guard(() => doIncrease())}
             >
-              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 加仓
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} Increase
             </Button>
           </TabsContent>
           <TabsContent value="Close" className="flex flex-col gap-3 pt-3">
@@ -947,20 +956,20 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
             </div>
             <p className="text-secondary-foreground text-[11px]">
               {pct === 10000
-                ? "平掉整个仓位，还清双腿债务，余额回到钱包。"
-                : `平掉 ${pct / 100}% 仓位，按比例还债，保留剩余 LP。`}
+                ? "Close the entire position, repay both debt legs, and return the remainder to your wallet."
+                : `Close ${pct / 100}% of the position, repay debt proportionally, and keep the remaining liquidity.`}
             </p>
             <div className="border-foreground/10 flex flex-col gap-3 rounded-lg border border-dashed p-3">
               <div className={ROW}>
-                <span>结算预览</span>
-                <span>链上实时读取</span>
+                <span>Settlement preview</span>
+                <span>Live on-chain data</span>
               </div>
               {preview && !previewFailed && !previewLoading ? (
                 <>
                   {[
-                    ["LP 拆出", preview[0], preview[1]],
-                    ["还债", preview[2], preview[3]],
-                    ...(hasGap ? [["待补缺口", preview[4], preview[5]]] : []),
+                    ["Liquidity withdrawn", preview[0], preview[1]],
+                    ["Debt repayment", preview[2], preview[3]],
+                    ...(hasGap ? [["Shortfall", preview[4], preview[5]]] : []),
                   ].map(([label, risk, loan]) => (
                     <div key={label as string} className="text-xs">
                       <div className={ROW}>
@@ -976,7 +985,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                   ))}
                   <div className="border-foreground/10 border-t pt-3 text-xs">
                     <div className={ROW}>
-                      <span>预计到手下限</span>
+                      <span>Estimated minimum received</span>
                       <span className="text-primary-foreground text-right">
                         {closeLimits ? pairAmount(closeLimits.minOutRisk, closeLimits.minOutLoan) : "—"}
                       </span>
@@ -985,42 +994,49 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                       {closeLimits ? pairUsd(closeLimits.minOutRisk, closeLimits.minOutLoan) : "≈ $—"}
                     </p>
                     <p className="text-secondary-foreground mt-2 text-[10px]">
-                      已计滑点保护，未计待收手续费；最终以成交为准。{useTopUp ? "自补金额由钱包另付。" : ""}
+                      Includes slippage protection; excludes unclaimed fees. Final amounts depend on execution.
+                      {useTopUp ? " Wallet top-ups are paid separately." : ""}
                     </p>
                     {closeEstimateError && <p className="mt-2 text-[11px]">{closeEstimateError}</p>}
                   </div>
                   {hasGap ? (
                     <fieldset className="border-foreground/10 flex flex-col gap-3 rounded-lg border p-3 text-xs">
-                      <legend className="text-secondary-foreground px-1">补缺口方式</legend>
+                      <legend className="text-secondary-foreground px-1">Cover shortfall</legend>
                       <label className="flex items-start gap-2">
                         <input type="radio" name="gap-mode" checked={useTopUp} onChange={() => setUseTopUp(true)} />
                         <span>
-                          自补缺口
-                          <span className="text-secondary-foreground"> — 精确还债，不动市场（只拉实际所需）</span>
+                          Top up from wallet
+                          <span className="text-secondary-foreground">
+                            {" "}
+                            — repay without swaps (only the required amount is transferred)
+                          </span>
                         </span>
                       </label>
                       <label className="flex items-start gap-2">
                         <input type="radio" name="gap-mode" checked={!useTopUp} onChange={() => setUseTopUp(false)} />
                         <span>
-                          自动换币补缺口
+                          Swap to cover shortfall
                           <span className="text-secondary-foreground">
                             {" "}
-                            — 盈余腿换所缺币，滑点 ≤ {validSlippage ? slippage : "—"}%，预言机兜底价
+                            — swap surplus tokens for the shortfall, slippage ≤ {validSlippage ? slippage : "—"}%, with
+                            an oracle price floor
                           </span>
                         </span>
                       </label>
                     </fieldset>
                   ) : (
-                    <p className="text-secondary-foreground text-[11px]">无需补缺口 · 两币各自还债，不换币。</p>
+                    <p className="text-secondary-foreground text-[11px]">
+                      No shortfall · each token repays its own debt, without swaps.
+                    </p>
                   )}
                 </>
               ) : previewFailed ? (
                 <p role="alert" className="text-morpho-error text-xs">
-                  平仓预览失败，暂不可提交；请稍后重试。
+                  Close preview failed. Submission is unavailable; try again later.
                 </p>
               ) : (
                 <p role="status" className="text-xs">
-                  正在更新平仓预览，暂不可提交。
+                  Updating close preview. Submission is temporarily unavailable.
                 </p>
               )}
             </div>
@@ -1031,14 +1047,14 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
               disabled={isPending || busy || !preview || previewFailed || previewLoading || !validSlippage}
               onClick={() => void guard(() => doClose())}
             >
-              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 平仓 {pct / 100}%
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} Close {pct / 100}%
             </Button>
           </TabsContent>
           <TabsContent value="Rebalance" className="flex flex-col gap-3 pt-3">
             <div className={CARD}>
               <div className={ROW}>
-                <span>新区间 · 围绕当前价格</span>
-                <span>债务不变</span>
+                <span>New range · around current price</span>
+                <span>Debt unchanged</span>
               </div>
               <div className="flex gap-2">
                 {[2, 5, 10].map((p) => (
@@ -1052,7 +1068,9 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                   </Button>
                 ))}
               </div>
-              <p className="text-secondary-foreground text-[11px]">撤出全部 LP 后在新区间重新添加；当前操作不换币。</p>
+              <p className="text-secondary-foreground text-[11px]">
+                Withdraw all liquidity and add it back in the new range. This action does not swap tokens.
+              </p>
             </div>
             <Button
               className="h-10 w-full rounded-lg text-xs"
@@ -1060,17 +1078,18 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
               disabled={isPending || busy}
               onClick={() => void guard(() => doRebalance(curTick))}
             >
-              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 调仓至 ±{rangePct}%
+              {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} Rebalance to ±{rangePct}%
             </Button>
           </TabsContent>
           <TabsContent value="Harvest" className="flex flex-col gap-3 pt-3">
             <div className={CARD}>
               <div className={ROW}>
-                <span>已累积 LP 手续费</span>
-                <span>领取 / 复投均扣除收获费</span>
+                <span>Accrued LP fees</span>
+                <span>Harvest fees apply to claims and compounding</span>
               </div>
               <p className="text-secondary-foreground text-[11px]">
-                领取：扣费后两币回钱包。复投：两币直接加回仓位。两种方式均不换币。
+                Claim returns both tokens to your wallet after fees. Compound adds both tokens directly to the position.
+                Neither option swaps tokens.
               </p>
               <div className="flex gap-2">
                 <Button
@@ -1079,7 +1098,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                   disabled={isPending || busy}
                   onClick={() => void guard(() => doHarvest(false))}
                 >
-                  {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} 领取手续费
+                  {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />} Claim fees
                 </Button>
                 <Button
                   className="h-10 grow rounded-lg text-xs"
@@ -1087,17 +1106,17 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
                   disabled={isPending || busy}
                   onClick={() => void guard(() => doHarvest(true))}
                 >
-                  复投
+                  Compound
                 </Button>
               </div>
             </div>
           </TabsContent>
         </Tabs>
         <label className={`${ROW} border-foreground/10 border-t pt-3`}>
-          <span>滑点容忍（平仓换币 / 加仓铸造）</span>
+          <span>Slippage tolerance (closing swaps / increasing liquidity)</span>
           <span className="border-foreground/10 rounded-md border px-2 py-1">
             <input
-              aria-label="滑点容忍百分比"
+              aria-label="Slippage tolerance percentage"
               type="number"
               min="0.1"
               max="5"
@@ -1109,7 +1128,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
             %
           </span>
         </label>
-        {!validSlippage && <p className="text-morpho-error text-xs">请输入 0.1% 至 5% 的滑点容忍。</p>}
+        {!validSlippage && <p className="text-morpho-error text-xs">Enter a slippage tolerance from 0.1% to 5%.</p>}
         {txError && <p className="text-morpho-error text-[11px]">{txError}</p>}
         {lastTx && (
           <a
@@ -1118,7 +1137,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
             rel="noopener noreferrer"
             target="_blank"
           >
-            查看最近交易 <ExternalLink className="h-3 w-3" />
+            View latest transaction <ExternalLink className="h-3 w-3" />
           </a>
         )}
       </div>
@@ -1239,7 +1258,7 @@ export function FarmPositions() {
   return (
     <div className="text-primary-foreground w-full max-w-7xl px-2 lg:px-8">
       <div className="flex items-baseline justify-between px-2 pb-1 pt-8">
-        <h2 className="text-sm font-light tracking-wide">My farm positions · Sepolia testnet</h2>
+        <h2 className="text-sm font-light tracking-wide">My farm positions</h2>
         <span className="text-secondary-foreground text-xs font-light">click a row to manage</span>
       </div>
       <div className="overflow-x-auto">
@@ -1251,7 +1270,7 @@ export function FarmPositions() {
               <TableHead className="text-secondary-foreground text-xs font-light">Debt</TableHead>
               <TableHead className="text-secondary-foreground text-xs font-light">Leverage</TableHead>
               <TableHead className="text-secondary-foreground hidden text-xs font-light md:table-cell">
-                区间 · 价格(风险/计价)
+                Range · price (risk/quote)
               </TableHead>
               <TableHead className="text-secondary-foreground rounded-r-lg text-xs font-light">
                 Health (100% = liquidation)
