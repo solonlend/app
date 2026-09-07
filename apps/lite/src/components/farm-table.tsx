@@ -18,19 +18,12 @@ import { FarmSheetContent } from "@/components/farm-sheet-content";
 import { PtsBadge } from "@/components/pts-badge";
 import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
 import { useLiveFeeApr, effectiveFeeApr } from "@/hooks/use-live-fee-apr";
+import { useObservationPools } from "@/hooks/use-observation-pools";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
 import { farmAssets } from "@/lib/farm-protocol";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { monogramURI } from "@/lib/monogram";
-import {
-  SOLON_FARMS,
-  CANDIDATE_POOLS,
-  WETH_RH,
-  USDG_RH,
-  ETH_USD_FEED_RH,
-  estimateNetApy,
-  type FarmPool,
-} from "@/lib/solon-farms";
+import { SOLON_FARMS, WETH_RH, USDG_RH, ETH_USD_FEED_RH, estimateNetApy, type FarmPool } from "@/lib/solon-farms";
 import { getTokenURI } from "@/lib/tokens";
 
 const chainlinkAggregatorAbi = [
@@ -162,6 +155,7 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
   const capacityBlocked = !!protocol.fullReserve || protocol.capacityUnknown;
   const rates = useReserveRates();
   const { data: liveFeeApr } = useLiveFeeApr();
+  const { data: observationData } = useObservationPools();
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
   const ratesLive = riskApr !== undefined && loanApr !== undefined;
@@ -329,28 +323,48 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
       </div>
 
       <div className="flex flex-col gap-1 px-2 pb-1 pt-6 sm:flex-row sm:items-baseline sm:justify-between">
-        <h3 className="text-secondary-foreground text-xs font-light tracking-wide">New assets · under evaluation</h3>
+        <h3 className="text-secondary-foreground text-xs font-light tracking-wide">
+          Observation pools · top 10 by TVL
+        </h3>
         <span className="text-secondary-foreground text-[11px] font-light">
-          No price feed yet — needs TWAP oracle + conservative LLTV + its own red-team round
+          Feed-backed pools can become leverage farms; the rest need a TWAP oracle + red-team round first
         </span>
       </div>
       <div className="overflow-x-auto">
-        <Table className="border-separate border-spacing-y-2 opacity-60">
+        <Table className="border-separate border-spacing-y-2 opacity-80">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-secondary-foreground pl-4 text-[10px] font-light">Pool</TableHead>
+              <TableHead className="text-secondary-foreground text-[10px] font-light">TVL</TableHead>
+              <TableHead className="text-secondary-foreground hidden text-[10px] font-light md:table-cell">
+                Fee APR
+              </TableHead>
+              <TableHead className="text-secondary-foreground text-[10px] font-light">Feed</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {CANDIDATE_POOLS.map((c, i) => (
-              <TableRow key={i} className="bg-primary">
+            {(observationData?.pools ?? []).map((c) => (
+              <TableRow key={`${c.dex}-${c.label}-${c.fee_tier_label}`} className="bg-primary">
                 <TableCell className="rounded-l-lg py-2 pl-4">
-                  <span className="whitespace-nowrap">{c.pair}</span>
+                  <span className="whitespace-nowrap">{c.label}</span>
                   <span className="text-secondary-foreground ml-2 whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
-                    {c.dexLabel}
+                    {c.dex} · {c.fee_tier_label}
                   </span>
                 </TableCell>
-                <TableCell>{c.tvlSnapshot}</TableCell>
-                <TableCell className="hidden md:table-cell">{c.feeAprSnapshot}</TableCell>
+                <TableCell>{formatUsdCompact(c.tvl_usd)}</TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {c.fee_apr !== null ? formatPct(c.fee_apr) : "—"}
+                </TableCell>
                 <TableCell className="rounded-r-lg">
-                  <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-2 py-0.5 text-[10px]">
-                    {c.blocker}
-                  </span>
+                  {c.has_feed ? (
+                    <span className="text-farm-safe bg-farm-safe-subtle whitespace-nowrap rounded-sm px-2 py-0.5 text-[10px]">
+                      feed · eligible
+                    </span>
+                  ) : (
+                    <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-2 py-0.5 text-[10px]">
+                      no feed
+                    </span>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -358,7 +372,15 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
         </Table>
       </div>
       <p className="text-secondary-foreground px-2 pt-1 text-[11px] font-light">
-        TVL / APR are manual snapshots (2026-09-04) from the DEX interface, for evaluation only.
+        {observationData
+          ? `Live top-10 by TVL from the Uniswap interface (as of ${new Date(observationData.generated_at * 1000)
+              .toISOString()
+              .slice(0, 16)
+              .replace(
+                "T",
+                " ",
+              )} UTC). Fee APR = annualized 24h volume × fee ÷ TVL; unavailable (—) where the source omits v4 volume.`
+          : "Loading live top-10 pools by TVL…"}
       </p>
     </div>
   );
