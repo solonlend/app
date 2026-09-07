@@ -11,7 +11,7 @@ import {
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
 import { abbreviateAddress } from "@morpho-org/uikit/lib/utils";
 import { ExternalLink } from "lucide-react";
-import { Chain, erc20Abi, formatUnits } from "viem";
+import { Address, Chain, erc20Abi, formatUnits } from "viem";
 import { useReadContracts } from "wagmi";
 
 import { FarmSheetContent } from "@/components/farm-sheet-content";
@@ -31,6 +31,7 @@ import {
   estimateNetApy,
   type FarmPool,
 } from "@/lib/solon-farms";
+import { getTokenURI } from "@/lib/tokens";
 
 const chainlinkAggregatorAbi = [
   {
@@ -61,18 +62,30 @@ function formatUsdCompact(v: number): string {
 }
 
 function PairCell({ farm, chain }: { farm: FarmPool; chain: Chain | undefined }) {
+  const chainId = chain?.id;
   const explorer = chain?.blockExplorers?.default.url;
   const assets = farmAssets(farm.token0Symbol, farm.token1Symbol, farm.loanIsC0)!;
+  const iconSrc = (symbol: string, address?: Address) =>
+    symbol === "WETH" || symbol === "ETH"
+      ? `${import.meta.env.BASE_URL}eth-logo.svg`
+      : address
+        ? getTokenURI({ symbol, address, chainId })
+        : undefined;
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex w-min items-center gap-2 p-2">
             <div className="flex -space-x-2">
-              {[farm.token0Symbol, farm.token1Symbol].map((symbol, i) => (
+              {[
+                { symbol: farm.token0Symbol, address: farm.token0Address },
+                { symbol: farm.token1Symbol, address: farm.token1Address },
+              ].map(({ symbol, address }, i) => (
                 <Avatar key={i} className="h-6 w-6">
-                  <AvatarImage src={monogramURI(symbol)} alt={symbol} />
-                  <AvatarFallback>{symbol.slice(0, 1)}</AvatarFallback>
+                  <AvatarImage src={iconSrc(symbol, address)} alt={symbol} />
+                  <AvatarFallback delayMs={500}>
+                    <img src={monogramURI(symbol)} alt={symbol} />
+                  </AvatarFallback>
                 </Avatar>
               ))}
             </div>

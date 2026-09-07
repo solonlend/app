@@ -27,6 +27,7 @@ import { FarmPauseBanner } from "@/components/farm-pause-banner";
 import { PtsBadge } from "@/components/pts-badge";
 import { useBusy } from "@/hooks/use-busy";
 import { useFarmPaused } from "@/hooks/use-farm-paused";
+import { farmReserveAbi } from "@/lib/farm-protocol-abi";
 import { RH_FARM_LENDING as P } from "@/lib/solon-farms";
 import { runTx } from "@/lib/tx-toast";
 
@@ -150,6 +151,7 @@ function LendingSheet({
   exchangeRate,
   myShares,
   availableCash,
+  capacityRemaining,
   refetch,
 }: {
   r: ReserveCfg;
@@ -157,6 +159,7 @@ function LendingSheet({
   exchangeRate: number;
   myShares: bigint;
   availableCash: bigint; // Unborrowed underlying tokens in the pool (the current withdrawal limit for lenders)
+  capacityRemaining: bigint | undefined; // reserve supply room left (capacity − total liquidity); deposits above it revert
   refetch: () => void;
 }) {
   const { address: user } = useAccount();
@@ -185,6 +188,11 @@ function LendingSheet({
 
   const myAssets = Number(formatUnits(myShares, r.decimals)) * exchangeRate;
   const availableNow = Math.min(myAssets, Number(formatUnits(availableCash, r.decimals)));
+  // Reserve supply room: deposits above it revert (checkCapacity), so cap the input and block the button.
+  const remainingN = capacityRemaining !== undefined ? Number(formatUnits(capacityRemaining, r.decimals)) : undefined;
+  const amountN = Number(amount || "0");
+  const capacityFull = remainingN !== undefined && remainingN <= 0;
+  const overCapacity = remainingN !== undefined && amountN > remainingN + 1e-9;
 
   const doMint = async () => {
     if (!user) return;
@@ -361,13 +369,28 @@ function LendingSheet({
                 Get {r.mintAmount} test {r.symbol}
               </Button>
             )}
+            {remainingN !== undefined && (
+              <div className="text-secondary-foreground flex items-center justify-between px-1 text-[11px] font-light">
+                <span>Reserve capacity remaining</span>
+                <span className={capacityFull ? "text-farm-warning" : "text-primary-foreground"}>
+                  {capacityFull ? "Full · soft-launch cap" : `${fmt(remainingN, r.decimals === 6 ? 2 : 4)} ${r.symbol}`}
+                </span>
+              </div>
+            )}
+            {overCapacity && !capacityFull && (
+              <p className="text-farm-warning px-1 text-[11px] font-light">
+                Above the remaining capacity — reduce to {fmt(remainingN ?? 0, r.decimals === 6 ? 2 : 4)} {r.symbol} or
+                less.
+              </p>
+            )}
             <Button
               className="h-10 w-full rounded-full text-xs"
               variant="blue"
-              disabled={isPending || busy || blocked || !amount}
+              disabled={isPending || busy || blocked || !amount || capacityFull || overCapacity}
               onClick={() => void guard(() => doDeposit())}
             >
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null} Approve + Deposit
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}{" "}
+              {capacityFull ? "Capacity reached" : "Approve + Deposit"}
             </Button>
           </TabsContent>
           <TabsContent value="Withdraw" className="flex flex-col gap-3 pt-3">
@@ -508,10 +531,26 @@ export function FarmLendingVaults() {
     query: { enabled: eTokens.every((e) => !!e), staleTime: 30_000 },
   });
 
+  // Reserve supply capacity: deposit() reverts (checkCapacity) once totalLiquidity + amount exceeds it,
+  // so the deposit UI must cap the input and block a doomed tx rather than burning the user's approval gas.
+  const { data: capData, refetch: refetchCap } = useReadContracts({
+    contracts: RESERVES.map((r) => ({
+      chainId: P.chainId,
+      address: LENDING,
+      abi: farmReserveAbi,
+      functionName: "reserves" as const,
+      args: [r.reserveId] as const,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    })) as any,
+    allowFailure: true,
+    query: { staleTime: 30_000 },
+  });
+
   const refetchAll = () => {
     void refetch();
     void refetchShares();
     void refetchCash();
+    void refetchCap();
   };
 
   return (
@@ -551,6 +590,10 @@ export function FarmLendingVaults() {
               const xrN = xr !== undefined ? Number(formatUnits(xr, 18)) : 1;
               const myShares = (shareData?.[i]?.result as bigint | undefined) ?? 0n;
               const myAssets = Number(formatUnits(myShares, r.decimals)) * xrN;
+              // reserves() index 6 is reserveCapacity; remaining room = capacity − current total liquidity.
+              const capacity = (capData?.[i]?.result as readonly bigint[] | undefined)?.[6];
+              const capacityRemaining =
+                capacity !== undefined && tvl !== undefined ? (capacity > tvl ? capacity - tvl : 0n) : undefined;
               return (
                 <Sheet key={r.reserveId.toString()}>
                   <SheetTrigger asChild>
@@ -600,6 +643,7 @@ export function FarmLendingVaults() {
                     exchangeRate={xrN}
                     myShares={myShares}
                     availableCash={(cashData?.[i]?.result as bigint | undefined) ?? 0n}
+                    capacityRemaining={capacityRemaining}
                     refetch={refetchAll}
                   />
                 </Sheet>
