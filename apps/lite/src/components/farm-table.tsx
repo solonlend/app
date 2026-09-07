@@ -17,7 +17,6 @@ import { useReadContracts } from "wagmi";
 import { FarmSheetContent } from "@/components/farm-sheet-content";
 import { PtsBadge } from "@/components/pts-badge";
 import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
-import { useLiveFeeApr, effectiveFeeApr } from "@/hooks/use-live-fee-apr";
 import { useObservationPools } from "@/hooks/use-observation-pools";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
 import { farmAssets } from "@/lib/farm-protocol";
@@ -154,8 +153,25 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
   const capacityLabel = fullCapacityLabel(protocol.fullReserve);
   const capacityBlocked = !!protocol.fullReserve || protocol.capacityUnknown;
   const rates = useReserveRates();
-  const { data: liveFeeApr } = useLiveFeeApr();
   const { data: observationData } = useObservationPools();
+
+  // Fee APR comes from ONE source: the Uniswap interface gateway (via the observation-pools feed),
+  // so a farm row and its pool in the observation table below always show the same number. Match
+  // the farm's pool by dex + pair + fee tier; fall back to the dated snapshot only if the feed is
+  // unavailable.
+  const uniAprFor = (farm: FarmPool): number | undefined => {
+    if (!observationData) return undefined;
+    const dexShort = farm.dex.includes("V4") ? "v4" : "v3";
+    const farmFeePct = farm.feeTierBps / 10000; // 100 bps-hundredths => 0.01(%)
+    const m = observationData.pools.find(
+      (p) =>
+        p.dex === dexShort &&
+        p.label === farm.pair &&
+        p.fee_apr !== null &&
+        Math.abs(parseFloat(p.fee_tier_label) - farmFeePct) < 1e-6,
+    );
+    return m?.fee_apr ?? undefined;
+  };
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
   const ratesLive = riskApr !== undefined && loanApr !== undefined;
@@ -210,9 +226,10 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
               // The table has no margin breakdown, so average both reserve rates assuming equal borrowing across the legs.
               // The opening panel calculates each position's cost per leg using its actual borrowing mix.
               // Hide net APY when rates are unavailable; do not use a fixed 8% rate to produce a plausible-looking number.
-              // Fee APR: live from the on-chain indexer once warmed up (>=2h window), else the dated snapshot.
-              const { value: feeApr, live: feeAprLive } =
-                farm.feeAprSnapshot > 0 ? effectiveFeeApr(liveFeeApr, farm.feeAprSnapshot) : { value: 0, live: false };
+              // Fee APR: live from the Uniswap gateway (observation feed), else the dated snapshot.
+              const uniApr = uniAprFor(farm);
+              const feeApr = uniApr !== undefined ? uniApr : farm.feeAprSnapshot > 0 ? farm.feeAprSnapshot : 0;
+              const feeAprLive = uniApr !== undefined;
               const netApy =
                 tableBorrowApr !== undefined ? estimateNetApy(feeApr, farm.maxLeverage, tableBorrowApr) : undefined;
               const tvl = farm.dex === "Uniswap V3" ? v3TvlUsd : undefined;
@@ -240,11 +257,12 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                             </TooltipTrigger>
                             <TooltipContent className="text-primary-foreground max-w-96 rounded-3xl p-4 shadow-2xl">
                               {feeAprLive ? (
-                                <p>Live 24h fee APR, computed on-chain (pool feeGrowth over the trailing 24h ÷ TVL).</p>
-                              ) : (
                                 <p>
-                                  24h fee APR snapshot ({farm.snapshotDate}); the on-chain live indexer is warming up.
+                                  Live fee APR from the Uniswap interface (annualized 24h volume × fee ÷ TVL) — the same
+                                  figure shown for this pool in the observation table below.
                                 </p>
+                              ) : (
+                                <p>Fee APR snapshot ({farm.snapshotDate}); the live Uniswap feed is unavailable.</p>
                               )}
                             </TooltipContent>
                           </Tooltip>
