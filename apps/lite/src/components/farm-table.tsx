@@ -17,6 +17,7 @@ import { useReadContracts } from "wagmi";
 import { FarmSheetContent } from "@/components/farm-sheet-content";
 import { PtsBadge } from "@/components/pts-badge";
 import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
+import { useLiveFeeApr, effectiveFeeApr } from "@/hooks/use-live-fee-apr";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
 import { farmAssets } from "@/lib/farm-protocol";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
@@ -84,6 +85,9 @@ function PairCell({ farm, chain }: { farm: FarmPool; chain: Chain | undefined })
             <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
               {farm.dex.replace("Uniswap ", "")} · {farm.feeLabel ?? `${(farm.feeTierBps / 10000).toFixed(2)}%`}
             </span>
+            <span className="text-secondary-foreground whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
+              {farm.borrowMode === "dual" ? "Dual-borrow" : "Single-borrow"}
+            </span>
             {farm.flagship && (
               <span className="text-morpho-brand whitespace-nowrap rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
                 Flagship
@@ -144,6 +148,7 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
   const capacityLabel = fullCapacityLabel(protocol.fullReserve);
   const capacityBlocked = !!protocol.fullReserve || protocol.capacityUnknown;
   const rates = useReserveRates();
+  const { data: liveFeeApr } = useLiveFeeApr();
   const riskApr = rates.riskBorrowApr;
   const loanApr = rates.loanBorrowApr;
   const ratesLive = riskApr !== undefined && loanApr !== undefined;
@@ -194,14 +199,15 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {SOLON_FARMS.map((farm) => {
+            {SOLON_FARMS.filter((farm) => farm.status === "live").map((farm) => {
               // The table has no margin breakdown, so average both reserve rates assuming equal borrowing across the legs.
               // The opening panel calculates each position's cost per leg using its actual borrowing mix.
               // Hide net APY when rates are unavailable; do not use a fixed 8% rate to produce a plausible-looking number.
+              // Fee APR: live from the on-chain indexer once warmed up (>=2h window), else the dated snapshot.
+              const { value: feeApr, live: feeAprLive } =
+                farm.feeAprSnapshot > 0 ? effectiveFeeApr(liveFeeApr, farm.feeAprSnapshot) : { value: 0, live: false };
               const netApy =
-                tableBorrowApr !== undefined
-                  ? estimateNetApy(farm.feeAprSnapshot, farm.maxLeverage, tableBorrowApr)
-                  : undefined;
+                tableBorrowApr !== undefined ? estimateNetApy(feeApr, farm.maxLeverage, tableBorrowApr) : undefined;
               const tvl = farm.dex === "Uniswap V3" ? v3TvlUsd : undefined;
               return (
                 <Sheet key={farm.id}>
@@ -222,17 +228,16 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="underline decoration-dotted underline-offset-2">
-                                {farm.feeAprSnapshot > 0 ? formatPct(farm.feeAprSnapshot) : "－"}
+                                {farm.feeAprSnapshot > 0 ? formatPct(feeApr) : "－"}
                               </span>
                             </TooltipTrigger>
                             <TooltipContent className="text-primary-foreground max-w-96 rounded-3xl p-4 shadow-2xl">
-                              {farm.note ? (
-                                <p>{farm.note}</p>
+                              {feeAprLive ? (
+                                <p>Live 24h fee APR, computed on-chain (pool feeGrowth over the trailing 24h ÷ TVL).</p>
                               ) : (
-                                <>
-                                  <p>24h fee APR snapshot ({farm.snapshotDate}) from the DEX interface.</p>
-                                  <p>Live indexer lands with the mainnet vault launch.</p>
-                                </>
+                                <p>
+                                  24h fee APR snapshot ({farm.snapshotDate}); the on-chain live indexer is warming up.
+                                </p>
                               )}
                             </TooltipContent>
                           </Tooltip>
