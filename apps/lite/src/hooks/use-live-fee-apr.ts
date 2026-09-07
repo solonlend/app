@@ -35,15 +35,14 @@ export function useLiveFeeApr() {
 }
 
 /**
- * Effective fee APR: the live value only once the indexer has warmed up to a full ~24h window
- * (short windows are noisy and diverge from the DEX UI's 24h figure), else the dated 24h snapshot
- * (which is itself a realized-fee 24h number ≈ the DEX UI). This keeps the shown APR on the
- * realized-yield basis and close to what users see on Uniswap, instead of a jumpy short-window value.
+ * Effective fee APR: always the live indexer value when one is available (even before the trailing
+ * window has warmed up to a full 24h — a real short-window number beats a dated snapshot). The
+ * snapshot is only a fallback for when the feed itself is unreachable.
  */
 export function effectiveFeeApr(
   live: LiveFeeApr | null | undefined,
   snapshot: number,
 ): { value: number; live: boolean } {
-  if (live && live.warmedUp) return { value: live.feeApr, live: true };
+  if (live) return { value: live.feeApr, live: true };
   return { value: snapshot, live: false };
 }

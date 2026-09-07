@@ -252,7 +252,7 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
                                 </p>
                               ) : (
                                 <p>
-                                  24h fee APR snapshot ({farm.snapshotDate}); the on-chain live indexer is warming up.
+                                  24h fee APR snapshot ({farm.snapshotDate}); the live feed is temporarily unreachable.
                                 </p>
                               )}
                             </TooltipContent>

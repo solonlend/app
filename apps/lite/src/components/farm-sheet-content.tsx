@@ -6,6 +6,7 @@ import { erc20Abi, formatUnits } from "viem";
 import { useReadContracts } from "wagmi";
 
 import { FarmTestnetPlayground } from "@/components/farm-testnet-playground";
+import { useLiveFeeApr, effectiveFeeApr } from "@/hooks/use-live-fee-apr";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import {
@@ -63,6 +64,10 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
   // Match the open panel's config so the preview reads the same oracle the execution uses.
   const cfg = chainId === SEPOLIA_PLAYGROUND.chainId ? SEPOLIA_PLAYGROUND : RH_MAINNET;
 
+  // Same live fee-APR feed the table uses, so the sheet's earnings preview matches the listed APR.
+  const { data: liveFeeAprData } = useLiveFeeApr();
+  const feeApr = farm.feeAprSnapshot > 0 ? effectiveFeeApr(liveFeeAprData, farm.feeAprSnapshot).value : 0;
+
   const { data } = useReadContracts({
     contracts: [
       { chainId, address: cfg.oracle, abi: farmOracleAbi, functionName: "riskValueInLoan", args: [10n ** 18n] },
@@ -114,7 +119,7 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
   const netApy =
     ratesLive && derivedLoaded
       ? netApyDual({
-          feeApr: farm.feeAprSnapshot,
+          feeApr,
           positionValue,
           equity: m,
           riskValue: borrowWethValue,
@@ -322,13 +327,13 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
                   </TooltipTrigger>
                   <TooltipContent className="text-primary-foreground max-w-80 rounded-3xl p-4 shadow-2xl">
                     <p>
-                      (fee APR {(farm.feeAprSnapshot * 100).toFixed(1)}% × {derivedLoaded ? fmt(positionValue) : "－"}{" "}
-                      USDG position − {borrowCost !== undefined ? `${fmt(borrowCost)}` : "－"} USDG interest) ÷{" "}
+                      (fee APR {(feeApr * 100).toFixed(1)}% × {derivedLoaded ? fmt(positionValue) : "－"} USDG position
+                      − {borrowCost !== undefined ? `${fmt(borrowCost)}` : "－"} USDG interest) ÷{" "}
                       {derivedLoaded ? fmt(m) : "－"} USDG equity. Interest is the sum of the two legs at their own live
                       reserve rates, not one blended rate.
                     </p>
                     <p>
-                      Fee APR is a 24h snapshot.{" "}
+                      Fee APR is computed live from the pool&apos;s realized fee growth.{" "}
                       {ratesLive
                         ? "Borrow rates are read live from the on-chain lending pool."
                         : "Borrow rates are unavailable, so no net APY estimate is shown."}
