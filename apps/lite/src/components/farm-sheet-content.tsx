@@ -15,6 +15,8 @@ import {
   WETH_RH,
   USDG_RH,
   ETH_USD_FEED_RH,
+  RH_MAINNET,
+  SEPOLIA_PLAYGROUND,
   type FarmPool,
 } from "@/lib/solon-farms";
 
@@ -359,18 +361,25 @@ export function FarmSheetContent({ farm, chainId }: { farm: FarmPool; chainId: n
           </div>
         </div>
 
-        <Button className="h-11 w-full rounded-full text-sm" variant="secondary" disabled>
-          Open position · Mainnet soon
-        </Button>
-
-        {farm.flagship && chainId === 11155111 && (
-          <FarmTestnetPlayground
-            marginUsdg={mUsdg}
-            marginEth={mEthAmt}
-            leverage={leverage}
-            rangePct={RANGE_PRESETS[rangeIdx].pct}
-          />
-        )}
+        {farm.flagship &&
+          farm.borrowMode === "dual" &&
+          (chainId === 11155111 ? (
+            <FarmTestnetPlayground
+              cfg={SEPOLIA_PLAYGROUND}
+              marginUsdg={mUsdg}
+              marginEth={mEthAmt}
+              leverage={leverage}
+              rangePct={RANGE_PRESETS[rangeIdx].pct}
+            />
+          ) : (
+            <FarmTestnetPlayground
+              cfg={RH_MAINNET}
+              marginUsdg={mUsdg}
+              marginEth={mEthAmt}
+              leverage={leverage}
+              rangePct={RANGE_PRESETS[rangeIdx].pct}
+            />
+          ))}
         <p className="text-secondary-foreground text-center text-[11px] font-light">
           Live on Robinhood Chain (2026-09-07): V3 dual-borrow + V3 single-borrow vaults, on-chain verified. A scaled
           soft launch — small reserve caps, single operator key, external audit still pending. Size accordingly and

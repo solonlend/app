@@ -11,7 +11,7 @@ import { useFarmPaused } from "@/hooks/use-farm-paused";
 import { fullCapacityLabel, useFarmProtocol } from "@/hooks/use-farm-protocol";
 import { mintMinimums, slippageBps } from "@/lib/farm-slippage";
 import { farmVaultAbi } from "@/lib/farm-vault-abi";
-import { SEPOLIA_PLAYGROUND as P } from "@/lib/solon-farms";
+import { SEPOLIA_PLAYGROUND, RH_MAINNET } from "@/lib/solon-farms";
 import { runTx } from "@/lib/tx-toast";
 
 const mockTokenAbi = [
@@ -120,12 +120,17 @@ export function FarmTestnetPlayground({
   marginEth,
   leverage,
   rangePct,
+  cfg = SEPOLIA_PLAYGROUND,
 }: {
   marginUsdg: number;
   marginEth: number;
   leverage: number;
   rangePct: number;
+  cfg?: typeof SEPOLIA_PLAYGROUND | typeof RH_MAINNET;
 }) {
+  // One config drives every read/write: SEPOLIA_PLAYGROUND (mock tokens, mint step) on testnet,
+  // RH_MAINNET (real USDG/WETH, no mint) on mainnet. Same vault ABI and open() flow either way.
+  const P = cfg;
   const { address: user, isConnected } = useAccount();
   const [txs, setTxs] = useState<{ mint?: `0x${string}`; approve?: `0x${string}`; open?: `0x${string}` }>({});
 
@@ -302,12 +307,13 @@ export function FarmTestnetPlayground({
   return (
     <div className="bg-primary flex flex-col gap-2 rounded-2xl p-4">
       <div className="text-secondary-foreground flex items-center justify-between text-xs font-light">
-        <span>Testnet playground · Sepolia</span>
+        <span>{P.testnet ? "Testnet playground · Sepolia" : "Open position · Robinhood Chain"}</span>
         <span>{ethPx6 !== undefined ? `oracle ETH $${Number(formatUnits(ethPx6, 6)).toFixed(0)}` : "…"}</span>
       </div>
       <p className="text-secondary-foreground text-[11px] font-light">
-        The exact vault heading to mainnet, live on Sepolia — mock tokens, real contract. Your wallet will be asked to
-        switch networks.
+        {P.testnet
+          ? "The exact vault heading to mainnet, live on Sepolia — mock tokens, real contract. Your wallet will be asked to switch networks."
+          : "Live on Robinhood Chain with real USDG/WETH — this opens a real leveraged position. Soft launch: small reserve caps, so size within the remaining capacity and verify on-chain. Your wallet will be asked to switch networks."}
       </p>
       <FarmPauseBanner paused={paused} />
       <label className="text-secondary-foreground flex items-center justify-between gap-2 text-xs">
@@ -328,16 +334,23 @@ export function FarmTestnetPlayground({
         <p className="text-secondary-foreground text-center text-xs">Connect a wallet to try it.</p>
       ) : (
         <>
+          {P.testnet && (
+            <StepButton
+              label="1 · Get test tokens (10,000 USDG + 5 ETH)"
+              doneLabel="Test tokens ready"
+              onClick={() => void guard(() => run("mint"))}
+              disabled={busy}
+              pending={pendingStep === "mint" && (isPending || busy)}
+              done={minted && !needsUsdg && !needsWeth}
+            />
+          )}
+          {!P.testnet && (needsUsdg || needsWeth) && (
+            <p className="text-morpho-error text-[11px]">
+              Insufficient wallet balance for this size — reduce the margin or top up USDG/WETH.
+            </p>
+          )}
           <StepButton
-            label="1 · Get test tokens (10,000 USDG + 5 ETH)"
-            doneLabel="Test tokens ready"
-            onClick={() => void guard(() => run("mint"))}
-            disabled={busy}
-            pending={pendingStep === "mint" && (isPending || busy)}
-            done={minted && !needsUsdg && !needsWeth}
-          />
-          <StepButton
-            label="2 · Approve USDG + WETH"
+            label={P.testnet ? "2 · Approve USDG + WETH" : "Approve USDG + WETH"}
             doneLabel="Approved"
             onClick={() => void guard(() => run("approve"))}
             disabled={busy || !plan}
@@ -347,7 +360,11 @@ export function FarmTestnetPlayground({
           <StepButton
             label={
               fullCapacityLabel(protocol.fullReserve) ??
-              (protocol.capacityUnknown ? "Capacity unavailable" : "3 · Open position (real tx)")
+              (protocol.capacityUnknown
+                ? "Capacity unavailable"
+                : P.testnet
+                  ? "3 · Open position (real tx)"
+                  : "Open position (real tx)")
             }
             doneLabel="Position opened"
             onClick={() => void guard(() => run("open"))}
