@@ -90,49 +90,6 @@ const vaultAbi = [
   },
 ] as const;
 
-// Single-borrow (classic leverage) vault: USDG-only margin + USDG borrow, then the vault zaps
-// part of the USDG to WETH internally (empty zapPath => SwapExecutor uses the default fee-100 pool)
-// and mints. Its own internal zap slippage + minLiquidity are the guards, so amount{0,1}Min stay 0.
-const singleVaultAbi = [
-  {
-    type: "function",
-    name: "open",
-    stateMutability: "nonpayable",
-    inputs: [
-      {
-        name: "p",
-        type: "tuple",
-        components: [
-          { name: "amountInvest", type: "uint256" },
-          { name: "amountBorrow", type: "uint256" },
-          { name: "tickLower", type: "int24" },
-          { name: "tickUpper", type: "int24" },
-          { name: "amount0Min", type: "uint256" },
-          { name: "amount1Min", type: "uint256" },
-          { name: "minLiquidity", type: "uint128" },
-          { name: "zapPath", type: "bytes" },
-          { name: "deadline", type: "uint256" },
-        ],
-      },
-    ],
-    outputs: [{ name: "positionNftId", type: "uint256" }],
-  },
-] as const;
-
-const zapOracleAbi = [
-  {
-    type: "function",
-    name: "zapAmountToToken0",
-    stateMutability: "view",
-    inputs: [
-      { name: "totalLoan", type: "uint256" },
-      { name: "tickLower", type: "int24" },
-      { name: "tickUpper", type: "int24" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-] as const;
-
 function StepButton({
   label,
   doneLabel,
@@ -171,22 +128,16 @@ export function FarmTestnetPlayground({
   leverage,
   rangePct,
   cfg = SEPOLIA_PLAYGROUND,
-  borrowMode = "dual",
 }: {
   marginUsdg: number;
   marginEth: number;
   leverage: number;
   rangePct: number;
   cfg?: typeof SEPOLIA_PLAYGROUND | typeof RH_MAINNET;
-  borrowMode?: "dual" | "single";
 }) {
   // One config drives every read/write: SEPOLIA_PLAYGROUND (mock tokens, mint step) on testnet,
   // RH_MAINNET (real USDG/WETH, no mint) on mainnet. Same vault ABI and open() flow either way.
   const P = cfg;
-  // Single-borrow targets the classic-leverage vault (USDG-only margin); it only exists on mainnet.
-  // Dual keeps P.vault exactly. `single` is guarded so a config without it can never route here.
-  const single = borrowMode === "single";
-  const targetVault = single && "vaults" in P ? P.vaults.single : P.vault;
   const { address: user, isConnected, chainId: walletChainId } = useAccount();
   const { switchChain, isPending: switching } = useSwitchChain();
   const [txs, setTxs] = useState<{ mint?: `0x${string}`; approve?: `0x${string}`; open?: `0x${string}` }>({});
@@ -213,20 +164,8 @@ export function FarmTestnetPlayground({
         ? ([
             { chainId: P.chainId, address: P.usdg, abi: erc20Abi, functionName: "balanceOf", args: [user] },
             { chainId: P.chainId, address: P.weth, abi: erc20Abi, functionName: "balanceOf", args: [user] },
-            {
-              chainId: P.chainId,
-              address: P.usdg,
-              abi: erc20Abi,
-              functionName: "allowance",
-              args: [user, targetVault],
-            },
-            {
-              chainId: P.chainId,
-              address: P.weth,
-              abi: erc20Abi,
-              functionName: "allowance",
-              args: [user, targetVault],
-            },
+            { chainId: P.chainId, address: P.usdg, abi: erc20Abi, functionName: "allowance", args: [user, P.vault] },
+            { chainId: P.chainId, address: P.weth, abi: erc20Abi, functionName: "allowance", args: [user, P.vault] },
           ] as const)
         : []),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -251,19 +190,6 @@ export function FarmTestnetPlayground({
   const plan = useMemo(() => {
     if (ethPx6 === undefined || tick === undefined) return undefined;
     const ethPx = Number(formatUnits(ethPx6, 6));
-    // ±pct% → ticks (1.0001^t): ln(1+pct/100)/ln(1.0001)
-    const half = Math.max(20, Math.round(Math.log(1 + rangePct / 100) / Math.log(1.0001)));
-    const tickLower = tick - half;
-    const tickUpper = tick + half;
-    if (single) {
-      // Classic single-borrow: USDG-only equity; borrow USDG for the extra (L−1)x; the vault zaps
-      // part of the total USDG to WETH internally to build the position.
-      const equityUsdg = marginUsdg;
-      if (equityUsdg <= 0) return undefined;
-      const amountInvest = parseUnits(equityUsdg.toFixed(6), 6);
-      const amountBorrow = parseUnits((equityUsdg * (leverage - 1)).toFixed(6), 6);
-      return { mode: "single" as const, amountInvest, amountBorrow, tickLower, tickUpper };
-    }
     const equity = marginUsdg + marginEth * ethPx;
     if (equity <= 0) return undefined;
     // Each leg needs positionValue/2; borrowing = leg requirement minus user margin (same formula as the panel preview).
@@ -274,16 +200,15 @@ export function FarmTestnetPlayground({
     const investRisk = parseUnits(marginEth.toFixed(18), 18);
     const borrowLoan = parseUnits(borrowLoanVal.toFixed(6), 6);
     const borrowRisk = parseUnits((borrowRiskVal / ethPx).toFixed(18), 18);
-    return { mode: "dual" as const, investLoan, investRisk, borrowLoan, borrowRisk, tickLower, tickUpper };
-  }, [ethPx6, tick, marginUsdg, marginEth, leverage, rangePct, single]);
+    // ±pct% → ticks (1.0001^t): ln(1+pct/100)/ln(1.0001)
+    const half = Math.max(20, Math.round(Math.log(1 + rangePct / 100) / Math.log(1.0001)));
+    return { investLoan, investRisk, borrowLoan, borrowRisk, tickLower: tick - half, tickUpper: tick + half };
+  }, [ethPx6, tick, marginUsdg, marginEth, leverage, rangePct]);
 
-  // Margin the user must hold/approve: single-borrow is USDG-only; dual needs both legs.
-  const reqUsdg = plan ? (plan.mode === "single" ? plan.amountInvest : plan.investLoan) : 0n;
-  const reqWeth = plan && plan.mode === "dual" ? plan.investRisk : 0n;
-  const needsUsdg = plan ? balUsdg < reqUsdg : false;
-  const needsWeth = plan ? balWeth < reqWeth : false;
+  const needsUsdg = plan ? balUsdg < plan.investLoan : false;
+  const needsWeth = plan ? balWeth < plan.investRisk : false;
   const minted = !!txs.mint || (!needsUsdg && !needsWeth && (balUsdg > 0n || balWeth > 0n));
-  const approved = plan ? allowUsdg >= reqUsdg && allowWeth >= reqWeth : false;
+  const approved = plan ? allowUsdg >= plan.investLoan && allowWeth >= plan.investRisk : false;
 
   const [txError, setTxError] = useState<string | undefined>();
 
@@ -321,123 +246,64 @@ export function FarmTestnetPlayground({
             address: P.usdg,
             abi: erc20Abi,
             functionName: "approve",
-            args: [targetVault, 2n ** 256n - 1n],
+            args: [P.vault, 2n ** 256n - 1n],
           }),
         );
         if (!h) return;
         setTxs((t) => ({ ...t, approve: h }));
-        if (!single) {
-          // Dual-borrow needs a WETH margin leg too; single-borrow is USDG-only.
-          const hApproveWeth = await runTx(
-            config,
-            { chainId: P.chainId, explorer: P.explorer, label: "Approve WETH" },
-            () =>
-              writeContractAsync({
-                chainId: P.chainId,
-                address: P.weth,
-                abi: erc20Abi,
-                functionName: "approve",
-                args: [targetVault, 2n ** 256n - 1n],
-              }),
-          );
-          if (!hApproveWeth) return;
-        }
+        const hApproveWeth = await runTx(
+          config,
+          { chainId: P.chainId, explorer: P.explorer, label: "Approve WETH" },
+          () =>
+            writeContractAsync({
+              chainId: P.chainId,
+              address: P.weth,
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [P.vault, 2n ** 256n - 1n],
+            }),
+        );
+        if (!hApproveWeth) return;
       } else {
         const tolerance = slippageBps(slippage);
         await assertActive();
         // No supply-capacity assert here: opening BORROWS from the reserve, so a fully-supplied
         // reserve must not block it. The on-chain open() reverts if the borrow exceeds credit/LLTV.
-        // LOAN_IS_C0 is a pool property (same for both vaults on this pool), so read it from the
-        // dual vault, which always exists and exposes it.
         const [slot0, loanIsC0] = await Promise.all([
           readContract(config, { chainId: P.chainId, address: P.pool, abi: poolAbi, functionName: "slot0" }),
           readContract(config, { chainId: P.chainId, address: P.vault, abi: farmVaultAbi, functionName: "LOAN_IS_C0" }),
         ]);
-        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1800);
-        if (plan.mode === "single") {
-          // Estimate the vault's internal zap: it converts `swapUsdg` of the total USDG to WETH and
-          // keeps the rest as USDG, then mints. minLiquidity (from the estimate) + the vault's own
-          // oracle-based zap slippage are the guards, so amount{0,1}Min stay 0 (the swap makes the
-          // exact post-zap split uncertain, and over-tight mint minimums would only cause reverts).
-          // NOTE: the vault zaps on (totalUsdg − borrowFee). The single vault is deployed with
-          // borrowFeeBps = 0, so totalUsdg is exact today. If it is ever redeployed with a nonzero
-          // borrow fee, subtract it here or minLiquidity will estimate high and opens will revert.
-          const totalUsdg = plan.amountInvest + plan.amountBorrow;
-          const loanForC0 = (await readContract(config, {
+        const minimums = mintMinimums({
+          sqrtPriceX96: slot0[0],
+          tickLower: plan.tickLower,
+          tickUpper: plan.tickUpper,
+          riskAmount: plan.investRisk + plan.borrowRisk,
+          loanAmount: plan.investLoan + plan.borrowLoan,
+          loanIsC0,
+          slippageBps: tolerance,
+        });
+        const h = await runTx(config, { chainId: P.chainId, explorer: P.explorer, label: "Open position" }, () =>
+          writeContractAsync({
             chainId: P.chainId,
-            address: P.oracle,
-            abi: zapOracleAbi,
-            functionName: "zapAmountToToken0",
-            args: [totalUsdg, plan.tickLower, plan.tickUpper],
-          })) as bigint;
-          const swapUsdg = loanIsC0 ? totalUsdg - loanForC0 : loanForC0; // USDG converted to WETH
-          const keptUsdg = totalUsdg - swapUsdg; // USDG kept
-          const wethOut = ethPx6 && ethPx6 > 0n ? (swapUsdg * 10n ** 18n) / ethPx6 : 0n; // WETH (18dp) estimate
-          const minimums = mintMinimums({
-            sqrtPriceX96: slot0[0],
-            tickLower: plan.tickLower,
-            tickUpper: plan.tickUpper,
-            riskAmount: wethOut,
-            loanAmount: keptUsdg,
-            loanIsC0,
-            slippageBps: tolerance,
-          });
-          const h = await runTx(config, { chainId: P.chainId, explorer: P.explorer, label: "Open position" }, () =>
-            writeContractAsync({
-              chainId: P.chainId,
-              address: targetVault,
-              abi: singleVaultAbi,
-              functionName: "open",
-              args: [
-                {
-                  amountInvest: plan.amountInvest,
-                  amountBorrow: plan.amountBorrow,
-                  tickLower: plan.tickLower,
-                  tickUpper: plan.tickUpper,
-                  amount0Min: 0n,
-                  amount1Min: 0n,
-                  minLiquidity: minimums.minLiquidity,
-                  zapPath: "0x",
-                  deadline,
-                },
-              ],
-            }),
-          );
-          if (!h) return;
-          setTxs((t) => ({ ...t, open: h }));
-        } else {
-          const minimums = mintMinimums({
-            sqrtPriceX96: slot0[0],
-            tickLower: plan.tickLower,
-            tickUpper: plan.tickUpper,
-            riskAmount: plan.investRisk + plan.borrowRisk,
-            loanAmount: plan.investLoan + plan.borrowLoan,
-            loanIsC0,
-            slippageBps: tolerance,
-          });
-          const h = await runTx(config, { chainId: P.chainId, explorer: P.explorer, label: "Open position" }, () =>
-            writeContractAsync({
-              chainId: P.chainId,
-              address: targetVault,
-              abi: vaultAbi,
-              functionName: "open",
-              args: [
-                {
-                  investRisk: plan.investRisk,
-                  investLoan: plan.investLoan,
-                  borrowRisk: plan.borrowRisk,
-                  borrowLoan: plan.borrowLoan,
-                  tickLower: plan.tickLower,
-                  tickUpper: plan.tickUpper,
-                  ...minimums,
-                  deadline,
-                },
-              ],
-            }),
-          );
-          if (!h) return;
-          setTxs((t) => ({ ...t, open: h }));
-        }
+            address: P.vault,
+            abi: vaultAbi,
+            functionName: "open",
+            args: [
+              {
+                investRisk: plan.investRisk,
+                investLoan: plan.investLoan,
+                borrowRisk: plan.borrowRisk,
+                borrowLoan: plan.borrowLoan,
+                tickLower: plan.tickLower,
+                tickUpper: plan.tickUpper,
+                ...minimums,
+                deadline: BigInt(Math.floor(Date.now() / 1000) + 1800),
+              },
+            ],
+          }),
+        );
+        if (!h) return;
+        setTxs((t) => ({ ...t, open: h }));
       }
     } catch (e) {
       setTxError((e as Error).message?.split("\n")[0]?.slice(0, 160));
