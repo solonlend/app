@@ -1,12 +1,13 @@
 import { type Address } from "viem";
 
 /**
- * Solon leveraged-LP farm pools (dual-borrow vaults on Uniswap V3/V4, Robinhood Chain).
+ * Solon leveraged-LP farm pools (single- and dual-borrow vaults on Uniswap V3, Robinhood Chain).
  *
- * Vault contracts are audited-in-house & battle-tested on Sepolia (see leverage/RED-TEAM-2026-09-04.md);
- * mainnet deployment is gated on DEPLOY-CHECKLIST sign-off, so `vault` stays undefined until launch.
- * `feeAprSnapshot` is a manually refreshed 24h snapshot from the DEX interface — NOT live data;
- * refresh `snapshotDate` whenever it's updated. Everything marked estimate is labeled in the UI.
+ * The V3 dual-borrow and V3 single-borrow vaults are LIVE on Robinhood Chain since 2026-09-07
+ * (scaled soft launch — small reserve caps, single operator key, external audit pending). V4 vaults
+ * are built and tested but not yet deployed, so those entries stay `status: "soon"` with `vault`
+ * undefined. `feeAprSnapshot` is a manually refreshed 24h snapshot from the DEX interface — NOT live
+ * data; refresh `snapshotDate` whenever it's updated. Everything marked estimate is labeled in the UI.
  */
 export type FarmPool = {
   id: string;
@@ -17,15 +18,17 @@ export type FarmPool = {
   token0Address?: Address;
   token1Address?: Address;
   dex: "Uniswap V3" | "Uniswap V4";
+  borrowMode: "dual" | "single"; // dual-borrow both legs, or single-borrow the loan asset (classic leverage)
   feeTierBps: number; // e.g. 100 = 0.01%
   feeLabel?: string; // overrides the % label (e.g. dynamic-fee v4 pools)
   poolAddress?: Address; // V3 pool (readable TVL); V4 sits inside the singleton PoolManager
   v4PoolId?: `0x${string}`;
-  maxLeverage: number; // display cap (LLTV 80% theoretical max 5x, shipped cap 4x)
+  maxLeverage: number; // display cap (shipped 4x at LLTV 77%)
   lltvPercent: number;
   feeAprSnapshot: number; // fraction, e.g. 0.9427
   snapshotDate: string;
-  vault?: Address; // leverage vault once deployed on mainnet
+  vault?: Address; // leverage vault (set once deployed on mainnet)
+  vaultId?: number; // SolonVaultRegistry id
   status: "soon" | "live";
   flagship?: boolean;
   note?: string; // honest caveat shown in the row tooltip
@@ -47,7 +50,7 @@ export const ETH_USD_FEED_RH = "0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9" as A
 
 export const SOLON_FARMS: FarmPool[] = [
   {
-    id: "eth-usdg-v3-100",
+    id: "eth-usdg-v3-100-dual",
     pair: "ETH / USDG",
     token0Symbol: "WETH",
     token1Symbol: "USDG",
@@ -55,14 +58,39 @@ export const SOLON_FARMS: FarmPool[] = [
     token0Address: WETH_RH,
     token1Address: USDG_RH,
     dex: "Uniswap V3",
+    borrowMode: "dual",
     feeTierBps: 100,
     poolAddress: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as Address,
     maxLeverage: 4,
-    lltvPercent: 80,
+    lltvPercent: 77,
     feeAprSnapshot: 0.9427,
     snapshotDate: "2026-09-04",
-    status: "soon",
+    vault: "0x9Db7aDa64D1E8b856E15D916d886797501F28ce0" as Address,
+    vaultId: 1,
+    status: "live",
     flagship: true,
+    note: "Live on Robinhood Chain (soft launch): USDG reserve cap 200, credit 100 USDG + 0.04 WETH. Size accordingly; re-verify on-chain.",
+  },
+  {
+    id: "eth-usdg-v3-100-single",
+    pair: "ETH / USDG",
+    token0Symbol: "WETH",
+    token1Symbol: "USDG",
+    loanIsC0: false,
+    token0Address: WETH_RH,
+    token1Address: USDG_RH,
+    dex: "Uniswap V3",
+    borrowMode: "single",
+    feeTierBps: 100,
+    poolAddress: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as Address,
+    maxLeverage: 4,
+    lltvPercent: 77,
+    feeAprSnapshot: 0.9427,
+    snapshotDate: "2026-09-04",
+    vault: "0x9e100d524DFEa1Aa76286A7F00682e72F79aC3aE" as Address,
+    vaultId: 2,
+    status: "live",
+    note: "Classic single-borrow leverage (borrows USDG only). Shares the same pool and reserves as the dual vault; soft-launch credit 60 USDG.",
   },
   {
     id: "eth-usdg-v4-100",
@@ -73,11 +101,12 @@ export const SOLON_FARMS: FarmPool[] = [
     token0Address: WETH_RH,
     token1Address: USDG_RH,
     dex: "Uniswap V4",
+    borrowMode: "dual",
     feeTierBps: 100,
     feeLabel: "dyn",
     v4PoolId: "0x0000000000000000000000000000000000000000000000000000000000000000",
     maxLeverage: 4,
-    lltvPercent: 80,
+    lltvPercent: 77,
     feeAprSnapshot: 0,
     snapshotDate: "2026-09-04",
     status: "soon",
