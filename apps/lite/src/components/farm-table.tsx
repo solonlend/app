@@ -199,7 +199,7 @@ export function FarmTable({ chain }: { chain: Chain | undefined }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {SOLON_FARMS.filter((farm) => farm.status === "live").map((farm) => {
+            {SOLON_FARMS.filter((farm) => farm.status === "live" && farm.listed !== false).map((farm) => {
               // The table has no margin breakdown, so average both reserve rates assuming equal borrowing across the legs.
               // The opening panel calculates each position's cost per leg using its actual borrowing mix.
               // Hide net APY when rates are unavailable; do not use a fixed 8% rate to produce a plausible-looking number.

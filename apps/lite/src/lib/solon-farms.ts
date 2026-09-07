@@ -29,6 +29,7 @@ export type FarmPool = {
   snapshotDate: string;
   vault?: Address; // leverage vault (set once deployed on mainnet)
   vaultId?: number; // SolonVaultRegistry id
+  listed?: boolean; // false = a secondary vault on a pool already listed (e.g. single-borrow sharing the dual's pool); hidden from the pool table
   status: "soon" | "live";
   flagship?: boolean;
   note?: string; // honest caveat shown in the row tooltip
@@ -90,6 +91,7 @@ export const SOLON_FARMS: FarmPool[] = [
     vault: "0x9e100d524DFEa1Aa76286A7F00682e72F79aC3aE" as Address,
     vaultId: 2,
     status: "live",
+    listed: false, // same V3 ETH/USDG pool as the dual vault — not a separate table row; a borrow-mode toggle inside the pool comes with the single-borrow interactive UI
     note: "Classic single-borrow leverage (borrows USDG only). Shares the same pool and reserves as the dual vault; soft-launch credit 60 USDG.",
   },
   {
