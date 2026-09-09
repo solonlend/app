@@ -59,14 +59,9 @@ const mockMintAbi = [
 
 export function RangeVaults({ chainId }: { chainId: number | undefined }) {
   const cfg = RANGE_VAULTS.find((v) => v.chainId === chainId) ?? RANGE_VAULTS[0];
+  // Section heading lives on the Farm tab bar now (DESIGN-farm-tabs-v1) — this renders the card only.
   return (
-    <div className="flex w-full max-w-7xl flex-col gap-3 px-2 pt-12 lg:px-8">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-primary-foreground text-lg font-medium">Range Vaults</h2>
-        <span className="text-secondary-foreground text-xs font-light">
-          Passive LP · the vault manages the range and compounds fees · no leverage, no liquidation
-        </span>
-      </div>
+    <div className="flex w-full max-w-7xl flex-col gap-3 px-2 lg:px-8">
       {cfg.vault && cfg.strategy ? <RangeVaultCard cfg={cfg} /> : <ComingSoon cfg={cfg} />}
     </div>
   );

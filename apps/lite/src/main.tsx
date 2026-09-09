@@ -32,7 +32,7 @@ createRoot(document.getElementById("root")!).render(
             <Route index element={<Navigate replace to="earn" />} />
             <Route element={<Page />}>
               <Route path="earn" element={<EarnSubPage />} />
-              <Route path="farm" element={<FarmSubPage />} />
+              <Route path="farm/:tab?" element={<FarmSubPage />} />
               <Route path="borrow" element={<BorrowSubPage />} />
               <Route path="points" element={<PointsSubPage />} />
               <Route path="liquidations" element={<LiquidationsSubPage />} />
