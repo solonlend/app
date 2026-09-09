@@ -60,7 +60,7 @@ const mockMintAbi = [
 export function RangeVaults({ chainId }: { chainId: number | undefined }) {
   const cfg = RANGE_VAULTS.find((v) => v.chainId === chainId) ?? RANGE_VAULTS[0];
   return (
-    <div className="flex w-full max-w-5xl flex-col gap-3 px-2 pt-12">
+    <div className="flex w-full max-w-7xl flex-col gap-3 px-2 pt-12 lg:px-8">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-primary-foreground text-lg font-medium">Range Vaults</h2>
         <span className="text-secondary-foreground text-xs font-light">
