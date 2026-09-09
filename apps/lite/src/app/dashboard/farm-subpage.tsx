@@ -6,6 +6,7 @@ import { FarmPositions } from "@/components/farm-positions";
 import { FarmProtocolPanel } from "@/components/farm-protocol-panel";
 import { FarmTable } from "@/components/farm-table";
 import { PageHeader } from "@/components/page-header";
+import { RangeVaults } from "@/components/range-vaults";
 
 /** Farm — leveraged concentrated LP. Separated from Earn: active product with liquidation risk. */
 export function FarmSubPage() {
@@ -23,6 +24,7 @@ export function FarmSubPage() {
           <FarmProtocolPanel />
           <FarmTable chain={chain} />
           <FarmPositions />
+          <RangeVaults chainId={chain?.id} />
         </div>
       </div>
     </div>
