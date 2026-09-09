@@ -40,7 +40,7 @@ export function FarmSubPage() {
   const navigate = useNavigate();
   const location = useLocation();
   // Absolute base ending in "/farm" — relative navigation is ambiguous between /farm and /farm/:tab.
-  const farmBase = location.pathname.replace(/\/farm(\/.*)?$/, "/farm");
+  const farmBase = location.pathname.replace(/\/farm(\/.*)?$/i, "/farm");
 
   const active: TabKey = tab === "range" ? "range" : "leverage";
   // /farm and unknown tab values normalize to the default tab (replace: keeps history clean).

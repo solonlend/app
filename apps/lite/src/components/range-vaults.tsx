@@ -317,8 +317,15 @@ function RangeSheet({
     }
   };
 
+  // Monotonic sequence guards the previews against in-flight response races: only the latest
+  // request may write state, so a slow stale response can never re-arm the submit button with
+  // outdated amounts (cross-review HIGH-1/HIGH-2).
+  const previewSeq = useRef(0);
+
   const schedulePreview = (a0: string, a1: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    const seq = ++previewSeq.current;
+    setDepPreview(undefined);
     setPreviewing(true);
     debounceRef.current = setTimeout(() => {
       void (async () => {
@@ -330,11 +337,12 @@ function RangeSheet({
             functionName: "previewDeposit",
             args: [parseAmt(a0, d0), parseAmt(a1, d1)],
           })) as readonly [bigint, bigint, bigint, bigint, bigint];
+          if (seq !== previewSeq.current) return; // stale response — a newer request owns the state
           setDepPreview({ shares: r[0], take0: r[1], take1: r[2], fee0: r[3], fee1: r[4] });
         } catch {
-          setDepPreview(undefined);
+          if (seq === previewSeq.current) setDepPreview(undefined);
         } finally {
-          setPreviewing(false);
+          if (seq === previewSeq.current) setPreviewing(false);
         }
       })();
     }, 400);
@@ -342,8 +350,10 @@ function RangeSheet({
 
   const previewWithdrawPct = (p: number) => {
     setPct(p);
+    const seq = ++previewSeq.current;
+    setWdPreview(undefined);
     const shares = (myShares * BigInt(p)) / 100n;
-    if (shares === 0n) return setWdPreview(undefined);
+    if (shares === 0n) return;
     setPreviewing(true);
     void (async () => {
       try {
@@ -354,11 +364,12 @@ function RangeSheet({
           functionName: "previewWithdraw",
           args: [shares],
         })) as readonly [bigint, bigint];
+        if (seq !== previewSeq.current) return; // stale response
         setWdPreview({ out0: r[0], out1: r[1], shares });
       } catch {
-        setWdPreview(undefined);
+        if (seq === previewSeq.current) setWdPreview(undefined);
       } finally {
-        setPreviewing(false);
+        if (seq === previewSeq.current) setPreviewing(false);
       }
     })();
   };

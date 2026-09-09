@@ -67,16 +67,22 @@ export default function Page() {
     [chains, selectedChainSlug],
   );
 
+  // Farm carries a :tab segment (DESIGN-farm-tabs-v1): preserve it across chain switches. Absolute
+  // navigation — "../" URL-style resolution shifts segments once a third path segment exists.
+  const subPath =
+    selectedSubPage === SubPage.Farm && locationSegments.at(2)
+      ? `${SubPage.Farm}/${locationSegments.at(2)}`
+      : selectedSubPage;
   const setSelectedChainSlug = useCallback(
     (value: string) => {
-      void navigate(`../${value}/${selectedSubPage}`, { replace: true, relative: "path" });
+      void navigate(`/${value}/${subPath}`, { replace: true });
       // If selected chain is a core deployment, open main app in a new tab (we don't navigate away in
       // case they're using this because the main app is down).
       // if ([...CORE_DEPLOYMENTS].map((id) => getChainSlug(extractChain({ chains, id }))).includes(value)) {
       //   window.open(`https://app.morpho.org/${value}/${selectedSubPage}`, "_blank", "noopener,noreferrer");
       // }
     },
-    [navigate, selectedSubPage],
+    [navigate, subPath],
   );
 
   useEffect(() => {
