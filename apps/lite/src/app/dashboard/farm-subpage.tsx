@@ -12,14 +12,14 @@ import { RangeVaults } from "@/components/range-vaults";
 /*
   Farm — two product tabs with opposite risk profiles (DESIGN-farm-tabs-v1):
     /farm/leverage  Leveraged concentrated LP (borrow to amplify, liquidation risk) — default
-    /farm/range     Range Vaults (passive 1x, no leverage, no liquidation)
+    /farm/auto      Auto LP (passive 1x, auto-compound + auto-rebalance; /farm/range redirects here)
   The tab lives in the URL so views are linkable, refreshable and back-button friendly.
   /farm and unknown tab values redirect to leverage.
 */
 
 const TABS = [
   { key: "leverage", label: "Leveraged", risk: "borrow to amplify · liquidation risk" },
-  { key: "range", label: "Range", risk: "passive · no liquidation" },
+  { key: "auto", label: "Auto", risk: "auto-compound · auto-rebalance · no leverage" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -29,8 +29,7 @@ const RANGE_NEW_UNTIL = Date.parse("2026-10-15");
 const SUBTITLES: Record<TabKey, string> = {
   leverage:
     "Leveraged concentrated liquidity. Each position borrows both legs of the pair in the ratio the range requires, so nothing is swapped on entry or exit. The debt sits in the same reserves Earn supplies, and clears on the same liquidation terms as any other loan.",
-  range:
-    "Deposit both tokens and the vault does the rest: it manages the range, compounds trading fees back in, and never swaps your principal. No leverage, no liquidation.",
+  auto: "Deposit both tokens and the vault does the rest: it auto-compounds trading fees and auto-rebalances the range as price moves. Your principal is never swapped. No leverage, no liquidation.",
 };
 
 export function FarmSubPage() {
@@ -42,7 +41,8 @@ export function FarmSubPage() {
   // Absolute base ending in "/farm" — relative navigation is ambiguous between /farm and /farm/:tab.
   const farmBase = location.pathname.replace(/\/farm(\/.*)?$/i, "/farm");
 
-  const active: TabKey = tab === "range" ? "range" : "leverage";
+  // legacy /farm/range links land on the renamed Auto tab
+  const active: TabKey = tab === "auto" || tab === "range" ? "auto" : "leverage";
   // /farm and unknown tab values normalize to the default tab (replace: keeps history clean).
   useEffect(() => {
     if (tab !== active) void navigate(`${farmBase}/${active}`, { replace: true });
@@ -71,7 +71,7 @@ export function FarmSubPage() {
             >
               <span className="text-primary-foreground flex items-center gap-2 text-sm font-medium">
                 {t.label}
-                {t.key === "range" && Date.now() < RANGE_NEW_UNTIL && (
+                {t.key === "auto" && Date.now() < RANGE_NEW_UNTIL && (
                   <span className="text-morpho-brand rounded-sm bg-white/[0.08] px-1 py-0.5 font-mono text-[9px] tracking-wide">
                     NEW
                   </span>
