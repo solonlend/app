@@ -3,18 +3,22 @@ import { useLocation, useNavigate, useOutletContext, useParams } from "react-rou
 import { type Chain } from "viem";
 import { useAccount } from "wagmi";
 
+import { AutoVaultDetail } from "@/components/auto-vault-detail";
+import { AutoVaultList } from "@/components/auto-vault-list";
 import { FarmPositions } from "@/components/farm-positions";
 import { FarmProtocolPanel } from "@/components/farm-protocol-panel";
 import { FarmTable } from "@/components/farm-table";
 import { PageHeader } from "@/components/page-header";
-import { RangeVaults } from "@/components/range-vaults";
+import { resolveFarmRoute } from "@/lib/auto-vault-nav";
+import { findRangeVault } from "@/lib/solon-range";
 
 /*
-  Farm — two product tabs with opposite risk profiles (DESIGN-farm-tabs-v1):
-    /farm/leverage  Leveraged concentrated LP (borrow to amplify, liquidation risk) — default
-    /farm/auto      Auto LP (passive 1x, auto-compound + auto-rebalance; /farm/range redirects here)
-  The tab lives in the URL so views are linkable, refreshable and back-button friendly.
-  /farm and unknown tab values redirect to leverage.
+  Farm — two product tabs with opposite risk profiles (DESIGN-farm-tabs-v1 §E):
+    /farm/leverage         Leveraged concentrated LP (borrow to amplify, liquidation risk) — default
+    /farm/auto             Auto LP vault list (directory + entry point)
+    /farm/auto/:vault      Auto LP vault detail (slug-addressed, shareable)
+  Legacy /farm/range[/:vault] replace-redirects to the auto equivalent; /farm and unknown
+  values normalize to leverage. All URL resolution lives in resolveFarmRoute (unit-tested).
 */
 
 const TABS = [
@@ -35,18 +39,20 @@ const SUBTITLES: Record<TabKey, string> = {
 export function FarmSubPage() {
   const { chain } = useOutletContext() as { chain?: Chain };
   const { isConnected } = useAccount();
-  const { tab } = useParams();
+  const { tab, vault } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   // Absolute base ending in "/farm" — relative navigation is ambiguous between /farm and /farm/:tab.
   const farmBase = location.pathname.replace(/\/farm(\/.*)?$/i, "/farm");
 
-  // legacy /farm/range links land on the renamed Auto tab
-  const active: TabKey = tab === "auto" || tab === "range" ? "auto" : "leverage";
-  // /farm and unknown tab values normalize to the default tab (replace: keeps history clean).
+  const route = resolveFarmRoute(tab, vault, (s) => findRangeVault(chain?.id, s) !== undefined);
+  const active: TabKey = route.view === "leverage" ? "leverage" : "auto";
+  // Legacy /farm/range[/:vault], /farm, unknown tabs and bad slugs normalize via client replace.
   useEffect(() => {
-    if (tab !== active) void navigate(`${farmBase}/${active}`, { replace: true });
-  }, [tab, active, navigate, farmBase]);
+    if (route.redirect) void navigate(`${farmBase}/${route.redirect}`, { replace: true });
+  }, [route.redirect, navigate, farmBase]);
+
+  const detailCfg = route.view === "auto-detail" ? findRangeVault(chain?.id, route.slug) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col px-2.5 pt-16">
@@ -90,8 +96,10 @@ export function FarmSubPage() {
               <FarmTable chain={chain} />
               <FarmPositions />
             </>
+          ) : detailCfg ? (
+            <AutoVaultDetail cfg={detailCfg} onBack={() => void navigate(`${farmBase}/auto`)} />
           ) : (
-            <RangeVaults chainId={chain?.id} />
+            <AutoVaultList chainId={chain?.id} onOpen={(slug) => void navigate(`${farmBase}/auto/${slug}`)} />
           )}
         </div>
       </div>

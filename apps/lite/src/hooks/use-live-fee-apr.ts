@@ -15,10 +15,20 @@ export type LiveFeeApr = {
   poolTvlUsd: number;
 };
 
-export function useLiveFeeApr() {
+/** The V3 pool the indexer feed describes (RH ETH/USDG 0.01%). Other pools have no feed yet. */
+export const LIVE_FEE_APR_POOL = "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca";
+
+/**
+ * @param pool When given, the feed is only returned if it describes this pool — a second vault on
+ * a different pool must show "no feed" rather than borrowing the wrong APR. No-arg callers (the
+ * leveraged farm, which IS the feed's pool) keep the original behavior.
+ */
+export function useLiveFeeApr(pool?: string) {
+  const poolMatches = pool === undefined || pool.toLowerCase() === LIVE_FEE_APR_POOL.toLowerCase();
   return useQuery<LiveFeeApr | null>({
-    queryKey: ["farm-live-fee-apr"],
+    queryKey: ["farm-live-fee-apr", poolMatches],
     queryFn: async () => {
+      if (!poolMatches) return null;
       try {
         const res = await fetch(`${import.meta.env.BASE_URL}data/farm-fee-apr.json`, { cache: "no-store" });
         if (!res.ok) return null;

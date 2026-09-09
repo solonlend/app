@@ -9,6 +9,8 @@ import { type Address } from "viem";
 export type RangeVaultCfg = {
   chainId: number;
   testnet: boolean;
+  /** URL segment for /farm/auto/:vault — human-readable, unique within a chain. */
+  slug: string;
   pair: string;
   vault?: Address;
   strategy?: Address;
@@ -23,6 +25,7 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     // Robinhood Chain mainnet — deployment pending sign-off; coming-soon card until addresses land.
     chainId: 4663,
     testnet: false,
+    slug: "eth-usdg",
     pair: "ETH / USDG",
     vault: undefined,
     strategy: undefined,
@@ -35,6 +38,7 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     // Sepolia rehearsal instance (deployments/sepolia-clm-2026-09-09.md) — testnet playground only.
     chainId: 11155111,
     testnet: true,
+    slug: "eth-usdg",
     pair: "ETH / USDG",
     vault: "0x7C0cCcCB2C41e3DE01b4cB0Ba7d0EbdA11bb3701",
     strategy: "0x8352d9Df9006c21Cfc4dCaeBA8ec91Dae4Af8F4F",
@@ -44,6 +48,17 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     explorer: "https://sepolia.etherscan.io",
   },
 ];
+
+/** All Auto LP vaults configured for a chain (falls back to the first chain when disconnected). */
+export function rangeVaultsForChain(chainId: number | undefined): RangeVaultCfg[] {
+  const own = RANGE_VAULTS.filter((v) => v.chainId === chainId);
+  return own.length > 0 ? own : RANGE_VAULTS.filter((v) => v.chainId === RANGE_VAULTS[0].chainId);
+}
+
+export function findRangeVault(chainId: number | undefined, slug: string | undefined): RangeVaultCfg | undefined {
+  if (slug === undefined) return undefined;
+  return rangeVaultsForChain(chainId).find((v) => v.slug === slug);
+}
 
 export const rangeVaultAbi = [
   {

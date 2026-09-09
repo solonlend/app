@@ -15,7 +15,9 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { MorphoMenu } from "@/components/morpho-menu";
 import { WelcomeModal } from "@/components/welcome-modal";
+import { farmChainSwitchSubPath } from "@/lib/auto-vault-nav";
 import { APP_DETAILS, SHOW_REWARDS, SITE_URL, WORDMARK } from "@/lib/constants";
+import { RANGE_VAULTS } from "@/lib/solon-range";
 
 enum SubPage {
   Earn = "earn",
@@ -67,14 +69,20 @@ export default function Page() {
     [chains, selectedChainSlug],
   );
 
-  // Farm carries a :tab segment (DESIGN-farm-tabs-v1): preserve it across chain switches. Absolute
+  // Farm carries :tab and :vault segments (DESIGN-farm-tabs-v1 §E): preserve the tab across chain
+  // switches, and the vault detail only when the target chain configures the same slug. Absolute
   // navigation — "../" URL-style resolution shifts segments once a third path segment exists.
-  const subPath =
-    selectedSubPage === SubPage.Farm && locationSegments.at(2)
-      ? `${SubPage.Farm}/${locationSegments.at(2)}`
-      : selectedSubPage;
   const setSelectedChainSlug = useCallback(
     (value: string) => {
+      let subPath: string = selectedSubPage;
+      if (selectedSubPage === SubPage.Farm) {
+        const tab = locationSegments.at(2);
+        const vaultSlug = locationSegments.at(3);
+        const targetId = chains.find((c) => getChainSlug(c) === value)?.id;
+        const targetHasSlug =
+          vaultSlug !== undefined && RANGE_VAULTS.some((v) => v.chainId === targetId && v.slug === vaultSlug);
+        subPath = farmChainSwitchSubPath(tab, vaultSlug, targetHasSlug);
+      }
       void navigate(`/${value}/${subPath}`, { replace: true });
       // If selected chain is a core deployment, open main app in a new tab (we don't navigate away in
       // case they're using this because the main app is down).
@@ -82,7 +90,7 @@ export default function Page() {
       //   window.open(`https://app.morpho.org/${value}/${selectedSubPage}`, "_blank", "noopener,noreferrer");
       // }
     },
-    [navigate, subPath],
+    [navigate, selectedSubPage, locationSegments, chains],
   );
 
   useEffect(() => {
