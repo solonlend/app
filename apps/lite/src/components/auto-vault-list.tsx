@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BADGE, LABEL, fmt } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoVault } from "@/hooks/use-auto-vault";
+import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { rangeVaultsForChain, type RangeVaultCfg } from "@/lib/solon-range";
 
 /*
@@ -124,11 +125,12 @@ function AutoVaultRow({
     onStats(cfg.slug, { tvl: sortTvl, apr: netApr, mine: myShares > 0n });
   }, [cfg.slug, sortTvl, netApr, myShares, onStats]);
 
-  const cell = (label: string, value: string, accent = false, note?: string) => (
+  // Net APR is a directional yield metric — same signed color the leveraged table's Net APY uses.
+  const cell = (label: string, value: string, colorClass = "", note?: string) => (
     <div className="flex flex-col gap-0.5">
       <span className={`${LABEL} md:hidden`}>{label}</span>
       <span
-        className={`${accent ? "text-morpho-brand text-lg" : "text-primary-foreground text-sm"} font-medium tabular-nums`}
+        className={`${colorClass || "text-primary-foreground"} ${colorClass ? "text-lg" : "text-sm"} font-medium tabular-nums`}
       >
         {value}
       </span>
@@ -163,7 +165,12 @@ function AutoVaultRow({
           <span className={`${BADGE} text-morpho-brand bg-white/[0.06]`}>COMING SOON</span>
         )}
       </div>
-      {cell("Net APR", v.netApr !== undefined ? `${(v.netApr * 100).toFixed(2)}%` : "－", true, poolNote)}
+      {cell(
+        "Net APR",
+        v.netApr !== undefined ? `${(v.netApr * 100).toFixed(2)}%` : "－",
+        farmSignedColor(v.netApr) || "text-primary-foreground",
+        poolNote,
+      )}
       {cell("Daily", v.netApr !== undefined ? `${((v.netApr / 365) * 100).toFixed(4)}%` : "－")}
       {cell(
         "TVL",
@@ -172,7 +179,7 @@ function AutoVaultRow({
           : v.poolTvlUsd !== undefined
             ? `$${fmt(v.poolTvlUsd)}`
             : "－",
-        false,
+        "",
         poolNote,
       )}
       {cell(
