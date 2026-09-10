@@ -16,6 +16,7 @@ import { readContract } from "wagmi/actions";
 
 import { BADGE, INPUT, LABEL, PANEL, fmt, fmtAmt } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
+import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { useBusy } from "@/hooks/use-busy";
 import { depositPctAmounts } from "@/lib/auto-deposit";
@@ -104,10 +105,11 @@ function FeesPanel() {
         </div>
         <div className={FEE_ROW}>
           <span>Performance fee</span>
-          <span>10% of yield — never from principal</span>
+          <span>10% of yield</span>
         </div>
         <p className="text-secondary-foreground mt-1 text-[11px] font-light">
-          Withdrawals are available in any market condition.
+          The performance fee is taken at harvest, never from principal. Withdrawals are available in any market
+          condition.
         </p>
       </div>
     </div>
@@ -141,6 +143,19 @@ function VaultDetailsPanel({ cfg, lastAdjustment }: { cfg: RangeVaultCfg; lastAd
 
 function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
+  const { data: contribution } = useAutoNetContribution(cfg, v.user);
+
+  // Vs-holding PnL at today's price: current claim minus net contributed, both marked now.
+  let pnl1: number | undefined;
+  let pnlDelta0: number | undefined;
+  let pnlDelta1: number | undefined;
+  if (contribution && v.myShares > 0n && v.bal0 !== undefined && v.bal1 !== undefined && v.price !== undefined) {
+    const claim0 = v.bal0 * v.myFrac;
+    const claim1 = v.bal1 * v.myFrac;
+    pnlDelta0 = claim0 - Number(formatUnits(contribution.net0, cfg.token0.decimals));
+    pnlDelta1 = claim1 - Number(formatUnits(contribution.net1, cfg.token1.decimals));
+    pnl1 = pnlDelta0 * v.price + pnlDelta1;
+  }
 
   const stat = (label: string, value: string, sub?: string, colorClass?: string) => (
     <div className="rounded-xl bg-white/[0.04] p-3">
@@ -369,7 +384,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           {v.user && v.myShares > 0n && (
             <div className={PANEL}>
               <span className={LABEL}>My position</span>
-              <div className="mt-2 grid grid-cols-3 gap-3">
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div>
                   <span className={LABEL}>Value</span>
                   <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
@@ -386,6 +401,32 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                   <span className={LABEL}>Shares</span>
                   <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
                     {fmtAmt(v.myShares, d1)}
+                  </div>
+                </div>
+                <div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`${LABEL} underline decoration-dotted underline-offset-2`}>PnL</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
+                        Your current claim minus what you net deposited, both priced at today&apos;s price — compounded
+                        fees minus divergence drift, versus simply holding the tokens.
+                        {pnlDelta0 !== undefined && pnlDelta1 !== undefined && (
+                          <>
+                            <br />
+                            {cfg.token0.symbol}: {pnlDelta0 >= 0 ? "+" : ""}
+                            {fmt(pnlDelta0, 4)} · {cfg.token1.symbol}: {pnlDelta1 >= 0 ? "+" : ""}
+                            {fmt(pnlDelta1, 4)}
+                          </>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <div
+                    className={`${farmSignedColor(pnl1) || "text-primary-foreground"} mt-0.5 text-base font-medium tabular-nums`}
+                  >
+                    {pnl1 !== undefined ? `${pnl1 >= 0 ? "+" : ""}${fmt(pnl1)} ${cfg.token1.symbol}` : "－"}
                   </div>
                 </div>
               </div>

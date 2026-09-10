@@ -17,6 +17,8 @@ export type RangeVaultCfg = {
   vault?: Address;
   strategy?: Address;
   pool?: Address;
+  /** Block the vault was deployed at — lower bound for event scans (user PnL). */
+  deployBlock?: number;
   token0: { address: Address; symbol: string; decimals: number };
   token1: { address: Address; symbol: string; decimals: number };
   explorer: string;
@@ -79,6 +81,7 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     vault: "0x7C0cCcCB2C41e3DE01b4cB0Ba7d0EbdA11bb3701",
     strategy: "0x8352d9Df9006c21Cfc4dCaeBA8ec91Dae4Af8F4F",
     pool: "0x81ffB0C7127e90212f85cc825e9ecA8056A28A02",
+    deployBlock: 11650000, // safe floor: deployed 2026-09-09, chain was ~11,672k on 09-10
     token0: { address: "0x5Fb4b5AA8f408389cA96E7e5B9cFF014A8176563", symbol: "ETH", decimals: 18 },
     token1: { address: "0xB89b8f4d12bDFf564FF475832DE683dAF0911cDb", symbol: "USDG", decimals: 6 },
     explorer: "https://sepolia.etherscan.io",
