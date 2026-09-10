@@ -21,7 +21,7 @@ import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { useBusy } from "@/hooks/use-busy";
-import { depositPctAmounts } from "@/lib/auto-deposit";
+import { depositPctAmounts, depositShortfalls, swapLinkFor } from "@/lib/auto-deposit";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { rangeVaultAbi, type RangeVaultCfg } from "@/lib/solon-range";
 import { runTx } from "@/lib/tx-toast";
@@ -384,6 +384,13 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                 </div>
               </div>
             )}
+            {/* Out-of-range explainer (SPEC §2.2, wording mirrors the Strategy panel) */}
+            {v.price !== undefined && v.lower !== undefined && !v.inRange && (
+              <p className="mt-3 rounded-xl bg-yellow-500/10 p-3 text-[11px] font-light leading-relaxed text-yellow-300">
+                Price is outside the managed range: the position earns no fees and leans toward one token until the
+                keeper re-centers the range during a calm market. Nothing is force-sold.
+              </p>
+            )}
           </div>
 
           {/* LP breakdown */}
@@ -419,10 +426,11 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
             <span className={LABEL}>Strategy</span>
             <p className="text-secondary-foreground mt-2 text-xs font-light leading-relaxed">
               Your two tokens are placed as concentrated liquidity around the current price on Uniswap V3. The vault
-              collects trading fees and compounds them back into the position; a keeper re-centers the range when price
-              moves out of it, and every sensitive action is gated behind a 2-minute TWAP calm check. Your principal is
-              never swapped. Risk to understand: while price sits outside the range the position earns no fees and holds
-              mostly one token until the next re-center — no losses are forced, but the mix follows the market.
+              collects trading fees and compounds them back into the position; a keeper re-centers the range during a
+              calm market when price drifts out of it, and every sensitive action is gated behind a 2-minute TWAP calm
+              check. Your principal is never swapped. Risk to understand: while price sits outside the range the
+              position earns no fees and holds mostly one token until the next re-center — no losses are forced, but the
+              mix follows the market.
             </p>
           </div>
 
@@ -603,6 +611,8 @@ function ActionSheetContent({
   });
   const wallet0 = (walletData?.[0]?.result as bigint | undefined) ?? 0n;
   const wallet1 = (walletData?.[1]?.result as bigint | undefined) ?? 0n;
+  // Shortfall hints only render once balances have actually loaded — never a false alarm on undefined.
+  const walletLoaded = walletData?.[0]?.result !== undefined && walletData?.[1]?.result !== undefined;
 
   const parseAmt = (v: string, dec: number): bigint => {
     try {
@@ -790,6 +800,10 @@ function ActionSheetContent({
     });
 
   const depositBlocked = mode === "deposit" && isCalm === false;
+  // Per-side gap between what the vault will take and the wallet balance (SPEC §3.1 shortfall row).
+  const shortfall =
+    depPreview && walletLoaded ? depositShortfalls(depPreview.take0, depPreview.take1, wallet0, wallet1) : undefined;
+  const hasShortfall = !!shortfall && (shortfall.short0 > 0n || shortfall.short1 > 0n);
   const takeSummary =
     depPreview && (depPreview.take0 > 0n || depPreview.take1 > 0n)
       ? [
@@ -855,7 +869,8 @@ function ActionSheetContent({
           <>
             {depositBlocked && (
               <p className="rounded-xl bg-yellow-500/10 p-3 text-xs leading-relaxed text-yellow-300">
-                The pool is moving right now. Deposits resume automatically once it settles — usually minutes.
+                Spot price is away from the pool&apos;s 2-minute average right now. Deposits reopen automatically once
+                it returns; withdrawals stay open.
               </p>
             )}
             <div className="flex flex-col gap-1.5">
@@ -937,10 +952,36 @@ function ActionSheetContent({
               )}
             </div>
 
+            {/* Shortfall hint: the vault would take more than the wallet holds (never blocks smaller deposits) */}
+            {hasShortfall && !previewing && (
+              <div className="flex flex-col gap-1 rounded-xl bg-yellow-500/10 p-3">
+                {([[shortfall!.short0, cfg.token0, d0] as const, [shortfall!.short1, cfg.token1, d1] as const] as const)
+                  .filter(([s]) => s > 0n)
+                  .map(([s, t, dec]) => {
+                    const link = cfg.testnet ? undefined : swapLinkFor(cfg.chainId, t.address);
+                    return (
+                      <span key={t.symbol} className="flex items-center justify-between text-xs text-yellow-300">
+                        <span className="tabular-nums">
+                          Need ~{fmtAmt(s, dec)} more {t.symbol}
+                        </span>
+                        {link && (
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="underline">
+                            Get {t.symbol} ↗
+                          </a>
+                        )}
+                      </span>
+                    );
+                  })}
+                <span className="text-secondary-foreground text-[11px] font-light">
+                  Or lower the amount — the % buttons fit your balance automatically.
+                </span>
+              </div>
+            )}
+
             <Button
               className="rounded-full font-light"
               variant="blue"
-              disabled={busy || depositBlocked || previewing || !depPreview || depPreview.shares === 0n}
+              disabled={busy || depositBlocked || previewing || !depPreview || depPreview.shares === 0n || hasShortfall}
               onClick={() => void doDeposit()}
             >
               {busy ? <LoaderCircle className="animate-spin" /> : "Deposit"}
