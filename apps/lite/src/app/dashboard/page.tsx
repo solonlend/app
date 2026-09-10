@@ -23,7 +23,7 @@ enum SubPage {
   Earn = "earn",
   Farm = "farm",
   Borrow = "borrow",
-  Points = "points",
+  Portfolio = "portfolio",
   Liquidations = "liquidations",
   Rewards = "rewards",
 }
@@ -55,8 +55,8 @@ export default function Page() {
       ? SubPage.Farm
       : locationSegments.at(1) === SubPage.Borrow
         ? SubPage.Borrow
-        : locationSegments.at(1) === SubPage.Points
-          ? SubPage.Points
+        : locationSegments.at(1) === SubPage.Portfolio
+          ? SubPage.Portfolio
           : locationSegments.at(1) === SubPage.Liquidations
             ? SubPage.Liquidations
             : locationSegments.at(1) === SubPage.Rewards
@@ -140,13 +140,13 @@ export default function Page() {
                 Borrow
               </Button>
             </Link>
-            <Link to={SubPage.Points} relative="path">
+            <Link to={SubPage.Portfolio} relative="path">
               <Button
-                variant={selectedSubPage === SubPage.Points ? "tertiary" : "secondaryTab"}
+                variant={selectedSubPage === SubPage.Portfolio ? "tertiary" : "secondaryTab"}
                 size="lg"
                 className="rounded-full px-3 font-light md:px-6"
               >
-                Points
+                Portfolio
               </Button>
             </Link>
             <Link to={SubPage.Liquidations} relative="path">
@@ -199,7 +199,7 @@ export default function Page() {
                 { to: SubPage.Farm, label: "FARM" },
                 { to: SubPage.Earn, label: "EARN" },
                 { to: SubPage.Borrow, label: "BORROW" },
-                { to: SubPage.Points, label: "POINTS" },
+                { to: SubPage.Portfolio, label: "PORTFOLIO" },
                 { to: SubPage.Liquidations, label: "LIQUIDATIONS" },
                 ...(SHOW_REWARDS ? [{ to: SubPage.Rewards, label: "REWARDS" }] : []),
               ].map(({ to, label }) => (

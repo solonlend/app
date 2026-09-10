@@ -10,7 +10,7 @@ import { EarnSubPage } from "@/app/dashboard/earn-subpage.tsx";
 import { FarmSubPage } from "@/app/dashboard/farm-subpage.tsx";
 import { LiquidationsSubPage } from "@/app/dashboard/liquidations-subpage.tsx";
 import Page from "@/app/dashboard/page.tsx";
-import { PointsSubPage } from "@/app/dashboard/points-subpage.tsx";
+import { PortfolioSubPage } from "@/app/dashboard/portfolio-subpage.tsx";
 import { RewardsSubPage } from "@/app/dashboard/rewards-subpage.tsx";
 import App from "@/App.tsx";
 import { DEFAULT_CHAIN } from "@/lib/constants";
@@ -33,8 +33,10 @@ createRoot(document.getElementById("root")!).render(
             <Route element={<Page />}>
               <Route path="earn" element={<EarnSubPage />} />
               <Route path="farm/:tab?/:vault?" element={<FarmSubPage />} />
+              <Route path="portfolio" element={<PortfolioSubPage />} />
               <Route path="borrow" element={<BorrowSubPage />} />
-              <Route path="points" element={<PointsSubPage />} />
+              {/* Points merged into Portfolio (2026-09-10) — keep old links working */}
+              <Route path="points" element={<Navigate replace to="../portfolio" />} />
               <Route path="liquidations" element={<LiquidationsSubPage />} />
               <Route path="rewards" element={<RewardsSubPage />} />
             </Route>
