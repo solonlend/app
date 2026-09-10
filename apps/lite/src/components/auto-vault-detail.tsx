@@ -15,6 +15,7 @@ import { useAccount, useConfig, useReadContracts, useWriteContract } from "wagmi
 import { readContract } from "wagmi/actions";
 
 import { BADGE, INPUT, LABEL, PANEL, fmt, fmtAmt } from "@/components/auto-vault-common";
+import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { useBusy } from "@/hooks/use-busy";
 import { depositPctAmounts } from "@/lib/auto-deposit";
@@ -41,8 +42,12 @@ export function AutoVaultDetail({ cfg, onBack }: { cfg: RangeVaultCfg; onBack: (
         >
           ← All vaults
         </button>
-        <span className="text-primary-foreground ml-2 text-base font-medium">{cfg.pair}</span>
-        <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
+        <AutoPairInfo cfg={cfg}>
+          <span className="ml-2 flex items-center gap-2">
+            <span className="text-primary-foreground text-base font-medium">{cfg.pair}</span>
+            <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
+          </span>
+        </AutoPairInfo>
         {cfg.testnet && <span className={`${BADGE} bg-yellow-500/15 text-yellow-300`}>TESTNET</span>}
       </div>
       <DetailInner key={`${cfg.chainId}:${cfg.slug}:${user ?? "-"}`} cfg={cfg} />

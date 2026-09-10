@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BADGE, LABEL, fmt } from "@/components/auto-vault-common";
+import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { rangeVaultsForChain, type RangeVaultCfg } from "@/lib/solon-range";
 
@@ -141,8 +142,12 @@ function AutoVaultRow({
       }`}
     >
       <div className="col-span-2 flex flex-wrap items-center gap-2 md:col-span-1">
-        <span className="text-primary-foreground text-base font-medium">{cfg.pair}</span>
-        <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
+        <AutoPairInfo cfg={cfg}>
+          <span className="flex items-center gap-2">
+            <span className="text-primary-foreground text-base font-medium">{cfg.pair}</span>
+            <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
+          </span>
+        </AutoPairInfo>
         {cfg.testnet && <span className={`${BADGE} bg-yellow-500/15 text-yellow-300`}>TESTNET</span>}
         {v.deployed ? (
           <span
