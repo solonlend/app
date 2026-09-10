@@ -12,6 +12,8 @@ export type RangeVaultCfg = {
   /** URL segment for /farm/auto/:vault — human-readable, unique within a chain. */
   slug: string;
   pair: string;
+  /** Pool fee tier, display form ("0.01%"). */
+  feeLabel: string;
   vault?: Address;
   strategy?: Address;
   pool?: Address;
@@ -27,6 +29,7 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     testnet: false,
     slug: "eth-usdg",
     pair: "ETH / USDG",
+    feeLabel: "0.01%",
     vault: undefined,
     strategy: undefined,
     pool: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca",
@@ -35,11 +38,44 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     explorer: "https://robinhoodchain.blockscout.com",
   },
   {
+    // RH NVDA/USDG 0.05% — candidate pool #2 (2026-09-10 gateway pull: TVL $7.9M, fee APR ~68-74%).
+    // Coming-soon until deployed. NOTE before deploying: token1 is NVDA, so TVL/My-deposit render
+    // in NVDA units — the USD/stable quote source must land first (list sorting assumes token1
+    // is a stable quote; harmless while undeployed since reads stay disabled).
+    chainId: 4663,
+    testnet: false,
+    slug: "nvda-usdg",
+    pair: "NVDA / USDG",
+    feeLabel: "0.05%",
+    vault: undefined,
+    strategy: undefined,
+    pool: "0xd4EB21209C4D6093f80B5b84f5C45cc093EA14a3",
+    token0: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", symbol: "USDG", decimals: 6 },
+    token1: { address: "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC", symbol: "NVDA", decimals: 18 },
+    explorer: "https://robinhoodchain.blockscout.com",
+  },
+  {
+    // RH SPY/WETH 0.05% — candidate pool #3 (gateway pull: TVL $1.9M, fee APR ~91-125%). Same
+    // token1-quote caveat as above (token1 = SPY). Coming-soon until deployed.
+    chainId: 4663,
+    testnet: false,
+    slug: "spy-weth",
+    pair: "SPY / WETH",
+    feeLabel: "0.05%",
+    vault: undefined,
+    strategy: undefined,
+    pool: "0xDDCBBa3666f578E3F09516f21Ff85BFee859AB5e",
+    token0: { address: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", symbol: "WETH", decimals: 18 },
+    token1: { address: "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C", symbol: "SPY", decimals: 18 },
+    explorer: "https://robinhoodchain.blockscout.com",
+  },
+  {
     // Sepolia rehearsal instance (deployments/sepolia-clm-2026-09-09.md) — testnet playground only.
     chainId: 11155111,
     testnet: true,
     slug: "eth-usdg",
     pair: "ETH / USDG",
+    feeLabel: "0.01%",
     vault: "0x7C0cCcCB2C41e3DE01b4cB0Ba7d0EbdA11bb3701",
     strategy: "0x8352d9Df9006c21Cfc4dCaeBA8ec91Dae4Af8F4F",
     pool: "0x81ffB0C7127e90212f85cc825e9ecA8056A28A02",

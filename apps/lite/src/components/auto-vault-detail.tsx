@@ -1,4 +1,12 @@
 import { Button } from "@morpho-org/uikit/components/shadcn/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@morpho-org/uikit/components/shadcn/sheet";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
 import { LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -14,11 +22,11 @@ import { rangeVaultAbi, type RangeVaultCfg } from "@/lib/solon-range";
 import { runTx } from "@/lib/tx-toast";
 
 /*
-  Auto LP vault detail — /farm/auto/:vault (DESIGN-farm-tabs-v1 §E): price-range visual +
-  LP breakdown + strategy on the left, sticky Deposit/Withdraw action panel with full fee
-  disclosure on the right. Reached only from the vault list; `← All vaults` goes back.
-  The whole subtree is remounted per vault/chain/account so no input, preview or tx state
-  can leak across identities (preview race lesson, structural fix).
+  Auto LP vault detail — /farm/auto/:vault (DESIGN-farm-tabs-v1 §E, v1.3): price-range visual +
+  LP breakdown + strategy full-width; Deposit/Withdraw open a right-hand sheet with the full fee
+  disclosure — same interaction grammar as the leveraged side. `← All vaults` goes back.
+  The subtree is remounted per vault/chain/account, and sheet content mounts fresh per open, so
+  no input, preview or tx state can leak across identities (preview race lesson, structural fix).
 */
 
 export function AutoVaultDetail({ cfg, onBack }: { cfg: RangeVaultCfg; onBack: () => void }) {
@@ -34,7 +42,7 @@ export function AutoVaultDetail({ cfg, onBack }: { cfg: RangeVaultCfg; onBack: (
           ← All vaults
         </button>
         <span className="text-primary-foreground ml-2 text-base font-medium">{cfg.pair}</span>
-        <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · 0.01%</span>
+        <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
         {cfg.testnet && <span className={`${BADGE} bg-yellow-500/15 text-yellow-300`}>TESTNET</span>}
       </div>
       <DetailInner key={`${cfg.chainId}:${cfg.slug}:${user ?? "-"}`} cfg={cfg} />
@@ -47,19 +55,19 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
 
   if (!v.deployed) {
     return (
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="flex flex-col gap-4">
+        <div className={`${PANEL} flex flex-col gap-3`}>
+          <span className={`${BADGE} text-morpho-brand self-start bg-white/[0.06]`}>COMING SOON</span>
+          <p className="text-secondary-foreground text-xs font-light leading-relaxed">
+            This vault is not live on this chain yet. Deposits open when the mainnet deployment lands.
+          </p>
+        </div>
         <div className={PANEL}>
           <span className={LABEL}>Strategy</span>
           <p className="text-secondary-foreground mt-2 max-w-3xl text-xs font-light leading-relaxed">
             Deposit both tokens and walk away: the vault sets the range, resets it as price moves, and compounds trading
             fees back into the position. Your principal is never swapped. Contracts are complete and verified end-to-end
             on a live testnet — mainnet deployment is in final review.
-          </p>
-        </div>
-        <div className={`${PANEL} flex flex-col gap-3 lg:sticky lg:top-24`}>
-          <span className={`${BADGE} text-morpho-brand self-start bg-white/[0.06]`}>COMING SOON</span>
-          <p className="text-secondary-foreground text-xs font-light leading-relaxed">
-            This vault is not live on this chain yet. Deposits open when the mainnet deployment lands.
           </p>
         </div>
       </div>
@@ -69,8 +77,38 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const { d0, d1 } = v;
   const balances = v.balances;
 
+  const sheetProps = {
+    cfg,
+    isCalm: v.isCalm,
+    refetch: v.refetch,
+    myShares: v.myShares,
+    totalSupply: v.totalSupply,
+    vaultBal0: balances?.[0],
+    vaultBal1: balances?.[1],
+  };
+
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="flex flex-col gap-4">
+      {/* Actions — same grammar as the leveraged side: buttons open a right-hand sheet */}
+      <div className="flex gap-2">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button className="rounded-full px-8 font-light" variant="blue">
+              Deposit
+            </Button>
+          </SheetTrigger>
+          <ActionSheetContent {...sheetProps} initialMode="deposit" />
+        </Sheet>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button className="rounded-full px-8 font-light" variant="secondary">
+              Withdraw
+            </Button>
+          </SheetTrigger>
+          <ActionSheetContent {...sheetProps} initialMode="withdraw" />
+        </Sheet>
+      </div>
+
       <div className="flex min-w-0 flex-col gap-4">
         {/* Price & managed range */}
         <div className={PANEL}>
@@ -214,16 +252,6 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           </div>
         )}
       </div>
-
-      <ActionPanel
-        cfg={cfg}
-        isCalm={v.isCalm}
-        refetch={v.refetch}
-        myShares={v.myShares}
-        totalSupply={v.totalSupply}
-        vaultBal0={balances?.[0]}
-        vaultBal1={balances?.[1]}
-      />
     </div>
   );
 }
@@ -241,7 +269,7 @@ const mockMintAbi = [
   },
 ] as const;
 
-function ActionPanel({
+function ActionSheetContent({
   cfg,
   isCalm,
   refetch,
@@ -249,6 +277,7 @@ function ActionPanel({
   totalSupply,
   vaultBal0,
   vaultBal1,
+  initialMode,
 }: {
   cfg: RangeVaultCfg;
   isCalm: boolean | undefined;
@@ -257,6 +286,7 @@ function ActionPanel({
   totalSupply: bigint | undefined;
   vaultBal0: bigint | undefined;
   vaultBal1: bigint | undefined;
+  initialMode: "deposit" | "withdraw";
 }) {
   const { address: user } = useAccount();
   const config = useConfig();
@@ -266,7 +296,8 @@ function ActionPanel({
   const d0 = cfg.token0.decimals;
   const d1 = cfg.token1.decimals;
 
-  const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
+  // Sheet content mounts fresh on every open, so state (inputs, previews, tx status) resets per open.
+  const [mode, setMode] = useState<"deposit" | "withdraw">(initialMode);
   const [amt0, setAmt0] = useState("");
   const [amt1, setAmt1] = useState("");
   const [depPct, setDepPct] = useState<number | undefined>();
@@ -511,55 +542,70 @@ function ActionPanel({
   const ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";
 
   return (
-    <div className={`${PANEL} flex flex-col gap-4 lg:sticky lg:top-24`}>
-      {/* Mode tabs */}
-      <div className="flex rounded-xl bg-white/[0.04] p-1">
-        {(["deposit", "withdraw"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={`grow rounded-lg py-2 text-sm capitalize transition-colors ${
-              mode === m
-                ? "text-primary-foreground bg-white/[0.1]"
-                : "text-secondary-foreground hover:text-primary-foreground"
-            }`}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
+    <SheetContent className="bg-background z-[9999] w-full gap-3 overflow-y-scroll sm:w-[480px] sm:max-w-[480px]">
+      <SheetHeader>
+        <SheetTitle className="flex items-center gap-2">
+          {cfg.pair}
+          <span className="text-secondary-foreground rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
+            V3 · {cfg.feeLabel}
+          </span>
+          <span className="text-morpho-brand rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px]">Auto LP</span>
+        </SheetTitle>
+        <SheetDescription>
+          Deposit both tokens; the vault manages the range and compounds fees. Withdraw any time.
+        </SheetDescription>
+      </SheetHeader>
+      <div className="flex flex-col gap-4 px-4 pb-6">
+        {/* Mode tabs */}
+        <div className="flex rounded-xl bg-white/[0.04] p-1">
+          {(["deposit", "withdraw"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`grow rounded-lg py-2 text-sm capitalize transition-colors ${
+                mode === m
+                  ? "text-primary-foreground bg-white/[0.1]"
+                  : "text-secondary-foreground hover:text-primary-foreground"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
 
-      {!user ? (
-        <p className="text-secondary-foreground rounded-xl bg-white/[0.04] p-4 text-xs">
-          Connect a wallet to {mode === "deposit" ? "deposit" : "withdraw"}.
-        </p>
-      ) : mode === "deposit" ? (
-        <>
-          {depositBlocked && (
-            <p className="rounded-xl bg-yellow-500/10 p-3 text-xs leading-relaxed text-yellow-300">
-              The pool is moving right now. Deposits resume automatically once it settles — usually minutes.
-            </p>
-          )}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-secondary-foreground text-xs">Fill in the vault&apos;s current ratio</span>
-            <div className="flex gap-2">
-              {[25, 50, 75, 100].map((p) => (
-                <Button
-                  key={p}
-                  size="sm"
-                  variant={depPct === p ? "blue" : "secondary"}
-                  className="grow rounded-full font-light tabular-nums"
-                  disabled={busy || (wallet0 === 0n && wallet1 === 0n)}
-                  onClick={() => applyDepositPct(p)}
-                >
-                  {p === 100 ? "Max" : `${p}%`}
-                </Button>
-              ))}
+        {!user ? (
+          <p className="text-secondary-foreground rounded-xl bg-white/[0.04] p-4 text-xs">
+            Connect a wallet to {mode === "deposit" ? "deposit" : "withdraw"}.
+          </p>
+        ) : mode === "deposit" ? (
+          <>
+            {depositBlocked && (
+              <p className="rounded-xl bg-yellow-500/10 p-3 text-xs leading-relaxed text-yellow-300">
+                The pool is moving right now. Deposits resume automatically once it settles — usually minutes.
+              </p>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-secondary-foreground text-xs">Fill in the vault&apos;s current ratio</span>
+              <div className="flex gap-2">
+                {[25, 50, 75, 100].map((p) => (
+                  <Button
+                    key={p}
+                    size="sm"
+                    variant={depPct === p ? "blue" : "secondary"}
+                    className="grow rounded-full font-light tabular-nums"
+                    disabled={busy || (wallet0 === 0n && wallet1 === 0n)}
+                    onClick={() => applyDepositPct(p)}
+                  >
+                    {p === 100 ? "Max" : `${p}%`}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-          {[["0", cfg.token0, wallet0, amt0, setAmt0] as const, ["1", cfg.token1, wallet1, amt1, setAmt1] as const].map(
-            ([i, t, walletBal, val, setVal]) => (
+            {[
+              ["0", cfg.token0, wallet0, amt0, setAmt0] as const,
+              ["1", cfg.token1, wallet1, amt1, setAmt1] as const,
+            ].map(([i, t, walletBal, val, setVal]) => (
               <label key={i} className="flex flex-col gap-1.5">
                 <span className="text-secondary-foreground flex items-baseline justify-between text-xs">
                   <span className="font-medium">{t.symbol}</span>
@@ -592,167 +638,168 @@ function ActionPanel({
                   }}
                 />
               </label>
-            ),
-          )}
+            ))}
 
-          <div className="flex min-h-[64px] flex-col justify-center gap-1.5 rounded-xl bg-white/[0.04] p-3">
-            {previewing ? (
-              <span className="text-secondary-foreground flex items-center gap-2 text-xs">
-                <LoaderCircle className="size-3 animate-spin" /> calculating…
-              </span>
-            ) : takeSummary ? (
-              <>
-                <div className={ROW}>
-                  <span>Vault will take</span>
-                  <span className="text-primary-foreground tabular-nums">{takeSummary}</span>
-                </div>
-                <div className={ROW}>
-                  <span>You receive (est.)</span>
-                  <span className="text-primary-foreground tabular-nums">
-                    {fmtAmt(depPreview!.shares, d1)} shares
-                    {shareFrac !== undefined ? ` · ${shareFrac.toFixed(2)}%` : ""}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <span className="text-secondary-foreground text-xs">Enter an amount to see the exact terms.</span>
-            )}
-          </div>
+            <div className="flex min-h-[64px] flex-col justify-center gap-1.5 rounded-xl bg-white/[0.04] p-3">
+              {previewing ? (
+                <span className="text-secondary-foreground flex items-center gap-2 text-xs">
+                  <LoaderCircle className="size-3 animate-spin" /> calculating…
+                </span>
+              ) : takeSummary ? (
+                <>
+                  <div className={ROW}>
+                    <span>Vault will take</span>
+                    <span className="text-primary-foreground tabular-nums">{takeSummary}</span>
+                  </div>
+                  <div className={ROW}>
+                    <span>You receive (est.)</span>
+                    <span className="text-primary-foreground tabular-nums">
+                      {fmtAmt(depPreview!.shares, d1)} shares
+                      {shareFrac !== undefined ? ` · ${shareFrac.toFixed(2)}%` : ""}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <span className="text-secondary-foreground text-xs">Enter an amount to see the exact terms.</span>
+              )}
+            </div>
 
-          <Button
-            className="rounded-full font-light"
-            variant="blue"
-            disabled={busy || depositBlocked || previewing || !depPreview || depPreview.shares === 0n}
-            onClick={() => void doDeposit()}
-          >
-            {busy ? <LoaderCircle className="animate-spin" /> : "Deposit"}
-          </Button>
-          {cfg.testnet && (
             <Button
               className="rounded-full font-light"
-              variant="secondary"
-              size="sm"
-              disabled={busy}
-              onClick={() => void doMintTest()}
+              variant="blue"
+              disabled={busy || depositBlocked || previewing || !depPreview || depPreview.shares === 0n}
+              onClick={() => void doDeposit()}
             >
-              Mint test tokens · 1 {cfg.token0.symbol} + 2,500 {cfg.token1.symbol}
+              {busy ? <LoaderCircle className="animate-spin" /> : "Deposit"}
             </Button>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-secondary-foreground text-xs">
-              Amount to withdraw · you hold {fmtAmt(myShares, d1)} shares
-            </span>
-            <div className="flex gap-2">
-              {[25, 50, 75, 100].map((p) => (
-                <Button
-                  key={p}
-                  size="sm"
-                  variant={pct === p ? "blue" : "secondary"}
-                  className="grow rounded-full font-light tabular-nums"
-                  disabled={busy || myShares === 0n}
-                  onClick={() => previewWithdrawPct(p)}
-                >
-                  {p === 100 ? "Max" : `${p}%`}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex min-h-[52px] flex-col justify-center gap-1.5 rounded-xl bg-white/[0.04] p-3">
-            {previewing ? (
-              <span className="text-secondary-foreground flex items-center gap-2 text-xs">
-                <LoaderCircle className="size-3 animate-spin" /> calculating…
-              </span>
-            ) : wdPreview ? (
-              <>
-                <div className={ROW}>
-                  <span>You receive (est.)</span>
-                  <span className="text-primary-foreground tabular-nums">
-                    {fmtAmt(wdPreview.out0, d0)} {cfg.token0.symbol} + {fmtAmt(wdPreview.out1, d1)} {cfg.token1.symbol}
-                  </span>
-                </div>
-                <div className={ROW}>
-                  <span>Burning</span>
-                  <span className="tabular-nums">
-                    {fmtAmt(wdPreview.shares, d1)} of {fmtAmt(myShares, d1)} shares
-                  </span>
-                </div>
-              </>
-            ) : (
-              <span className="text-secondary-foreground text-xs">Pick a percentage of your position.</span>
+            {cfg.testnet && (
+              <Button
+                className="rounded-full font-light"
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => void doMintTest()}
+              >
+                Mint test tokens · 1 {cfg.token0.symbol} + 2,500 {cfg.token1.symbol}
+              </Button>
             )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-secondary-foreground text-xs">
+                Amount to withdraw · you hold {fmtAmt(myShares, d1)} shares
+              </span>
+              <div className="flex gap-2">
+                {[25, 50, 75, 100].map((p) => (
+                  <Button
+                    key={p}
+                    size="sm"
+                    variant={pct === p ? "blue" : "secondary"}
+                    className="grow rounded-full font-light tabular-nums"
+                    disabled={busy || myShares === 0n}
+                    onClick={() => previewWithdrawPct(p)}
+                  >
+                    {p === 100 ? "Max" : `${p}%`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex min-h-[52px] flex-col justify-center gap-1.5 rounded-xl bg-white/[0.04] p-3">
+              {previewing ? (
+                <span className="text-secondary-foreground flex items-center gap-2 text-xs">
+                  <LoaderCircle className="size-3 animate-spin" /> calculating…
+                </span>
+              ) : wdPreview ? (
+                <>
+                  <div className={ROW}>
+                    <span>You receive (est.)</span>
+                    <span className="text-primary-foreground tabular-nums">
+                      {fmtAmt(wdPreview.out0, d0)} {cfg.token0.symbol} + {fmtAmt(wdPreview.out1, d1)}{" "}
+                      {cfg.token1.symbol}
+                    </span>
+                  </div>
+                  <div className={ROW}>
+                    <span>Burning</span>
+                    <span className="tabular-nums">
+                      {fmtAmt(wdPreview.shares, d1)} of {fmtAmt(myShares, d1)} shares
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <span className="text-secondary-foreground text-xs">Pick a percentage of your position.</span>
+              )}
+            </div>
+
+            <Button
+              className="rounded-full font-light"
+              variant="blue"
+              disabled={busy || previewing || !wdPreview || wdPreview.shares === 0n || myShares === 0n}
+              onClick={() => void doWithdraw()}
+            >
+              {busy ? <LoaderCircle className="animate-spin" /> : "Withdraw"}
+            </Button>
+          </>
+        )}
+
+        {/* Fee disclosure — mirrors the contract exactly */}
+        <div className="flex flex-col gap-1 border-t border-white/[0.06] pt-3">
+          <div className={ROW}>
+            <span>Deposit fee</span>
+            <span>0%</span>
           </div>
-
-          <Button
-            className="rounded-full font-light"
-            variant="blue"
-            disabled={busy || previewing || !wdPreview || wdPreview.shares === 0n || myShares === 0n}
-            onClick={() => void doWithdraw()}
-          >
-            {busy ? <LoaderCircle className="animate-spin" /> : "Withdraw"}
-          </Button>
-        </>
-      )}
-
-      {/* Fee disclosure — mirrors the contract exactly */}
-      <div className="flex flex-col gap-1 border-t border-white/[0.06] pt-3">
-        <div className={ROW}>
-          <span>Deposit fee</span>
-          <span>0%</span>
-        </div>
-        <div className={ROW}>
-          <span>Withdrawal fee</span>
-          <span>0%</span>
-        </div>
-        <div className={ROW}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="underline decoration-dotted underline-offset-2">Performance fee</span>
-              </TooltipTrigger>
-              <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
-                10% of earned trading fees, taken at harvest — never from principal. The Net APR shown already accounts
-                for it.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <span>10% of yield</span>
-        </div>
-        {mode === "deposit" && balancingFee && (
+          <div className={ROW}>
+            <span>Withdrawal fee</span>
+            <span>0%</span>
+          </div>
           <div className={ROW}>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="underline decoration-dotted underline-offset-2">Balancing fee (this deposit)</span>
+                  <span className="underline decoration-dotted underline-offset-2">Performance fee</span>
                 </TooltipTrigger>
                 <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
-                  A one-sided deposit shifts the vault&apos;s token balance, so the filling side pays the pool&apos;s
-                  swap fee — the same cost as trading into position yourself. Balanced deposits pay nothing.
+                  10% of earned trading fees, taken at harvest — never from principal. The Net APR shown already
+                  accounts for it.
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <span className="tabular-nums">{balancingFee}</span>
+            <span>10% of yield</span>
           </div>
-        )}
-        <p className="text-secondary-foreground text-[11px] font-light">
-          Withdrawals are available in any market condition.
-        </p>
-      </div>
+          {mode === "deposit" && balancingFee && (
+            <div className={ROW}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="underline decoration-dotted underline-offset-2">Balancing fee (this deposit)</span>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
+                    A one-sided deposit shifts the vault&apos;s token balance, so the filling side pays the pool&apos;s
+                    swap fee — the same cost as trading into position yourself. Balanced deposits pay nothing.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="tabular-nums">{balancingFee}</span>
+            </div>
+          )}
+          <p className="text-secondary-foreground text-[11px] font-light">
+            Withdrawals are available in any market condition.
+          </p>
+        </div>
 
-      {txError && <p className="text-xs text-red-400">{txError}</p>}
-      {lastTx && (
-        <a
-          className="text-secondary-foreground text-xs underline"
-          href={`${cfg.explorer}/tx/${lastTx}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View last transaction ↗
-        </a>
-      )}
-    </div>
+        {txError && <p className="text-xs text-red-400">{txError}</p>}
+        {lastTx && (
+          <a
+            className="text-secondary-foreground text-xs underline"
+            href={`${cfg.explorer}/tx/${lastTx}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View last transaction ↗
+          </a>
+        )}
+      </div>
+    </SheetContent>
   );
 }

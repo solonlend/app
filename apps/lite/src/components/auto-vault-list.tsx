@@ -142,7 +142,7 @@ function AutoVaultRow({
     >
       <div className="col-span-2 flex flex-wrap items-center gap-2 md:col-span-1">
         <span className="text-primary-foreground text-base font-medium">{cfg.pair}</span>
-        <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · 0.01%</span>
+        <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
         {cfg.testnet && <span className={`${BADGE} bg-yellow-500/15 text-yellow-300`}>TESTNET</span>}
         {v.deployed ? (
           <span
