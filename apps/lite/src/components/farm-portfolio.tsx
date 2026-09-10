@@ -6,9 +6,11 @@ import { useAccount } from "wagmi";
 
 import { BADGE, LABEL, PANEL, fmtQuote } from "@/components/auto-vault-common";
 import { FarmPositions } from "@/components/farm-positions";
+import { FarmRiskPanel } from "@/components/farm-risk-panel";
 import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
 import { useAutoVault } from "@/hooks/use-auto-vault";
+import { useFarmPositions } from "@/hooks/use-farm-positions";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { rangeVaultsForChain, type RangeVaultCfg } from "@/lib/solon-range";
 
@@ -36,6 +38,7 @@ export function FarmPortfolio({
 }) {
   const { address: user } = useAccount();
   const { setOpen: openConnect } = useModal();
+  const farm = useFarmPositions();
   const cfgs = rangeVaultsForChain(chainId).filter((c) => c.vault !== undefined);
   const [rows, setRows] = useState<Record<string, Row>>({});
   const report = useCallback((slug: string, r: Row) => {
@@ -101,6 +104,9 @@ export function FarmPortfolio({
       {cfgs.map((cfg) => (
         <PortfolioProbe key={`${cfg.chainId}:${cfg.slug}`} cfg={cfg} onRow={report} />
       ))}
+
+      {/* Risk first — the account page's primary duty on a platform with liquidation lines */}
+      <FarmRiskPanel positions={farm.positions} lltv={farm.lltv} />
 
       {/* Overview (Auto LP totals — leverage positions carry no cost-basis feed yet) */}
       <div className={PANEL}>

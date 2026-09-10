@@ -17,7 +17,7 @@ import {
 } from "@morpho-org/uikit/components/shadcn/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@morpho-org/uikit/components/shadcn/tabs";
 import { ExternalLink, LoaderCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { erc20Abi, formatUnits, parseUnits } from "viem";
 import { useAccount, useConfig, useReadContract, useReadContracts, useWriteContract } from "wagmi";
 import { readContract } from "wagmi/actions";
@@ -25,6 +25,7 @@ import { readContract } from "wagmi/actions";
 import { FarmPauseBanner } from "@/components/farm-pause-banner";
 import { useBusy } from "@/hooks/use-busy";
 import { useFarmPaused } from "@/hooks/use-farm-paused";
+import { useFarmPositions, farmHealthUsage, type FarmPos } from "@/hooks/use-farm-positions";
 import { useFarmProtocol } from "@/hooks/use-farm-protocol";
 import { useReserveRates } from "@/hooks/use-reserve-rates";
 import { ensureFarmAllowances } from "@/lib/farm-allowance";
@@ -44,8 +45,6 @@ const lendingDebtAbi = [
     outputs: [{ type: "uint256" }, { type: "uint256" }],
   },
 ] as const;
-
-const MAX_SCAN = 50n; // scan the most recent ids
 
 const ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";
 const CARD = "bg-primary flex flex-col gap-3 rounded-2xl p-4";
@@ -82,23 +81,8 @@ function fmt(n: number, dp = 2): string {
   return Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: dp }) : "－";
 }
 
-type Pos = {
-  id: bigint;
-  debtRisk: bigint;
-  debtLoan: bigint;
-  debtRiskAmt: bigint; // WETH leg debt (18 decimals)
-  debtLoanAmt: bigint; // USDG leg debt (6 decimals)
-  tickLower: number;
-  tickUpper: number;
-  value: number; // USDG
-  debt: number; // USDG
-  healthy: boolean;
-};
-
-function healthUsage(value: number, debt: number, lltv: bigint | undefined): number | undefined {
-  if (lltv === undefined || lltv <= 0n) return undefined;
-  return value > 0 ? debt / (value * Number(formatUnits(lltv, 18))) : 0; // 1.0 = liquidation line
-}
+type Pos = FarmPos;
+const healthUsage = farmHealthUsage;
 
 function HealthBar({ usage, hero = false }: { usage: number | undefined; hero?: boolean }) {
   if (usage === undefined) return <span className="text-xs">LLTV unavailable</span>;
@@ -1148,110 +1132,7 @@ function PositionSheet({ pos, refetch }: { pos: Pos; refetch: () => void }) {
 export function FarmPositions() {
   const { lltv } = useVaultDisplay();
   const protocol = useFarmProtocol();
-  const { address: user, isConnected } = useAccount();
-
-  const { data: nextId, refetch: r0 } = useReadContract({
-    chainId: P.chainId,
-    address: P.vault,
-    abi: farmVaultAbi,
-    functionName: "nextPositionId",
-    query: { staleTime: 30_000 },
-  });
-
-  const ids = useMemo(() => {
-    if (!nextId) return [];
-    const start = nextId > MAX_SCAN ? nextId - MAX_SCAN : 1n;
-    const out: bigint[] = [];
-    for (let i = start; i < nextId; i++) out.push(i);
-    return out;
-  }, [nextId]);
-
-  const { data: owners, refetch: r1 } = useReadContracts({
-    contracts: ids.map((id) => ({
-      chainId: P.chainId,
-      address: P.vault,
-      abi: farmVaultAbi,
-      functionName: "ownerOf" as const,
-      args: [id] as const,
-    })),
-    allowFailure: true,
-    query: { enabled: ids.length > 0, staleTime: 30_000 },
-  });
-
-  const myIds = useMemo(
-    () =>
-      ids.filter((_, i) => {
-        const o = owners?.[i]?.result as string | undefined;
-        return !!user && !!o && o.toLowerCase() === user.toLowerCase();
-      }),
-    [ids, owners, user],
-  );
-
-  const { data: details, refetch: r2 } = useReadContracts({
-    contracts: myIds.flatMap((id) => [
-      {
-        chainId: P.chainId,
-        address: P.vault,
-        abi: farmVaultAbi,
-        functionName: "positions" as const,
-        args: [id] as const,
-      },
-      {
-        chainId: P.chainId,
-        address: P.vault,
-        abi: farmVaultAbi,
-        functionName: "positionValue" as const,
-        args: [id] as const,
-      },
-      {
-        chainId: P.chainId,
-        address: P.vault,
-        abi: farmVaultAbi,
-        functionName: "totalDebtInLoan" as const,
-        args: [id] as const,
-      },
-      {
-        chainId: P.chainId,
-        address: P.vault,
-        abi: farmVaultAbi,
-        functionName: "isHealthy" as const,
-        args: [id] as const,
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ]) as any,
-    allowFailure: true,
-    query: { enabled: myIds.length > 0, staleTime: 30_000 },
-  });
-
-  const positions: Pos[] = useMemo(() => {
-    return myIds
-      .map((id, i) => {
-        const p = details?.[i * 4]?.result as readonly [bigint, bigint, number, number, bigint, bigint] | undefined;
-        const v = details?.[i * 4 + 1]?.result as bigint | undefined;
-        const d = details?.[i * 4 + 2]?.result as bigint | undefined;
-        const h = details?.[i * 4 + 3]?.result as boolean | undefined;
-        if (!p || v === undefined || d === undefined) return undefined;
-        return {
-          id,
-          debtRisk: p[4],
-          debtLoan: p[5],
-          debtRiskAmt: 0n,
-          debtLoanAmt: 0n,
-          tickLower: Number(p[2]),
-          tickUpper: Number(p[3]),
-          value: Number(formatUnits(v, 6)),
-          debt: Number(formatUnits(d, 6)),
-          healthy: h ?? true,
-        };
-      })
-      .filter((x): x is Pos => !!x && x.value > 0);
-  }, [myIds, details]);
-
-  const refetch = () => {
-    void r0();
-    void r1();
-    void r2();
-  };
+  const { positions, isConnected, refetch } = useFarmPositions();
 
   if (!isConnected || positions.length === 0) return null;
 
