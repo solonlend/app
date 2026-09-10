@@ -1,6 +1,7 @@
 import { formatUnits } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
 
+import { useAutoPoolStats } from "@/hooks/use-auto-pool-stats";
 import { useLiveFeeApr } from "@/hooks/use-live-fee-apr";
 import { rangePriceToHuman, rangeStrategyAbi, rangeVaultAbi, type RangeVaultCfg } from "@/lib/solon-range";
 
@@ -69,7 +70,17 @@ export function useAutoVault(cfg: RangeVaultCfg) {
   // borrowed number. Testnet has no feed at all.
   const { data: liveApr } = useLiveFeeApr(cfg.pool);
   const grossApr = cfg.testnet ? undefined : liveApr?.feeApr;
-  const netApr = grossApr !== undefined ? grossApr * (1 - PERFORMANCE_FEE) : undefined;
+  let netApr = grossApr !== undefined ? grossApr * (1 - PERFORMANCE_FEE) : undefined;
+
+  // Undeployed mainnet vaults: fall back to pool-level stats (auto-pools.json) so the directory
+  // shows the real market instead of dashes. Marked pool-level in the UI (`poolLevel`).
+  const poolStats = useAutoPoolStats(cfg.testnet ? undefined : cfg.pool);
+  const poolLevel = !deployed && !cfg.testnet && poolStats !== undefined;
+  let poolTvlUsd: number | undefined;
+  if (poolLevel) {
+    poolTvlUsd = poolStats.tvlUsd;
+    if (netApr === undefined) netApr = poolStats.feeAprGross * (1 - PERFORMANCE_FEE);
+  }
 
   const refetch = () => {
     void refetchVault();
@@ -97,6 +108,9 @@ export function useAutoVault(cfg: RangeVaultCfg) {
     val0,
     share0,
     netApr,
+    poolLevel,
+    poolTvlUsd,
+    poolStats,
     refetch,
   };
 }

@@ -66,6 +66,12 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           <p className="text-secondary-foreground text-xs font-light leading-relaxed">
             This vault is not live on this chain yet. Deposits open when the mainnet deployment lands.
           </p>
+          {v.poolStats && (
+            <p className="text-secondary-foreground text-xs font-light tabular-nums">
+              Underlying pool today: ${fmt(v.poolStats.tvlUsd)} TVL · ${fmt(v.poolStats.volume24hUsd)} 24h volume ·{" "}
+              {(v.poolStats.feeAprGross * 100).toFixed(1)}% gross fee APR (pool-level, before the vault exists)
+            </p>
+          )}
         </div>
         <div className={PANEL}>
           <span className={LABEL}>Strategy</span>

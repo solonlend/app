@@ -117,12 +117,14 @@ function AutoVaultRow({
   onStats: (slug: string, s: RowStats) => void;
 }) {
   const v = useAutoVault(cfg);
-  const { tvl1, netApr, myShares } = v;
+  // Undeployed rows sort by their pool-level numbers so the directory still orders sensibly.
+  const sortTvl = v.tvl1 ?? v.poolTvlUsd;
+  const { netApr, myShares } = v;
   useEffect(() => {
-    onStats(cfg.slug, { tvl: tvl1, apr: netApr, mine: myShares > 0n });
-  }, [cfg.slug, tvl1, netApr, myShares, onStats]);
+    onStats(cfg.slug, { tvl: sortTvl, apr: netApr, mine: myShares > 0n });
+  }, [cfg.slug, sortTvl, netApr, myShares, onStats]);
 
-  const cell = (label: string, value: string, accent = false) => (
+  const cell = (label: string, value: string, accent = false, note?: string) => (
     <div className="flex flex-col gap-0.5">
       <span className={`${LABEL} md:hidden`}>{label}</span>
       <span
@@ -130,8 +132,10 @@ function AutoVaultRow({
       >
         {value}
       </span>
+      {note && <span className="text-secondary-foreground text-[10px] font-light">{note}</span>}
     </div>
   );
+  const poolNote = v.poolLevel ? "pool, pre-launch" : undefined;
 
   return (
     <button
@@ -159,9 +163,18 @@ function AutoVaultRow({
           <span className={`${BADGE} text-morpho-brand bg-white/[0.06]`}>COMING SOON</span>
         )}
       </div>
-      {cell("Net APR", v.netApr !== undefined ? `${(v.netApr * 100).toFixed(2)}%` : "－", true)}
+      {cell("Net APR", v.netApr !== undefined ? `${(v.netApr * 100).toFixed(2)}%` : "－", true, poolNote)}
       {cell("Daily", v.netApr !== undefined ? `${((v.netApr / 365) * 100).toFixed(4)}%` : "－")}
-      {cell("TVL", v.tvl1 !== undefined ? `${fmt(v.tvl1)} ${cfg.token1.symbol}` : "－")}
+      {cell(
+        "TVL",
+        v.tvl1 !== undefined
+          ? `${fmt(v.tvl1)} ${cfg.token1.symbol}`
+          : v.poolTvlUsd !== undefined
+            ? `$${fmt(v.poolTvlUsd)}`
+            : "－",
+        false,
+        poolNote,
+      )}
       {cell(
         "My deposit",
         !v.user ? "－" : v.myShares > 0n && v.myValue1 !== undefined ? `${fmt(v.myValue1)} ${cfg.token1.symbol}` : "0",
