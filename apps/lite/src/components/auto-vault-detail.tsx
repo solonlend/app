@@ -146,6 +146,8 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
   const { data: contribution } = useAutoNetContribution(cfg, v.user);
   const basis = useAutoPositionBasis(cfg, v.user);
+  const [depOpen, setDepOpen] = useState(false);
+  const [wdOpen, setWdOpen] = useState(false);
 
   // Cost-basis yield (Beefy dashboard's At Deposit / Yield): current value minus entry-priced basis.
   const atDeposit = v.myShares > 0n ? basis?.costBasisUsd : undefined;
@@ -253,21 +255,23 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           mobile; on lg the left column spans both right-side rows. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex gap-2 lg:col-start-2 lg:row-start-1">
-          <Sheet>
+          {/* Controlled + conditionally mounted so sheet state (inputs, previews, tx status)
+              really does reset on every open — the guarantee the spec promises. */}
+          <Sheet open={depOpen} onOpenChange={setDepOpen}>
             <SheetTrigger asChild>
               <Button size="lg" className="grow rounded-full font-light" variant="blue">
                 Deposit
               </Button>
             </SheetTrigger>
-            <ActionSheetContent {...sheetProps} initialMode="deposit" />
+            {depOpen && <ActionSheetContent {...sheetProps} initialMode="deposit" />}
           </Sheet>
-          <Sheet>
+          <Sheet open={wdOpen} onOpenChange={setWdOpen}>
             <SheetTrigger asChild>
               <Button size="lg" className="grow rounded-full font-light" variant="secondary">
                 Withdraw
               </Button>
             </SheetTrigger>
-            <ActionSheetContent {...sheetProps} initialMode="withdraw" />
+            {wdOpen && <ActionSheetContent {...sheetProps} initialMode="withdraw" />}
           </Sheet>
         </div>
         <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1">
@@ -279,6 +283,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
+                      hidden={v.isCalm === undefined}
                       className={`${BADGE} ${v.isCalm === false ? "bg-yellow-500/20 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}
                     >
                       {v.isCalm === false ? "VOLATILE" : "CALM"}
@@ -762,9 +767,10 @@ function ActionSheetContent({
         ? `${fmtAmt(depPreview.fee1, d1)} ${cfg.token1.symbol}`
         : undefined
     : undefined;
+  // Post-deposit total vault share: existing holdings + the new shares, over the new supply.
   const shareFrac =
     depPreview && totalSupply !== undefined && totalSupply + depPreview.shares > 0n
-      ? (Number(depPreview.shares) / Number(totalSupply + depPreview.shares)) * 100
+      ? (Number(myShares + depPreview.shares) / Number(totalSupply + depPreview.shares)) * 100
       : undefined;
 
   const ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";

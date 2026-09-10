@@ -43,8 +43,10 @@ export function AutoVaultList({ chainId, onOpen }: { chainId: number | undefined
       return true;
     });
     return filtered.sort((a, b) => {
-      const va = stats[a.slug]?.[sortKey] ?? -1;
-      const vb = stats[b.slug]?.[sortKey] ?? -1;
+      // Missing data sorts last in BOTH directions.
+      const missing = sortDesc ? -Infinity : Infinity;
+      const va = stats[a.slug]?.[sortKey] ?? missing;
+      const vb = stats[b.slug]?.[sortKey] ?? missing;
       return sortDesc ? vb - va : va - vb;
     });
   }, [cfgs, stats, sortKey, sortDesc, search, onlyMine]);
@@ -156,11 +158,14 @@ function AutoVaultRow({
         </AutoPairInfo>
         {cfg.testnet && <span className={`${BADGE} bg-yellow-500/15 text-yellow-300`}>TESTNET</span>}
         {v.deployed ? (
-          <span
-            className={`${BADGE} ${v.inRange ? "bg-emerald-500/15 text-emerald-300" : "bg-yellow-500/20 text-yellow-300"}`}
-          >
-            {v.inRange ? "IN RANGE" : "OUT OF RANGE"}
-          </span>
+          v.price !== undefined &&
+          v.lower !== undefined && (
+            <span
+              className={`${BADGE} ${v.inRange ? "bg-emerald-500/15 text-emerald-300" : "bg-yellow-500/20 text-yellow-300"}`}
+            >
+              {v.inRange ? "IN RANGE" : "OUT OF RANGE"}
+            </span>
+          )
         ) : (
           <span className={`${BADGE} text-morpho-brand bg-white/[0.06]`}>COMING SOON</span>
         )}
