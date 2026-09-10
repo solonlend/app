@@ -82,12 +82,14 @@ export function useAutoVault(cfg: RangeVaultCfg) {
   // Undeployed mainnet vaults: fall back to pool-level stats (auto-pools.json) so the directory
   // shows the real market instead of dashes. Marked pool-level in the UI (`poolLevel`).
   const poolStats = useAutoPoolStats(cfg.testnet ? undefined : cfg.pool);
-  const poolLevel = !deployed && !cfg.testnet && poolStats !== undefined;
   let poolTvlUsd: number | undefined;
-  if (poolLevel) {
+  if (!deployed && !cfg.testnet && poolStats !== undefined) {
     poolTvlUsd = poolStats.tvlUsd;
     if (netApr === undefined) netApr = poolStats.feeAprGross * (1 - PERFORMANCE_FEE);
   }
+  // Any number an undeployed row shows is pool-level by definition (live feed included) —
+  // the "pool, pre-launch" note must cover them all, not only the auto-pools.json path.
+  const poolLevel = !deployed && !cfg.testnet && (netApr !== undefined || poolTvlUsd !== undefined);
 
   const refetch = () => {
     void refetchVault();

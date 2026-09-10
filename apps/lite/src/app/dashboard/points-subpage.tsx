@@ -25,7 +25,8 @@ function fmt(x: number) {
 
 export function PointsSection() {
   const { address: userAddress } = useAccount();
-  const [data, setData] = useState<PointsData | null>(null);
+  // undefined = still loading, null = both sources failed
+  const [data, setData] = useState<PointsData | null | undefined>(undefined);
 
   useEffect(() => {
     // Two boards on the same chain (both USDG-day units, identical row shape): the Morpho markets
@@ -130,7 +131,7 @@ export function PointsSection() {
           })}
         </TableBody>
       </Table>
-      {data !== null && data.leaderboard.length === 0 && (
+      {data != null && data.leaderboard.length === 0 && (
         <p className="text-secondary-foreground mt-6 font-light">
           Accrual begins at Solon vault genesis — no points have been earned yet. Activity on external markets does not
           earn points.

@@ -309,9 +309,11 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
               <div className="rounded-xl bg-white/[0.04] p-3">
                 <span className={LABEL}>
                   Current{" "}
-                  <span className={v.inRange ? "text-emerald-300" : "text-yellow-300"}>
-                    {v.inRange ? "(in range)" : "(out)"}
-                  </span>
+                  {v.price !== undefined && v.lower !== undefined && (
+                    <span className={v.inRange ? "text-emerald-300" : "text-yellow-300"}>
+                      {v.inRange ? "(in range)" : "(out)"}
+                    </span>
+                  )}
                 </span>
                 <div className="text-primary-foreground mt-1 text-base font-medium tabular-nums">
                   {v.price !== undefined ? fmt(v.price) : "－"}
