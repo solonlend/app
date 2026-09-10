@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { BADGE, LABEL, fmt } from "@/components/auto-vault-common";
+import { BADGE, LABEL, fmtQuote } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
@@ -180,16 +180,16 @@ function AutoVaultRow({
       {cell(
         "TVL",
         v.tvl1 !== undefined
-          ? `${fmt(v.tvl1)} ${cfg.token1.symbol}`
+          ? fmtQuote(v.tvl1, cfg.token1.symbol)
           : v.poolTvlUsd !== undefined
-            ? `$${fmt(v.poolTvlUsd)}`
+            ? fmtQuote(v.poolTvlUsd, "USD")
             : "－",
         "",
         poolNote,
       )}
       {cell(
         "My deposit",
-        !v.user ? "－" : v.myShares > 0n && v.myValue1 !== undefined ? `${fmt(v.myValue1)} ${cfg.token1.symbol}` : "0",
+        !v.user ? "－" : v.myShares > 0n && v.myValue1 !== undefined ? fmtQuote(v.myValue1, cfg.token1.symbol) : "$0",
       )}
       <span className="text-secondary-foreground hidden text-right md:block">→</span>
     </button>

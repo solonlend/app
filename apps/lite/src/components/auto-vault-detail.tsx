@@ -8,13 +8,14 @@ import {
   SheetTrigger,
 } from "@morpho-org/uikit/components/shadcn/sheet";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
+import { useModal } from "connectkit";
 import { ExternalLink, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { erc20Abi, formatUnits, parseUnits, type Address } from "viem";
 import { useAccount, useConfig, useReadContracts, useWriteContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 
-import { BADGE, INPUT, LABEL, PANEL, fmt, fmtAmt } from "@/components/auto-vault-common";
+import { BADGE, INPUT, LABEL, PANEL, fmt, fmtAmt, fmtQuote } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
@@ -91,10 +92,10 @@ function AddressLine({ label, address, explorer }: { label: string; address?: st
   );
 }
 
-function FeesPanel() {
+function FeesPanel({ title = "Fees" }: { title?: string }) {
   return (
     <div className={PANEL}>
-      <span className={LABEL}>Fees</span>
+      <span className={LABEL}>{title}</span>
       <div className="mt-2 flex flex-col gap-1">
         <div className={FEE_ROW}>
           <span>Deposit fee</span>
@@ -148,6 +149,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const basis = useAutoPositionBasis(cfg, v.user);
   const [depOpen, setDepOpen] = useState(false);
   const [wdOpen, setWdOpen] = useState(false);
+  const { setOpen: openConnect } = useModal();
 
   // Cost-basis yield (Beefy dashboard's At Deposit / Yield): current value minus entry-priced basis.
   const atDeposit = v.myShares > 0n ? basis?.costBasisUsd : undefined;
@@ -207,7 +209,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <FeesPanel />
+          <FeesPanel title="Fees at launch" />
           <VaultDetailsPanel cfg={cfg} />
         </div>
       </div>
@@ -238,14 +240,10 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           farmSignedColor(v.netApr),
         )}
         {stat("Daily", v.netApr !== undefined ? `${((v.netApr / 365) * 100).toFixed(4)}%` : "－")}
-        {stat("TVL", v.tvl1 !== undefined ? `${fmt(v.tvl1)} ${cfg.token1.symbol}` : "－")}
+        {stat("TVL", v.tvl1 !== undefined ? fmtQuote(v.tvl1, cfg.token1.symbol) : "－")}
         {stat(
           "My deposit",
-          !v.user
-            ? "－"
-            : v.myShares > 0n && v.myValue1 !== undefined
-              ? `${fmt(v.myValue1)} ${cfg.token1.symbol}`
-              : "0",
+          !v.user ? "－" : v.myShares > 0n && v.myValue1 !== undefined ? fmtQuote(v.myValue1, cfg.token1.symbol) : "$0",
           v.user ? undefined : "connect wallet",
         )}
       </div>
@@ -255,24 +253,53 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           mobile; on lg the left column spans both right-side rows. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex gap-2 lg:col-start-2 lg:row-start-1">
-          {/* Controlled + conditionally mounted so sheet state (inputs, previews, tx status)
-              really does reset on every open — the guarantee the spec promises. */}
-          <Sheet open={depOpen} onOpenChange={setDepOpen}>
-            <SheetTrigger asChild>
-              <Button size="lg" className="grow rounded-full font-light" variant="blue">
+          {/* Disconnected: both buttons summon the wallet modal (SPEC §3 触发按钮). Connected:
+              controlled + conditionally mounted sheets so state really resets per open; Withdraw
+              is disabled while the account holds no shares. */}
+          {!v.user ? (
+            <>
+              <Button
+                size="lg"
+                className="grow rounded-full font-light"
+                variant="blue"
+                onClick={() => openConnect(true)}
+              >
                 Deposit
               </Button>
-            </SheetTrigger>
-            {depOpen && <ActionSheetContent {...sheetProps} initialMode="deposit" />}
-          </Sheet>
-          <Sheet open={wdOpen} onOpenChange={setWdOpen}>
-            <SheetTrigger asChild>
-              <Button size="lg" className="grow rounded-full font-light" variant="secondary">
+              <Button
+                size="lg"
+                className="grow rounded-full font-light"
+                variant="secondary"
+                onClick={() => openConnect(true)}
+              >
                 Withdraw
               </Button>
-            </SheetTrigger>
-            {wdOpen && <ActionSheetContent {...sheetProps} initialMode="withdraw" />}
-          </Sheet>
+            </>
+          ) : (
+            <>
+              <Sheet open={depOpen} onOpenChange={setDepOpen}>
+                <SheetTrigger asChild>
+                  <Button size="lg" className="grow rounded-full font-light" variant="blue">
+                    Deposit
+                  </Button>
+                </SheetTrigger>
+                {depOpen && <ActionSheetContent {...sheetProps} initialMode="deposit" />}
+              </Sheet>
+              <Sheet open={wdOpen} onOpenChange={setWdOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    size="lg"
+                    className="grow rounded-full font-light"
+                    variant="secondary"
+                    disabled={v.myShares === 0n}
+                  >
+                    Withdraw
+                  </Button>
+                </SheetTrigger>
+                {wdOpen && <ActionSheetContent {...sheetProps} initialMode="withdraw" />}
+              </Sheet>
+            </>
+          )}
         </div>
         <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           {/* Price & managed range */}
@@ -393,7 +420,15 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
             </p>
           </div>
 
-          {/* My position (only when holding) */}
+          {/* My position — placeholder when connected without a position (SPEC §2.4) */}
+          {v.user && v.myShares === 0n && (
+            <div className={PANEL}>
+              <span className={LABEL}>My position</span>
+              <p className="text-secondary-foreground mt-2 text-xs font-light">
+                No position yet — your value, cost basis and yield will appear here after your first deposit.
+              </p>
+            </div>
+          )}
           {v.user && v.myShares > 0n && (
             <div className={PANEL}>
               <span className={LABEL}>My position</span>
@@ -401,7 +436,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                 <div>
                   <span className={LABEL}>Value</span>
                   <div className="text-primary-foreground mt-0.5 break-all text-base font-medium tabular-nums">
-                    {v.myValue1 !== undefined ? `${fmt(v.myValue1)} ${cfg.token1.symbol}` : "－"}
+                    {v.myValue1 !== undefined ? fmtQuote(v.myValue1, cfg.token1.symbol) : "－"}
                   </div>
                 </div>
                 <div>
@@ -417,7 +452,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                     </Tooltip>
                   </TooltipProvider>
                   <div className="text-primary-foreground mt-0.5 break-all text-base font-medium tabular-nums">
-                    {atDeposit !== undefined ? `${fmt(atDeposit)} ${cfg.token1.symbol}` : "－"}
+                    {atDeposit !== undefined ? fmtQuote(atDeposit, cfg.token1.symbol) : "－"}
                   </div>
                 </div>
                 <div>
@@ -435,7 +470,9 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                   <div
                     className={`${farmSignedColor(yieldUsd) || "text-primary-foreground"} mt-0.5 break-all text-base font-medium tabular-nums`}
                   >
-                    {yieldUsd !== undefined ? `${yieldUsd >= 0 ? "+" : ""}${fmt(yieldUsd)} ${cfg.token1.symbol}` : "－"}
+                    {yieldUsd !== undefined
+                      ? `${yieldUsd >= 0 ? "+" : ""}${fmtQuote(yieldUsd, cfg.token1.symbol)}`
+                      : "－"}
                   </div>
                 </div>
                 <div>
@@ -461,7 +498,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                   <div
                     className={`${farmSignedColor(pnl1) || "text-primary-foreground"} mt-0.5 break-all text-base font-medium tabular-nums`}
                   >
-                    {pnl1 !== undefined ? `${pnl1 >= 0 ? "+" : ""}${fmt(pnl1)} ${cfg.token1.symbol}` : "－"}
+                    {pnl1 !== undefined ? `${pnl1 >= 0 ? "+" : ""}${fmtQuote(pnl1, cfg.token1.symbol)}` : "－"}
                   </div>
                 </div>
                 <div>

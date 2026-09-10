@@ -1,7 +1,10 @@
+import { Button } from "@morpho-org/uikit/components/shadcn/button";
+import { useModal } from "connectkit";
 import { useCallback, useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import { useAccount } from "wagmi";
 
-import { BADGE, LABEL, PANEL, fmt } from "@/components/auto-vault-common";
+import { BADGE, LABEL, PANEL, fmtQuote } from "@/components/auto-vault-common";
 import { FarmPositions } from "@/components/farm-positions";
 import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
@@ -31,6 +34,8 @@ export function FarmPortfolio({
   chainId: number | undefined;
   onOpenVault: (slug: string) => void;
 }) {
+  const { address: user } = useAccount();
+  const { setOpen: openConnect } = useModal();
   const cfgs = rangeVaultsForChain(chainId).filter((c) => c.vault !== undefined);
   const [rows, setRows] = useState<Record<string, Row>>({});
   const report = useCallback((slug: string, r: Row) => {
@@ -67,10 +72,28 @@ export function FarmPortfolio({
       <div
         className={`${(signed ? farmSignedColor(v) : "") || "text-primary-foreground"} mt-1 break-all text-base font-medium tabular-nums`}
       >
-        {v !== undefined ? `${signed && v >= 0 ? "+" : ""}${fmt(v)} USDG` : "－"}
+        {v !== undefined ? `${signed && v >= 0 ? "+" : ""}${fmtQuote(v, "USD")}` : "－"}
       </div>
     </div>
   );
+
+  if (!user) {
+    // Disconnected: four dash cards carry zero information — show one guidance card instead
+    // (SPEC §4 未连接态). The public Points board below stays visible.
+    return (
+      <div className="flex w-full max-w-7xl flex-col gap-4 px-2 lg:px-8">
+        <div className={`${PANEL} flex flex-col items-start gap-3`}>
+          <span className={LABEL}>Portfolio</span>
+          <p className="text-secondary-foreground text-sm font-light">
+            Connect a wallet to see your Auto LP value, cost basis, yield and leveraged positions on this chain.
+          </p>
+          <Button variant="blue" className="rounded-full px-6 font-light" onClick={() => openConnect(true)}>
+            Connect Wallet
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full max-w-7xl flex-col gap-4 px-2 lg:px-8">
@@ -138,7 +161,7 @@ function Cell({ label, v, signed = false }: { label: string; v?: number; signed?
       <span
         className={`${(signed ? farmSignedColor(v) : "") || "text-primary-foreground"} break-all text-sm font-medium tabular-nums`}
       >
-        {v !== undefined ? `${signed && v >= 0 ? "+" : ""}${fmt(v)}` : "－"}
+        {v !== undefined ? `${signed && v >= 0 ? "+" : ""}${fmtQuote(v, "USD")}` : "－"}
       </span>
     </span>
   );
