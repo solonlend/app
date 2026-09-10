@@ -59,19 +59,53 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
 
   if (!v.deployed) {
+    const stat = (label: string, value: string, sub?: string) => (
+      <div className="rounded-xl bg-white/[0.04] p-3">
+        <span className={LABEL}>{label}</span>
+        <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">{value}</div>
+        {sub && <span className="text-secondary-foreground text-[10px]">{sub}</span>}
+      </div>
+    );
+    const FEE_ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";
     return (
       <div className="flex flex-col gap-4">
         <div className={`${PANEL} flex flex-col gap-3`}>
           <span className={`${BADGE} text-morpho-brand self-start bg-white/[0.06]`}>COMING SOON</span>
           <p className="text-secondary-foreground text-xs font-light leading-relaxed">
-            This vault is not live on this chain yet. Deposits open when the mainnet deployment lands.
+            This vault is not live on this chain yet. Deposits open when the mainnet deployment lands. The numbers below
+            are today&apos;s underlying pool — what the vault will farm once it goes live.
           </p>
           {v.poolStats && (
-            <p className="text-secondary-foreground text-xs font-light tabular-nums">
-              Underlying pool today: ${fmt(v.poolStats.tvlUsd)} TVL · ${fmt(v.poolStats.volume24hUsd)} 24h volume ·{" "}
-              {(v.poolStats.feeAprGross * 100).toFixed(1)}% gross fee APR (pool-level, before the vault exists)
-            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {stat("Pool TVL", `$${fmt(v.poolStats.tvlUsd)}`, "pool-level, pre-launch")}
+              {stat("24h volume", `$${fmt(v.poolStats.volume24hUsd)}`)}
+              {stat(
+                "LP fee APR (gross)",
+                `${(v.poolStats.feeAprGross * 100).toFixed(1)}%`,
+                "before the 10% performance fee",
+              )}
+            </div>
           )}
+        </div>
+        <div className={PANEL}>
+          <span className={LABEL}>Fees at launch</span>
+          <div className="mt-2 flex max-w-md flex-col gap-1">
+            <div className={FEE_ROW}>
+              <span>Deposit fee</span>
+              <span>0%</span>
+            </div>
+            <div className={FEE_ROW}>
+              <span>Withdrawal fee</span>
+              <span>0%</span>
+            </div>
+            <div className={FEE_ROW}>
+              <span>Performance fee</span>
+              <span>10% of yield — never from principal</span>
+            </div>
+            <p className="text-secondary-foreground mt-1 text-[11px] font-light">
+              Withdrawals are available in any market condition.
+            </p>
+          </div>
         </div>
         <div className={PANEL}>
           <span className={LABEL}>Strategy</span>
