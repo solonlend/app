@@ -93,7 +93,7 @@ function FeesPanel() {
   return (
     <div className={PANEL}>
       <span className={LABEL}>Fees</span>
-      <div className="mt-2 flex max-w-md flex-col gap-1">
+      <div className="mt-2 flex flex-col gap-1">
         <div className={FEE_ROW}>
           <span>Deposit fee</span>
           <span>0%</span>
@@ -114,6 +114,31 @@ function FeesPanel() {
   );
 }
 
+function VaultDetailsPanel({ cfg, lastAdjustment }: { cfg: RangeVaultCfg; lastAdjustment?: bigint }) {
+  return (
+    <div className={PANEL}>
+      <span className={LABEL}>Vault details</span>
+      <div className="mt-2 flex flex-col gap-1">
+        <div className={FEE_ROW}>
+          <span>Platform</span>
+          <span>Uniswap V3 · {cfg.feeLabel} fee tier</span>
+        </div>
+        {cfg.vault && (
+          <div className={FEE_ROW}>
+            <span>Last range adjustment</span>
+            <span className="tabular-nums">{ago(lastAdjustment)}</span>
+          </div>
+        )}
+        <AddressLine label="Vault" address={cfg.vault} explorer={cfg.explorer} />
+        <AddressLine label="Strategy" address={cfg.strategy} explorer={cfg.explorer} />
+        <AddressLine label="Pool" address={cfg.pool} explorer={cfg.explorer} />
+        <AddressLine label={cfg.token0.symbol} address={cfg.token0.address} explorer={cfg.explorer} />
+        <AddressLine label={cfg.token1.symbol} address={cfg.token1.address} explorer={cfg.explorer} />
+      </div>
+    </div>
+  );
+}
+
 function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
 
@@ -127,33 +152,38 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
 
   if (!v.deployed) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className={`${PANEL} flex flex-col gap-3`}>
-          <span className={`${BADGE} text-morpho-brand self-start bg-white/[0.06]`}>COMING SOON</span>
-          <p className="text-secondary-foreground text-xs font-light leading-relaxed">
-            This vault is not live on this chain yet. Deposits open when the mainnet deployment lands. The numbers below
-            are today&apos;s underlying pool — what the vault will farm once it goes live.
-          </p>
-          {v.poolStats && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {stat("Pool TVL", `$${fmt(v.poolStats.tvlUsd)}`, "pool-level, pre-launch")}
-              {stat("24h volume", `$${fmt(v.poolStats.volume24hUsd)}`)}
-              {stat(
-                "LP fee APR (gross)",
-                `${(v.poolStats.feeAprGross * 100).toFixed(1)}%`,
-                "before the 10% performance fee",
-              )}
-            </div>
-          )}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className={`${PANEL} flex flex-col gap-3`}>
+            <span className={`${BADGE} text-morpho-brand self-start bg-white/[0.06]`}>COMING SOON</span>
+            <p className="text-secondary-foreground text-xs font-light leading-relaxed">
+              This vault is not live on this chain yet. Deposits open when the mainnet deployment lands. The numbers
+              below are today&apos;s underlying pool — what the vault will farm once it goes live.
+            </p>
+            {v.poolStats && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {stat("Pool TVL", `$${fmt(v.poolStats.tvlUsd)}`, "pool-level, pre-launch")}
+                {stat("24h volume", `$${fmt(v.poolStats.volume24hUsd)}`)}
+                {stat(
+                  "LP fee APR (gross)",
+                  `${(v.poolStats.feeAprGross * 100).toFixed(1)}%`,
+                  "before the 10% performance fee",
+                )}
+              </div>
+            )}
+          </div>
+          <div className={PANEL}>
+            <span className={LABEL}>Strategy</span>
+            <p className="text-secondary-foreground mt-2 max-w-3xl text-xs font-light leading-relaxed">
+              Deposit both tokens and walk away: the vault sets the range, resets it as price moves, and compounds
+              trading fees back into the position. Your principal is never swapped. Contracts are complete and verified
+              end-to-end on a live testnet — mainnet deployment is in final review.
+            </p>
+          </div>
         </div>
-        <FeesPanel />
-        <div className={PANEL}>
-          <span className={LABEL}>Strategy</span>
-          <p className="text-secondary-foreground mt-2 max-w-3xl text-xs font-light leading-relaxed">
-            Deposit both tokens and walk away: the vault sets the range, resets it as price moves, and compounds trading
-            fees back into the position. Your principal is never swapped. Contracts are complete and verified end-to-end
-            on a live testnet — mainnet deployment is in final review.
-          </p>
+        <div className="flex flex-col gap-4">
+          <FeesPanel />
+          <VaultDetailsPanel cfg={cfg} />
         </div>
       </div>
     );
@@ -215,169 +245,156 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
         </Sheet>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-4">
-        {/* Price & managed range */}
-        <div className={PANEL}>
-          <div className="mb-3 flex items-center justify-between">
-            <span className={LABEL}>Price & managed range</span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    className={`${BADGE} ${v.isCalm === false ? "bg-yellow-500/20 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}
-                  >
-                    {v.isCalm === false ? "VOLATILE" : "CALM"}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
-                  Deposits and compounding run only while spot sits near the pool&apos;s 2-minute average — this blocks
-                  price-manipulation entries. Withdrawals are never gated.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-white/[0.04] p-3">
-              <span className={LABEL}>Min price</span>
-              <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
-                {v.lower !== undefined ? fmt(v.lower) : "－"}
-              </div>
-              <span className="text-secondary-foreground text-[10px]">
-                {cfg.token1.symbol}/{cfg.token0.symbol}
-              </span>
+      {/* Beefy-style split: main content left, facts sidebar right (where the old action panel sat) */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* Price & managed range */}
+          <div className={PANEL}>
+            <div className="mb-3 flex items-center justify-between">
+              <span className={LABEL}>Price & managed range</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`${BADGE} ${v.isCalm === false ? "bg-yellow-500/20 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}
+                    >
+                      {v.isCalm === false ? "VOLATILE" : "CALM"}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
+                    Deposits and compounding run only while spot sits near the pool&apos;s 2-minute average — this
+                    blocks price-manipulation entries. Withdrawals are never gated.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-            <div className="rounded-xl bg-white/[0.04] p-3">
-              <span className={LABEL}>
-                Current{" "}
-                <span className={v.inRange ? "text-emerald-300" : "text-yellow-300"}>
-                  {v.inRange ? "(in range)" : "(out)"}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl bg-white/[0.04] p-3">
+                <span className={LABEL}>Min price</span>
+                <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
+                  {v.lower !== undefined ? fmt(v.lower) : "－"}
+                </div>
+                <span className="text-secondary-foreground text-[10px]">
+                  {cfg.token1.symbol}/{cfg.token0.symbol}
                 </span>
-              </span>
-              <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
-                {v.price !== undefined ? fmt(v.price) : "－"}
               </div>
-              <span className="text-secondary-foreground text-[10px]">
-                {cfg.token1.symbol}/{cfg.token0.symbol}
-              </span>
-            </div>
-            <div className="rounded-xl bg-white/[0.04] p-3">
-              <span className={LABEL}>Max price</span>
-              <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
-                {v.upper !== undefined ? fmt(v.upper) : "－"}
+              <div className="rounded-xl bg-white/[0.04] p-3">
+                <span className={LABEL}>
+                  Current{" "}
+                  <span className={v.inRange ? "text-emerald-300" : "text-yellow-300"}>
+                    {v.inRange ? "(in range)" : "(out)"}
+                  </span>
+                </span>
+                <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
+                  {v.price !== undefined ? fmt(v.price) : "－"}
+                </div>
+                <span className="text-secondary-foreground text-[10px]">
+                  {cfg.token1.symbol}/{cfg.token0.symbol}
+                </span>
               </div>
-              <span className="text-secondary-foreground text-[10px]">
-                {cfg.token1.symbol}/{cfg.token0.symbol}
-              </span>
+              <div className="rounded-xl bg-white/[0.04] p-3">
+                <span className={LABEL}>Max price</span>
+                <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
+                  {v.upper !== undefined ? fmt(v.upper) : "－"}
+                </div>
+                <span className="text-secondary-foreground text-[10px]">
+                  {cfg.token1.symbol}/{cfg.token0.symbol}
+                </span>
+              </div>
             </div>
+            {/* Range bar with current-price marker */}
+            {v.lower !== undefined && v.upper !== undefined && v.price !== undefined && v.upper > v.lower && (
+              <div className="mt-3">
+                <div className="relative h-2 rounded-full bg-white/[0.06]">
+                  <div className="absolute inset-y-0 left-[10%] right-[10%] rounded-full bg-emerald-500/25" />
+                  <div
+                    className={`absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded ${v.inRange ? "bg-emerald-300" : "bg-yellow-300"}`}
+                    style={{
+                      left: `${Math.min(98, Math.max(2, 10 + ((v.price - v.lower) / (v.upper - v.lower)) * 80))}%`,
+                    }}
+                  />
+                </div>
+                <div className="text-secondary-foreground mt-1 flex justify-between text-[10px] tabular-nums">
+                  <span>{fmt(v.lower)}</span>
+                  <span>range auto re-centered by the keeper</span>
+                  <span>{fmt(v.upper)}</span>
+                </div>
+              </div>
+            )}
           </div>
-          {/* Range bar with current-price marker */}
-          {v.lower !== undefined && v.upper !== undefined && v.price !== undefined && v.upper > v.lower && (
-            <div className="mt-3">
-              <div className="relative h-2 rounded-full bg-white/[0.06]">
-                <div className="absolute inset-y-0 left-[10%] right-[10%] rounded-full bg-emerald-500/25" />
-                <div
-                  className={`absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded ${v.inRange ? "bg-emerald-300" : "bg-yellow-300"}`}
-                  style={{
-                    left: `${Math.min(98, Math.max(2, 10 + ((v.price - v.lower) / (v.upper - v.lower)) * 80))}%`,
-                  }}
-                />
-              </div>
-              <div className="text-secondary-foreground mt-1 flex justify-between text-[10px] tabular-nums">
-                <span>{fmt(v.lower)}</span>
-                <span>range auto re-centered by the keeper</span>
-                <span>{fmt(v.upper)}</span>
+
+          {/* LP breakdown */}
+          <div className={PANEL}>
+            <span className={LABEL}>LP breakdown</span>
+            <div className="mt-3 flex flex-col gap-2">
+              {[
+                [cfg.token0, balances?.[0], d0, v.val0, v.share0] as const,
+                [cfg.token1, balances?.[1], d1, v.bal1, v.share0 !== undefined ? 100 - v.share0 : undefined] as const,
+              ].map(([t, raw, dec, val, share]) => (
+                <div key={t.symbol} className="flex items-center gap-3">
+                  <span className="text-primary-foreground w-14 text-sm font-medium">{t.symbol}</span>
+                  <div className="h-1.5 grow rounded-full bg-white/[0.06]">
+                    <div
+                      className="bg-morpho-brand/60 h-full rounded-full"
+                      style={{ width: `${share !== undefined ? Math.max(2, share) : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-secondary-foreground w-40 text-right text-xs tabular-nums">
+                    {raw !== undefined ? fmtAmt(raw, dec) : "－"}{" "}
+                    {t.symbol !== cfg.token1.symbol && val !== undefined ? `· ${fmt(val)} ${cfg.token1.symbol}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-secondary-foreground mt-2 text-[11px] font-light">
+              The mix drifts with price and is never force-rebalanced by selling — that is the point.
+            </p>
+          </div>
+
+          {/* Strategy */}
+          <div className={PANEL}>
+            <span className={LABEL}>Strategy</span>
+            <p className="text-secondary-foreground mt-2 text-xs font-light leading-relaxed">
+              Your two tokens are placed as concentrated liquidity around the current price on Uniswap V3. The vault
+              collects trading fees and compounds them back into the position; a keeper re-centers the range when price
+              moves out of it, and every sensitive action is gated behind a 2-minute TWAP calm check. Your principal is
+              never swapped. Risk to understand: while price sits outside the range the position earns no fees and holds
+              mostly one token until the next re-center — no losses are forced, but the mix follows the market.
+            </p>
+          </div>
+
+          {/* My position (only when holding) */}
+          {v.user && v.myShares > 0n && (
+            <div className={PANEL}>
+              <span className={LABEL}>My position</span>
+              <div className="mt-2 grid grid-cols-3 gap-3">
+                <div>
+                  <span className={LABEL}>Value</span>
+                  <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
+                    {v.myValue1 !== undefined ? `${fmt(v.myValue1)} ${cfg.token1.symbol}` : "－"}
+                  </div>
+                </div>
+                <div>
+                  <span className={LABEL}>Vault share</span>
+                  <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
+                    {(v.myFrac * 100).toFixed(2)}%
+                  </div>
+                </div>
+                <div>
+                  <span className={LABEL}>Shares</span>
+                  <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
+                    {fmtAmt(v.myShares, d1)}
+                  </div>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* LP breakdown */}
-        <div className={PANEL}>
-          <span className={LABEL}>LP breakdown</span>
-          <div className="mt-3 flex flex-col gap-2">
-            {[
-              [cfg.token0, balances?.[0], d0, v.val0, v.share0] as const,
-              [cfg.token1, balances?.[1], d1, v.bal1, v.share0 !== undefined ? 100 - v.share0 : undefined] as const,
-            ].map(([t, raw, dec, val, share]) => (
-              <div key={t.symbol} className="flex items-center gap-3">
-                <span className="text-primary-foreground w-14 text-sm font-medium">{t.symbol}</span>
-                <div className="h-1.5 grow rounded-full bg-white/[0.06]">
-                  <div
-                    className="bg-morpho-brand/60 h-full rounded-full"
-                    style={{ width: `${share !== undefined ? Math.max(2, share) : 0}%` }}
-                  />
-                </div>
-                <span className="text-secondary-foreground w-40 text-right text-xs tabular-nums">
-                  {raw !== undefined ? fmtAmt(raw, dec) : "－"}{" "}
-                  {t.symbol !== cfg.token1.symbol && val !== undefined ? `· ${fmt(val)} ${cfg.token1.symbol}` : ""}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="text-secondary-foreground mt-2 text-[11px] font-light">
-            The mix drifts with price and is never force-rebalanced by selling — that is the point.
-          </p>
-        </div>
-
-        {/* Strategy */}
-        <div className={PANEL}>
-          <span className={LABEL}>Strategy</span>
-          <p className="text-secondary-foreground mt-2 text-xs font-light leading-relaxed">
-            Your two tokens are placed as concentrated liquidity around the current price on Uniswap V3. The vault
-            collects trading fees and compounds them back into the position; a keeper re-centers the range when price
-            moves out of it, and every sensitive action is gated behind a 2-minute TWAP calm check. Your principal is
-            never swapped. Risk to understand: while price sits outside the range the position earns no fees and holds
-            mostly one token until the next re-center — no losses are forced, but the mix follows the market.
-          </p>
-        </div>
-
-        {/* My position (only when holding) */}
-        {v.user && v.myShares > 0n && (
-          <div className={PANEL}>
-            <span className={LABEL}>My position</span>
-            <div className="mt-2 grid grid-cols-3 gap-3">
-              <div>
-                <span className={LABEL}>Value</span>
-                <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
-                  {v.myValue1 !== undefined ? `${fmt(v.myValue1)} ${cfg.token1.symbol}` : "－"}
-                </div>
-              </div>
-              <div>
-                <span className={LABEL}>Vault share</span>
-                <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
-                  {(v.myFrac * 100).toFixed(2)}%
-                </div>
-              </div>
-              <div>
-                <span className={LABEL}>Shares</span>
-                <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
-                  {fmtAmt(v.myShares, d1)}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <FeesPanel />
-
-        {/* Vault details — contracts and operating facts, spelled out (not only in the hover card) */}
-        <div className={PANEL}>
-          <span className={LABEL}>Vault details</span>
-          <div className="mt-2 flex max-w-md flex-col gap-1">
-            <div className={FEE_ROW}>
-              <span>Platform</span>
-              <span>Uniswap V3 · {cfg.feeLabel} fee tier</span>
-            </div>
-            <div className={FEE_ROW}>
-              <span>Last range adjustment</span>
-              <span className="tabular-nums">{ago(v.lastAdjustment)}</span>
-            </div>
-            <AddressLine label="Vault" address={cfg.vault} explorer={cfg.explorer} />
-            <AddressLine label="Strategy" address={cfg.strategy} explorer={cfg.explorer} />
-            <AddressLine label="Pool" address={cfg.pool} explorer={cfg.explorer} />
-            <AddressLine label={cfg.token0.symbol} address={cfg.token0.address} explorer={cfg.explorer} />
-            <AddressLine label={cfg.token1.symbol} address={cfg.token1.address} explorer={cfg.explorer} />
-          </div>
+        {/* Facts sidebar */}
+        <div className="flex flex-col gap-4">
+          <FeesPanel />
+          <VaultDetailsPanel cfg={cfg} lastAdjustment={v.lastAdjustment} />
         </div>
       </div>
     </div>
