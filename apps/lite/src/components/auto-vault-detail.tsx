@@ -17,6 +17,7 @@ import { readContract } from "wagmi/actions";
 import { BADGE, INPUT, LABEL, PANEL, fmt, fmtAmt } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
+import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { useBusy } from "@/hooks/use-busy";
 import { depositPctAmounts } from "@/lib/auto-deposit";
@@ -144,6 +145,11 @@ function VaultDetailsPanel({ cfg, lastAdjustment }: { cfg: RangeVaultCfg; lastAd
 function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
   const { data: contribution } = useAutoNetContribution(cfg, v.user);
+  const basis = useAutoPositionBasis(cfg, v.user);
+
+  // Cost-basis yield (Beefy dashboard's At Deposit / Yield): current value minus entry-priced basis.
+  const atDeposit = v.myShares > 0n ? basis?.costBasisUsd : undefined;
+  const yieldUsd = atDeposit !== undefined && v.myValue1 !== undefined ? v.myValue1 - atDeposit : undefined;
 
   // Vs-holding PnL at today's price: current claim minus net contributed, both marked now.
   let pnl1: number | undefined;
@@ -384,30 +390,52 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           {v.user && v.myShares > 0n && (
             <div className={PANEL}>
               <span className={LABEL}>My position</span>
-              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
                   <span className={LABEL}>Value</span>
-                  <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
+                  <div className="text-primary-foreground mt-0.5 break-all text-base font-medium tabular-nums">
                     {v.myValue1 !== undefined ? `${fmt(v.myValue1)} ${cfg.token1.symbol}` : "－"}
-                  </div>
-                </div>
-                <div>
-                  <span className={LABEL}>Vault share</span>
-                  <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
-                    {(v.myFrac * 100).toFixed(2)}%
-                  </div>
-                </div>
-                <div>
-                  <span className={LABEL}>Shares</span>
-                  <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
-                    {fmtAmt(v.myShares, d1)}
                   </div>
                 </div>
                 <div>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className={`${LABEL} underline decoration-dotted underline-offset-2`}>PnL</span>
+                        <span className={`${LABEL} underline decoration-dotted underline-offset-2`}>At deposit</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
+                        What your current position cost when you entered: each deposit priced at its own entry block,
+                        withdrawals reduce the basis proportionally. Computed by the position indexer from vault events.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <div className="text-primary-foreground mt-0.5 break-all text-base font-medium tabular-nums">
+                    {atDeposit !== undefined ? `${fmt(atDeposit)} ${cfg.token1.symbol}` : "－"}
+                  </div>
+                </div>
+                <div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`${LABEL} underline decoration-dotted underline-offset-2`}>Yield</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
+                        Value now minus value at deposit — everything the position gained or lost since entry: trading
+                        fees compounded in, plus price moves of the tokens themselves.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <div
+                    className={`${farmSignedColor(yieldUsd) || "text-primary-foreground"} mt-0.5 break-all text-base font-medium tabular-nums`}
+                  >
+                    {yieldUsd !== undefined ? `${yieldUsd >= 0 ? "+" : ""}${fmt(yieldUsd)} ${cfg.token1.symbol}` : "－"}
+                  </div>
+                </div>
+                <div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`${LABEL} underline decoration-dotted underline-offset-2`}>vs HODL</span>
                       </TooltipTrigger>
                       <TooltipContent className="text-primary-foreground max-w-72 rounded-3xl p-4 shadow-2xl">
                         Your current claim minus what you net deposited, both priced at today&apos;s price — compounded
@@ -424,9 +452,21 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                     </Tooltip>
                   </TooltipProvider>
                   <div
-                    className={`${farmSignedColor(pnl1) || "text-primary-foreground"} mt-0.5 text-base font-medium tabular-nums`}
+                    className={`${farmSignedColor(pnl1) || "text-primary-foreground"} mt-0.5 break-all text-base font-medium tabular-nums`}
                   >
                     {pnl1 !== undefined ? `${pnl1 >= 0 ? "+" : ""}${fmt(pnl1)} ${cfg.token1.symbol}` : "－"}
+                  </div>
+                </div>
+                <div>
+                  <span className={LABEL}>Vault share</span>
+                  <div className="text-primary-foreground mt-0.5 break-all text-base font-medium tabular-nums">
+                    {(v.myFrac * 100).toFixed(2)}%
+                  </div>
+                </div>
+                <div>
+                  <span className={LABEL}>Shares</span>
+                  <div className="text-primary-foreground mt-0.5 break-all text-base font-medium tabular-nums">
+                    {fmtAmt(v.myShares, d1)}
                   </div>
                 </div>
               </div>
