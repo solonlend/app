@@ -131,12 +131,16 @@ function AutoVaultRow({
   const cell = (label: string, value: string, colorClass = "", note?: string) => (
     <div className="flex flex-col gap-0.5">
       <span className={`${LABEL} md:hidden`}>{label}</span>
-      <span
-        className={`${colorClass || "text-primary-foreground"} ${colorClass ? "text-lg" : "text-base"} font-medium tabular-nums`}
-      >
-        {value}
-      </span>
-      {note && <span className="text-secondary-foreground text-[10px] font-light">{note}</span>}
+      {v.loading ? (
+        <span className="h-5 w-16 animate-pulse rounded bg-white/[0.08]" />
+      ) : (
+        <span
+          className={`${colorClass || "text-primary-foreground"} ${colorClass ? "text-lg" : "text-base"} font-medium tabular-nums`}
+        >
+          {value}
+        </span>
+      )}
+      {note && !v.loading && <span className="text-secondary-foreground text-[10px] font-light">{note}</span>}
     </div>
   );
   const poolNote = v.poolLevel ? "pool, pre-launch" : undefined;

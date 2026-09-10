@@ -96,9 +96,12 @@ export function useAutoVault(cfg: RangeVaultCfg) {
     void refetchStrat();
   };
 
+  const loading = deployed && vaultData === undefined && stratData === undefined;
+
   return {
     user,
     deployed,
+    loading,
     d0,
     d1,
     balances,

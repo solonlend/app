@@ -170,10 +170,14 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const stat = (label: string, value: string, sub?: string, colorClass?: string) => (
     <div className="rounded-xl bg-white/[0.04] p-3">
       <span className={LABEL}>{label}</span>
-      <div className={`${colorClass || "text-primary-foreground"} mt-1 text-base font-medium tabular-nums`}>
-        {value}
-      </div>
-      {sub && <span className="text-secondary-foreground text-[10px]">{sub}</span>}
+      {v.loading ? (
+        <div className="mt-1 h-6 w-20 animate-pulse rounded bg-white/[0.08]" />
+      ) : (
+        <div className={`${colorClass || "text-primary-foreground"} mt-1 break-all text-base font-medium tabular-nums`}>
+          {value}
+        </div>
+      )}
+      {sub && !v.loading && <span className="text-secondary-foreground text-[10px]">{sub}</span>}
     </div>
   );
 
@@ -373,7 +377,9 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                 </div>
                 <div className="text-secondary-foreground mt-1 flex justify-between text-[10px] tabular-nums">
                   <span>{fmt(v.lower)}</span>
-                  <span>range auto re-centered by the keeper</span>
+                  <span>
+                    ±{(((v.upper - v.lower) / 2 / v.price) * 100).toFixed(1)}% range · auto re-centered by the keeper
+                  </span>
                   <span>{fmt(v.upper)}</span>
                 </div>
               </div>
@@ -433,12 +439,6 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
             <div className={PANEL}>
               <span className={LABEL}>My position</span>
               <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div>
-                  <span className={LABEL}>Value</span>
-                  <div className="text-primary-foreground mt-0.5 break-all text-base font-medium tabular-nums">
-                    {v.myValue1 !== undefined ? fmtQuote(v.myValue1, cfg.token1.symbol) : "－"}
-                  </div>
-                </div>
                 <div>
                   <TooltipProvider>
                     <Tooltip>

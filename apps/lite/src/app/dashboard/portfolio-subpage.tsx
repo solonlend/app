@@ -23,7 +23,7 @@ export function PortfolioSubPage() {
     <div className="flex min-h-screen flex-col px-2.5 pt-16">
       <PageHeader
         title="Portfolio"
-        subtitle="Everything about your account on this chain — Auto LP value, cost and yield, leveraged positions, and your points."
+        subtitle={`Everything about your account on ${chain?.name ?? "this chain"} — Auto LP value, cost and yield, leveraged positions, and your points.`}
         hint={isConnected ? undefined : "Connect wallet to see your positions"}
       />
       <div className="flex grow flex-col bg-white/[0.03]">
