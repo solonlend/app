@@ -22,6 +22,12 @@ test("legacy range tab redirects to auto and carries a valid vault segment", asy
   assert.deepEqual(resolveFarmRoute("range", "nope", hasSlug), { view: "auto-list", redirect: "auto" });
 });
 
+test("portfolio tab renders portfolio view; stray vault segment normalizes back", async () => {
+  const { resolveFarmRoute } = await load();
+  assert.deepEqual(resolveFarmRoute("portfolio", undefined, hasSlug), { view: "portfolio" });
+  assert.deepEqual(resolveFarmRoute("portfolio", "anything", hasSlug), { view: "portfolio", redirect: "portfolio" });
+});
+
 test("leverage tab normalizes stray vault segment; unknown tabs fall back to leverage", async () => {
   const { resolveFarmRoute } = await load();
   assert.deepEqual(resolveFarmRoute("leverage", undefined, hasSlug), { view: "leverage" });

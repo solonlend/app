@@ -7,7 +7,7 @@
 */
 
 export type FarmRoute = {
-  view: "leverage" | "auto-list" | "auto-detail";
+  view: "leverage" | "auto-list" | "auto-detail" | "portfolio";
   /** Path relative to the /farm base the subpage should replace-navigate to, when set. */
   redirect?: string;
   slug?: string;
@@ -29,6 +29,9 @@ export function resolveFarmRoute(
   }
   if (tab === "leverage") {
     return vault !== undefined ? { view: "leverage", redirect: "leverage" } : { view: "leverage" };
+  }
+  if (tab === "portfolio") {
+    return vault !== undefined ? { view: "portfolio", redirect: "portfolio" } : { view: "portfolio" };
   }
   return { view: "leverage", redirect: "leverage" };
 }

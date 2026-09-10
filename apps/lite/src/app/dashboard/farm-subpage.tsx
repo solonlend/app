@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 
 import { AutoVaultDetail } from "@/components/auto-vault-detail";
 import { AutoVaultList } from "@/components/auto-vault-list";
+import { FarmPortfolio } from "@/components/farm-portfolio";
 import { FarmPositions } from "@/components/farm-positions";
 import { FarmProtocolPanel } from "@/components/farm-protocol-panel";
 import { FarmTable } from "@/components/farm-table";
@@ -24,6 +25,7 @@ import { findRangeVault } from "@/lib/solon-range";
 const TABS = [
   { key: "leverage", label: "Leveraged", risk: "borrow to amplify · liquidation risk" },
   { key: "auto", label: "Auto", risk: "auto-compound · auto-rebalance · no leverage" },
+  { key: "portfolio", label: "Portfolio", risk: "all your farm positions" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -34,6 +36,8 @@ const SUBTITLES: Record<TabKey, string> = {
   leverage:
     "Leveraged concentrated liquidity. Each position borrows both legs of the pair in the ratio the range requires, so nothing is swapped on entry or exit. The debt sits in the same reserves Earn supplies, and clears on the same liquidation terms as any other loan.",
   auto: "Deposit both tokens and the vault does the rest: it auto-compounds trading fees and auto-rebalances the range as price moves. Your principal is never swapped. No leverage, no liquidation.",
+  portfolio:
+    "Everything your account holds across Farm on this chain — Auto LP value, cost and yield, and your leveraged positions.",
 };
 
 export function FarmSubPage() {
@@ -46,7 +50,7 @@ export function FarmSubPage() {
   const farmBase = location.pathname.replace(/\/farm(\/.*)?$/i, "/farm");
 
   const route = resolveFarmRoute(tab, vault, (s) => findRangeVault(chain?.id, s) !== undefined);
-  const active: TabKey = route.view === "leverage" ? "leverage" : "auto";
+  const active: TabKey = route.view === "leverage" ? "leverage" : route.view === "portfolio" ? "portfolio" : "auto";
   // Legacy /farm/range[/:vault], /farm, unknown tabs and bad slugs normalize via client replace.
   useEffect(() => {
     if (route.redirect) void navigate(`${farmBase}/${route.redirect}`, { replace: true });
@@ -96,6 +100,8 @@ export function FarmSubPage() {
               <FarmTable chain={chain} />
               <FarmPositions />
             </>
+          ) : active === "portfolio" ? (
+            <FarmPortfolio chainId={chain?.id} onOpenVault={(slug) => void navigate(`${farmBase}/auto/${slug}`)} />
           ) : detailCfg ? (
             <AutoVaultDetail cfg={detailCfg} onBack={() => void navigate(`${farmBase}/auto`)} />
           ) : (
