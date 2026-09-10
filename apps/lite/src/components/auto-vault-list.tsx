@@ -130,7 +130,7 @@ function AutoVaultRow({
     <div className="flex flex-col gap-0.5">
       <span className={`${LABEL} md:hidden`}>{label}</span>
       <span
-        className={`${colorClass || "text-primary-foreground"} ${colorClass ? "text-lg" : "text-sm"} font-medium tabular-nums`}
+        className={`${colorClass || "text-primary-foreground"} ${colorClass ? "text-lg" : "text-base"} font-medium tabular-nums`}
       >
         {value}
       </span>

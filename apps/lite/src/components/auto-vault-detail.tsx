@@ -145,7 +145,9 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const stat = (label: string, value: string, sub?: string, colorClass?: string) => (
     <div className="rounded-xl bg-white/[0.04] p-3">
       <span className={LABEL}>{label}</span>
-      <div className={`${colorClass || "text-primary-foreground"} mt-1 text-sm font-medium tabular-nums`}>{value}</div>
+      <div className={`${colorClass || "text-primary-foreground"} mt-1 text-base font-medium tabular-nums`}>
+        {value}
+      </div>
       {sub && <span className="text-secondary-foreground text-[10px]">{sub}</span>}
     </div>
   );
@@ -225,29 +227,29 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
         )}
       </div>
 
-      {/* Actions — same grammar as the leveraged side: buttons open a right-hand sheet */}
-      <div className="flex gap-2">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button className="rounded-full px-8 font-light" variant="blue">
-              Deposit
-            </Button>
-          </SheetTrigger>
-          <ActionSheetContent {...sheetProps} initialMode="deposit" />
-        </Sheet>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button className="rounded-full px-8 font-light" variant="secondary">
-              Withdraw
-            </Button>
-          </SheetTrigger>
-          <ActionSheetContent {...sheetProps} initialMode="withdraw" />
-        </Sheet>
-      </div>
-
-      {/* Beefy-style split: main content left, facts sidebar right (where the old action panel sat) */}
+      {/* Beefy-style split: main content left, actions + facts right (where the old action panel
+          sat). DOM order actions → content → facts keeps the buttons right under the stats on
+          mobile; on lg the left column spans both right-side rows. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex gap-2 lg:col-start-2 lg:row-start-1">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button size="lg" className="grow rounded-full font-light" variant="blue">
+                Deposit
+              </Button>
+            </SheetTrigger>
+            <ActionSheetContent {...sheetProps} initialMode="deposit" />
+          </Sheet>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button size="lg" className="grow rounded-full font-light" variant="secondary">
+                Withdraw
+              </Button>
+            </SheetTrigger>
+            <ActionSheetContent {...sheetProps} initialMode="withdraw" />
+          </Sheet>
+        </div>
+        <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           {/* Price & managed range */}
           <div className={PANEL}>
             <div className="mb-3 flex items-center justify-between">
@@ -271,7 +273,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-xl bg-white/[0.04] p-3">
                 <span className={LABEL}>Min price</span>
-                <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
+                <div className="text-primary-foreground mt-1 text-base font-medium tabular-nums">
                   {v.lower !== undefined ? fmt(v.lower) : "－"}
                 </div>
                 <span className="text-secondary-foreground text-[10px]">
@@ -285,7 +287,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                     {v.inRange ? "(in range)" : "(out)"}
                   </span>
                 </span>
-                <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
+                <div className="text-primary-foreground mt-1 text-base font-medium tabular-nums">
                   {v.price !== undefined ? fmt(v.price) : "－"}
                 </div>
                 <span className="text-secondary-foreground text-[10px]">
@@ -294,7 +296,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
               </div>
               <div className="rounded-xl bg-white/[0.04] p-3">
                 <span className={LABEL}>Max price</span>
-                <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">
+                <div className="text-primary-foreground mt-1 text-base font-medium tabular-nums">
                   {v.upper !== undefined ? fmt(v.upper) : "－"}
                 </div>
                 <span className="text-secondary-foreground text-[10px]">
@@ -370,19 +372,19 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
               <div className="mt-2 grid grid-cols-3 gap-3">
                 <div>
                   <span className={LABEL}>Value</span>
-                  <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
+                  <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
                     {v.myValue1 !== undefined ? `${fmt(v.myValue1)} ${cfg.token1.symbol}` : "－"}
                   </div>
                 </div>
                 <div>
                   <span className={LABEL}>Vault share</span>
-                  <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
+                  <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
                     {(v.myFrac * 100).toFixed(2)}%
                   </div>
                 </div>
                 <div>
                   <span className={LABEL}>Shares</span>
-                  <div className="text-primary-foreground mt-0.5 text-sm font-medium tabular-nums">
+                  <div className="text-primary-foreground mt-0.5 text-base font-medium tabular-nums">
                     {fmtAmt(v.myShares, d1)}
                   </div>
                 </div>
@@ -392,7 +394,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
         </div>
 
         {/* Facts sidebar */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-2">
           <FeesPanel />
           <VaultDetailsPanel cfg={cfg} lastAdjustment={v.lastAdjustment} />
         </div>
