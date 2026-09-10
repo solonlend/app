@@ -40,6 +40,12 @@ export function useAutoVault(cfg: RangeVaultCfg) {
     contracts: [
       { chainId: cfg.chainId, address: cfg.strategy ?? ZERO, abi: rangeStrategyAbi, functionName: "price" },
       { chainId: cfg.chainId, address: cfg.strategy ?? ZERO, abi: rangeStrategyAbi, functionName: "range" },
+      {
+        chainId: cfg.chainId,
+        address: cfg.strategy ?? ZERO,
+        abi: rangeStrategyAbi,
+        functionName: "lastPositionAdjustment",
+      },
     ],
     query: { refetchInterval: 30_000, enabled: deployed },
   });
@@ -50,6 +56,7 @@ export function useAutoVault(cfg: RangeVaultCfg) {
   const myShares = (user ? (vaultData?.[3]?.result as bigint | undefined) : 0n) ?? 0n;
   const priceRaw = stratData?.[0]?.result as bigint | undefined;
   const range = stratData?.[1]?.result as readonly [bigint, bigint] | undefined;
+  const lastAdjustment = stratData?.[2]?.result as bigint | undefined;
 
   const price = priceRaw !== undefined ? rangePriceToHuman(priceRaw, d0, d1) : undefined;
   const lower = range ? rangePriceToHuman(range[0], d0, d1) : undefined;
@@ -111,6 +118,7 @@ export function useAutoVault(cfg: RangeVaultCfg) {
     poolLevel,
     poolTvlUsd,
     poolStats,
+    lastAdjustment,
     refetch,
   };
 }

@@ -8,7 +8,7 @@ import {
   SheetTrigger,
 } from "@morpho-org/uikit/components/shadcn/sheet";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@morpho-org/uikit/components/shadcn/tooltip";
-import { LoaderCircle } from "lucide-react";
+import { ExternalLink, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { erc20Abi, formatUnits, parseUnits, type Address } from "viem";
 import { useAccount, useConfig, useReadContracts, useWriteContract } from "wagmi";
@@ -19,6 +19,7 @@ import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { useBusy } from "@/hooks/use-busy";
 import { depositPctAmounts } from "@/lib/auto-deposit";
+import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { rangeVaultAbi, type RangeVaultCfg } from "@/lib/solon-range";
 import { runTx } from "@/lib/tx-toast";
 
@@ -55,18 +56,76 @@ export function AutoVaultDetail({ cfg, onBack }: { cfg: RangeVaultCfg; onBack: (
   );
 }
 
+/** Relative "x ago" for on-chain timestamps. */
+function ago(ts: bigint | undefined): string {
+  if (ts === undefined || ts === 0n) return "－";
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - Number(ts));
+  if (s < 90) return `${s}s ago`;
+  if (s < 5400) return `${Math.round(s / 60)}m ago`;
+  if (s < 129600) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
+}
+
+const FEE_ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";
+
+function AddressLine({ label, address, explorer }: { label: string; address?: string; explorer: string }) {
+  return (
+    <div className={FEE_ROW}>
+      <span>{label}</span>
+      {address ? (
+        <a
+          className="text-primary-foreground flex items-center gap-1 underline decoration-dotted underline-offset-2"
+          href={`${explorer}/address/${address}`}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <code className="text-xs">{`${address.slice(0, 6)}…${address.slice(-4)}`}</code>
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ) : (
+        <span>pending deployment</span>
+      )}
+    </div>
+  );
+}
+
+function FeesPanel() {
+  return (
+    <div className={PANEL}>
+      <span className={LABEL}>Fees</span>
+      <div className="mt-2 flex max-w-md flex-col gap-1">
+        <div className={FEE_ROW}>
+          <span>Deposit fee</span>
+          <span>0%</span>
+        </div>
+        <div className={FEE_ROW}>
+          <span>Withdrawal fee</span>
+          <span>0%</span>
+        </div>
+        <div className={FEE_ROW}>
+          <span>Performance fee</span>
+          <span>10% of yield — never from principal</span>
+        </div>
+        <p className="text-secondary-foreground mt-1 text-[11px] font-light">
+          Withdrawals are available in any market condition.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
 
+  const stat = (label: string, value: string, sub?: string, colorClass?: string) => (
+    <div className="rounded-xl bg-white/[0.04] p-3">
+      <span className={LABEL}>{label}</span>
+      <div className={`${colorClass || "text-primary-foreground"} mt-1 text-sm font-medium tabular-nums`}>{value}</div>
+      {sub && <span className="text-secondary-foreground text-[10px]">{sub}</span>}
+    </div>
+  );
+
   if (!v.deployed) {
-    const stat = (label: string, value: string, sub?: string) => (
-      <div className="rounded-xl bg-white/[0.04] p-3">
-        <span className={LABEL}>{label}</span>
-        <div className="text-primary-foreground mt-1 text-sm font-medium tabular-nums">{value}</div>
-        {sub && <span className="text-secondary-foreground text-[10px]">{sub}</span>}
-      </div>
-    );
-    const FEE_ROW = "text-secondary-foreground flex items-center justify-between text-xs font-light";
     return (
       <div className="flex flex-col gap-4">
         <div className={`${PANEL} flex flex-col gap-3`}>
@@ -87,26 +146,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
             </div>
           )}
         </div>
-        <div className={PANEL}>
-          <span className={LABEL}>Fees at launch</span>
-          <div className="mt-2 flex max-w-md flex-col gap-1">
-            <div className={FEE_ROW}>
-              <span>Deposit fee</span>
-              <span>0%</span>
-            </div>
-            <div className={FEE_ROW}>
-              <span>Withdrawal fee</span>
-              <span>0%</span>
-            </div>
-            <div className={FEE_ROW}>
-              <span>Performance fee</span>
-              <span>10% of yield — never from principal</span>
-            </div>
-            <p className="text-secondary-foreground mt-1 text-[11px] font-light">
-              Withdrawals are available in any market condition.
-            </p>
-          </div>
-        </div>
+        <FeesPanel />
         <div className={PANEL}>
           <span className={LABEL}>Strategy</span>
           <p className="text-secondary-foreground mt-2 max-w-3xl text-xs font-light leading-relaxed">
@@ -134,6 +174,27 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Headline stats — the list row's numbers, so the detail stands on its own */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stat(
+          "Net APR",
+          v.netApr !== undefined ? `${(v.netApr * 100).toFixed(2)}%` : "－",
+          cfg.testnet && v.netApr === undefined ? "no APR feed on testnet" : "after the 10% performance fee",
+          farmSignedColor(v.netApr),
+        )}
+        {stat("Daily", v.netApr !== undefined ? `${((v.netApr / 365) * 100).toFixed(4)}%` : "－")}
+        {stat("TVL", v.tvl1 !== undefined ? `${fmt(v.tvl1)} ${cfg.token1.symbol}` : "－")}
+        {stat(
+          "My deposit",
+          !v.user
+            ? "－"
+            : v.myShares > 0n && v.myValue1 !== undefined
+              ? `${fmt(v.myValue1)} ${cfg.token1.symbol}`
+              : "0",
+          v.user ? undefined : "connect wallet",
+        )}
+      </div>
+
       {/* Actions — same grammar as the leveraged side: buttons open a right-hand sheet */}
       <div className="flex gap-2">
         <Sheet>
@@ -296,6 +357,28 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
             </div>
           </div>
         )}
+
+        <FeesPanel />
+
+        {/* Vault details — contracts and operating facts, spelled out (not only in the hover card) */}
+        <div className={PANEL}>
+          <span className={LABEL}>Vault details</span>
+          <div className="mt-2 flex max-w-md flex-col gap-1">
+            <div className={FEE_ROW}>
+              <span>Platform</span>
+              <span>Uniswap V3 · {cfg.feeLabel} fee tier</span>
+            </div>
+            <div className={FEE_ROW}>
+              <span>Last range adjustment</span>
+              <span className="tabular-nums">{ago(v.lastAdjustment)}</span>
+            </div>
+            <AddressLine label="Vault" address={cfg.vault} explorer={cfg.explorer} />
+            <AddressLine label="Strategy" address={cfg.strategy} explorer={cfg.explorer} />
+            <AddressLine label="Pool" address={cfg.pool} explorer={cfg.explorer} />
+            <AddressLine label={cfg.token0.symbol} address={cfg.token0.address} explorer={cfg.explorer} />
+            <AddressLine label={cfg.token1.symbol} address={cfg.token1.address} explorer={cfg.explorer} />
+          </div>
+        </div>
       </div>
     </div>
   );
