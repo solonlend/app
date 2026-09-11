@@ -145,6 +145,7 @@ function VaultDetailsPanel({ cfg, lastAdjustment }: { cfg: RangeVaultCfg; lastAd
 
 function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
+  const stableSym = cfg.stableLeg === 1 ? cfg.token1.symbol : cfg.token0.symbol;
   const { data: contribution } = useAutoNetContribution(cfg, v.user);
   const basis = useAutoPositionBasis(cfg, v.user);
   const [depOpen, setDepOpen] = useState(false);
@@ -164,7 +165,8 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
     const claim1 = v.bal1 * v.myFrac;
     pnlDelta0 = claim0 - Number(formatUnits(contribution.net0, cfg.token0.decimals));
     pnlDelta1 = claim1 - Number(formatUnits(contribution.net1, cfg.token1.decimals));
-    pnl1 = pnlDelta0 * v.price + pnlDelta1;
+    // Fold into the stable leg (SPEC §5 v1.7) — same USD semantics as every other quote.
+    pnl1 = cfg.stableLeg === 1 ? pnlDelta0 * v.price + pnlDelta1 : pnlDelta0 + pnlDelta1 / v.price;
   }
 
   const stat = (label: string, value: string, sub?: string, colorClass?: string) => (
@@ -209,6 +211,8 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
               Deposit both tokens and walk away: the vault sets the range, resets it as price moves, and compounds
               trading fees back into the position. Your principal is never swapped. Contracts are complete and verified
               end-to-end on a live testnet — mainnet deployment is in final review.
+              {cfg.marketHours &&
+                " One more: this pair carries a tokenized equity/ETF leg — its underlying market closes overnight and on weekends while the pool keeps trading, so expect wider drift and a re-center after gaps."}
             </p>
           </div>
         </div>
@@ -240,7 +244,11 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
         {stat(
           "Net APR",
           v.netApr !== undefined ? `${(v.netApr * 100).toFixed(2)}%` : "－",
-          cfg.testnet && v.netApr === undefined ? "no APR feed on testnet" : "after the 10% performance fee",
+          cfg.testnet && v.netApr === undefined
+            ? "no APR feed on testnet"
+            : v.aprWarming
+              ? "after the 10% performance fee · 24h window warming"
+              : "after the 10% performance fee",
           farmSignedColor(v.netApr),
         )}
         {stat("Daily", v.netApr !== undefined ? `${((v.netApr / 365) * 100).toFixed(4)}%` : "－")}
@@ -400,8 +408,14 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
             <span className={LABEL}>LP breakdown</span>
             <div className="mt-3 flex flex-col gap-2">
               {[
-                [cfg.token0, balances?.[0], d0, v.val0, v.share0] as const,
-                [cfg.token1, balances?.[1], d1, v.bal1, v.share0 !== undefined ? 100 - v.share0 : undefined] as const,
+                [cfg.token0, balances?.[0], d0, cfg.stableLeg === 1 ? v.val0 : undefined, v.share0] as const,
+                [
+                  cfg.token1,
+                  balances?.[1],
+                  d1,
+                  cfg.stableLeg === 0 && v.tvl1 !== undefined && v.bal0 !== undefined ? v.tvl1 - v.bal0 : v.bal1,
+                  v.share0 !== undefined ? 100 - v.share0 : undefined,
+                ] as const,
               ].map(([t, raw, dec, val, share]) => (
                 <div key={t.symbol} className="flex items-center gap-3">
                   <span className="text-primary-foreground w-14 text-sm font-medium">{t.symbol}</span>
@@ -413,7 +427,7 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                   </div>
                   <span className="text-secondary-foreground w-40 text-right text-xs tabular-nums">
                     {raw !== undefined ? fmtAmt(raw, dec) : "－"}{" "}
-                    {t.symbol !== cfg.token1.symbol && val !== undefined ? `· ${fmt(val)} ${cfg.token1.symbol}` : ""}
+                    {t.symbol !== stableSym && val !== undefined ? `· ${fmt(val)} ${stableSym}` : ""}
                   </span>
                 </div>
               ))}
@@ -433,6 +447,8 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
               check. Your principal is never swapped. Risk to understand: while price sits outside the range the
               position earns no fees and holds mostly one token until the next re-center — no losses are forced, but the
               mix follows the market.
+              {cfg.marketHours &&
+                " One more: this pair carries a tokenized equity/ETF leg — its underlying market closes overnight and on weekends while the pool keeps trading, so expect wider drift and a re-center after gaps."}
             </p>
           </div>
 

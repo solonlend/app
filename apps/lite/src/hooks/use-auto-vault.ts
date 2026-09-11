@@ -3,6 +3,7 @@ import { useAccount, useReadContracts } from "wagmi";
 
 import { useAutoPoolStats } from "@/hooks/use-auto-pool-stats";
 import { useLiveFeeApr } from "@/hooks/use-live-fee-apr";
+import { nonStableValueUsd, quoteUsd } from "@/lib/auto-quote";
 import { rangePriceToHuman, rangeStrategyAbi, rangeVaultAbi, type RangeVaultCfg } from "@/lib/solon-range";
 
 /** Net-of-fees APR shown to depositors: live gross fee APR × (1 − 10% performance fee). */
@@ -65,18 +66,20 @@ export function useAutoVault(cfg: RangeVaultCfg) {
 
   const bal0 = balances ? Number(formatUnits(balances[0], d0)) : undefined;
   const bal1 = balances ? Number(formatUnits(balances[1], d1)) : undefined;
-  // TVL is quoted in token1. Comparing it across vaults (list sorting) assumes every vault's
-  // token1 is the same stable quote asset — enforced in solon-farms config until a USD source lands.
-  const tvl1 = bal0 !== undefined && bal1 !== undefined && price !== undefined ? bal0 * price + bal1 : undefined;
+  // All quote values fold into the vault's stable leg (cfg.stableLeg, SPEC §5 v1.7) — USD-
+  // comparable across pools regardless of on-chain token order, so list sorting stays valid.
+  const tvl1 = quoteUsd(bal0, bal1, price, cfg.stableLeg);
   const myFrac = totalSupply && totalSupply > 0n ? Number(myShares) / Number(totalSupply) : 0;
   const myValue1 = tvl1 !== undefined ? tvl1 * myFrac : undefined;
-  const val0 = bal0 !== undefined && price !== undefined ? bal0 * price : undefined;
+  const val0 = cfg.stableLeg === 1 ? nonStableValueUsd(bal0, price, 1) : bal0; // token0's USD value either way
   const share0 = val0 !== undefined && tvl1 ? (val0 / tvl1) * 100 : undefined;
 
   // Live fee APR — pool-keyed: a vault on a pool the indexer doesn't cover shows "—", never a
   // borrowed number. Testnet has no feed at all.
   const { data: liveApr } = useLiveFeeApr(cfg.pool);
   const grossApr = cfg.testnet ? undefined : liveApr?.feeApr;
+  // Short-window honesty (SPEC §2.1 v1.7): surface the feed's own warm-up flag.
+  const aprWarming = !cfg.testnet && liveApr != null && !liveApr.warmedUp;
   let netApr = grossApr !== undefined ? grossApr * (1 - PERFORMANCE_FEE) : undefined;
 
   // Undeployed mainnet vaults: fall back to pool-level stats (auto-pools.json) so the directory
@@ -108,6 +111,7 @@ export function useAutoVault(cfg: RangeVaultCfg) {
     totalSupply,
     isCalm,
     myShares,
+    aprWarming,
     price,
     lower,
     upper,

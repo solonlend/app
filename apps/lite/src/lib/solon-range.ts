@@ -11,6 +11,10 @@ export type RangeVaultCfg = {
   testnet: boolean;
   /** URL segment for /farm/auto/:vault — human-readable, unique within a chain. */
   slug: string;
+  /** Which token is the USD-stable quote leg (SPEC §5 v1.7): all quote values fold into it. */
+  stableLeg: 0 | 1;
+  /** Equity/ETF leg pools: underlying market closes overnight/weekends while the pool trades. */
+  marketHours?: boolean;
   pair: string;
   /** Pool fee tier, display form ("0.01%"). */
   feeLabel: string;
@@ -32,6 +36,7 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     slug: "eth-usdg",
     pair: "ETH / USDG",
     feeLabel: "0.01%",
+    stableLeg: 1,
     vault: undefined,
     strategy: undefined,
     pool: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca",
@@ -41,12 +46,13 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
   },
   {
     // RH NVDA/USDG 0.05% — candidate pool #2 (2026-09-10 gateway pull: TVL $7.9M, fee APR ~68-74%).
-    // Coming-soon until deployed. NOTE before deploying: token1 is NVDA, so TVL/My-deposit render
-    // in NVDA units — the USD/stable quote source must land first (list sorting assumes token1
-    // is a stable quote; harmless while undeployed since reads stay disabled).
+    // Coming-soon until deployed. stableLeg=0: USDG is token0 on-chain, quotes fold into it
+    // (SPEC §5 v1.7); deployBlock must still be filled on deploy day.
     chainId: 4663,
     testnet: false,
     slug: "nvda-usdg",
+    stableLeg: 0,
+    marketHours: true,
     pair: "NVDA / USDG",
     feeLabel: "0.05%",
     vault: undefined,
@@ -58,12 +64,14 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
   },
   {
     // RH GLD/USDG 0.3% — first-batch candidate #3 (2026-09-11 gateway pull: TVL $4.8M, gross fee
-    // APR ~51%). Gold ETF leg = mild volatility, IL-friendly. Same token1-quote caveat as NVDA
-    // (token1 = GLD). Coming-soon until deployed. Replaced SPY/WETH (out of top-10 TVL, both
+    // APR ~51%). Gold ETF leg = mild volatility, IL-friendly. stableLeg=0 quoting.
+    // Coming-soon until deployed (deployBlock on deploy day). Replaced SPY/WETH (out of top-10 TVL, both
     // legs volatile) per 2026-09-11 first-batch decision.
     chainId: 4663,
     testnet: false,
     slug: "gld-usdg",
+    stableLeg: 0,
+    marketHours: true,
     pair: "GLD / USDG",
     feeLabel: "0.3%",
     vault: undefined,
@@ -76,10 +84,12 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
   {
     // RH SGOV/USDG 0.3% — first-batch candidate #4 (2026-09-11 gateway pull: TVL $5.1M, gross fee
     // APR ~16%). Short-treasury ETF: price barely moves, IL≈0 — the conservative "fixed-income-
-    // like" entry. Same token1-quote caveat (token1 = SGOV). Coming-soon until deployed.
+    // like" entry. stableLeg=0 quoting. Coming-soon until deployed (deployBlock on deploy day).
     chainId: 4663,
     testnet: false,
     slug: "sgov-usdg",
+    stableLeg: 0,
+    marketHours: true,
     pair: "SGOV / USDG",
     feeLabel: "0.3%",
     vault: undefined,
@@ -96,6 +106,7 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     slug: "eth-usdg",
     pair: "ETH / USDG",
     feeLabel: "0.01%",
+    stableLeg: 1,
     vault: "0x7C0cCcCB2C41e3DE01b4cB0Ba7d0EbdA11bb3701",
     strategy: "0x8352d9Df9006c21Cfc4dCaeBA8ec91Dae4Af8F4F",
     pool: "0x81ffB0C7127e90212f85cc825e9ecA8056A28A02",
