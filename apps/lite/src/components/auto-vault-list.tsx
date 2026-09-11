@@ -13,15 +13,16 @@ import { rangeVaultsForChain, type RangeVaultCfg } from "@/lib/solon-range";
   Undeployed vaults keep their row (COMING SOON) so the directory shows what's ahead.
 */
 
-type RowStats = { tvl?: number; apr?: number; mine: boolean };
-type SortKey = "apr" | "tvl";
+type RowStats = { tvl?: number; poolTvl?: number; apr?: number; mine: boolean };
+type SortKey = "apr" | "tvl" | "poolTvl";
 
 /** Below this many vaults the filter row would be noise — hide it (doc §E). */
 const FILTERS_FROM = 7;
 
 export function AutoVaultList({ chainId, onOpen }: { chainId: number | undefined; onOpen: (slug: string) => void }) {
   const cfgs = rangeVaultsForChain(chainId);
-  const [sortKey, setSortKey] = useState<SortKey>("tvl");
+  // Default: pool depth — the trust anchor; a young vault's own AUM starting tiny is normal.
+  const [sortKey, setSortKey] = useState<SortKey>("poolTvl");
   const [sortDesc, setSortDesc] = useState(true);
   const [search, setSearch] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
@@ -30,7 +31,8 @@ export function AutoVaultList({ chainId, onOpen }: { chainId: number | undefined
   const reportStats = useCallback((slug: string, s: RowStats) => {
     setStats((prev) => {
       const cur = prev[slug];
-      if (cur && cur.tvl === s.tvl && cur.apr === s.apr && cur.mine === s.mine) return prev;
+      if (cur && cur.tvl === s.tvl && cur.poolTvl === s.poolTvl && cur.apr === s.apr && cur.mine === s.mine)
+        return prev;
       return { ...prev, [slug]: s };
     });
   }, []);
@@ -91,11 +93,12 @@ export function AutoVaultList({ chainId, onOpen }: { chainId: number | undefined
       )}
 
       {/* Header — hidden on mobile where rows stack their own labels */}
-      <div className="hidden grid-cols-[1.4fr_repeat(4,1fr)_24px] items-center gap-x-6 px-4 md:grid">
+      <div className="hidden grid-cols-[1.4fr_repeat(5,1fr)_24px] items-center gap-x-6 px-4 md:grid">
         <span className={LABEL}>Vault</span>
         {sortHeader("apr", "Net APR")}
         <span className={LABEL}>Daily</span>
-        {sortHeader("tvl", "TVL")}
+        {sortHeader("poolTvl", "Pool TVL")}
+        {sortHeader("tvl", "Vault TVL")}
         <span className={LABEL}>My deposit</span>
         <span />
       </div>
@@ -121,11 +124,12 @@ function AutoVaultRow({
 }) {
   const v = useAutoVault(cfg);
   // Undeployed rows sort by their pool-level numbers so the directory still orders sensibly.
-  const sortTvl = v.tvl1 ?? v.poolTvlUsd;
+  const poolTvl = v.poolStats?.tvlUsd;
   const { netApr, myShares } = v;
   useEffect(() => {
-    onStats(cfg.slug, { tvl: sortTvl, apr: netApr, mine: myShares > 0n });
-  }, [cfg.slug, sortTvl, netApr, myShares, onStats]);
+    onStats(cfg.slug, { tvl: v.tvl1, poolTvl, apr: netApr, mine: myShares > 0n });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg.slug, v.tvl1, poolTvl, netApr, myShares, onStats]);
 
   // Net APR is a directional yield metric — same signed color the leveraged table's Net APY uses.
   const cell = (label: string, value: string, colorClass = "", note?: string) => (
@@ -149,7 +153,7 @@ function AutoVaultRow({
     <button
       type="button"
       onClick={() => onOpen(cfg.slug)}
-      className={`bg-primary grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-2xl p-4 text-left transition-colors hover:bg-white/[0.08] md:grid-cols-[1.4fr_repeat(4,1fr)_24px] ${
+      className={`bg-primary grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-2xl p-4 text-left transition-colors hover:bg-white/[0.08] md:grid-cols-[1.4fr_repeat(5,1fr)_24px] ${
         v.myShares > 0n ? "ring-1 ring-white/[0.12]" : ""
       }`}
     >
@@ -181,16 +185,8 @@ function AutoVaultRow({
         poolNote,
       )}
       {cell("Daily", v.netApr !== undefined ? `${((v.netApr / 365) * 100).toFixed(4)}%` : "－")}
-      {cell(
-        "TVL",
-        v.tvl1 !== undefined
-          ? fmtQuote(v.tvl1, cfg.token1.symbol)
-          : v.poolTvlUsd !== undefined
-            ? fmtQuote(v.poolTvlUsd, "USD")
-            : "－",
-        "",
-        poolNote,
-      )}
+      {cell("Pool TVL", poolTvl !== undefined ? fmtQuote(poolTvl, "USD") : "－")}
+      {cell("Vault TVL", v.tvl1 !== undefined ? fmtQuote(v.tvl1, cfg.token1.symbol) : "－")}
       {cell(
         "My deposit",
         !v.user ? "－" : v.myShares > 0n && v.myValue1 !== undefined ? fmtQuote(v.myValue1, cfg.token1.symbol) : "$0",
