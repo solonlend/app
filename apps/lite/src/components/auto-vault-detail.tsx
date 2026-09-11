@@ -17,6 +17,7 @@ import { readContract } from "wagmi/actions";
 
 import { BADGE, INPUT, LABEL, PANEL, fmt, fmtAmt, fmtQuote } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
+import { useAutoHistory } from "@/hooks/use-auto-history";
 import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
 import { useAutoVault } from "@/hooks/use-auto-vault";
@@ -147,6 +148,7 @@ function VaultDetailsPanel({ cfg, lastAdjustment }: { cfg: RangeVaultCfg; lastAd
 function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
   const v = useAutoVault(cfg);
   const stableSym = cfg.stableLeg === 1 ? cfg.token1.symbol : cfg.token0.symbol;
+  const history = useAutoHistory(cfg);
   const { data: contribution } = useAutoNetContribution(cfg, v.user);
   const basis = useAutoPositionBasis(cfg, v.user);
   const [depOpen, setDepOpen] = useState(false);
@@ -452,6 +454,44 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                 " One more: this pair carries a tokenized equity/ETF leg — its underlying market closes overnight and on weekends while the pool keeps trading, so expect wider drift and a re-center after gaps."}
             </p>
           </div>
+
+          {/* Activity — harvest/rebalance history (SPEC §2.5.5 v1.9); hidden when the feed is absent */}
+          {history !== undefined && (
+            <div className={PANEL}>
+              <span className={LABEL}>Activity</span>
+              {history.length === 0 ? (
+                <p className="text-secondary-foreground mt-2 text-xs font-light">No activity yet.</p>
+              ) : (
+                <div className="mt-3 flex flex-col gap-2">
+                  {history.slice(0, 8).map((e) => (
+                    <a
+                      key={e.tx}
+                      href={`${cfg.explorer}/tx/${e.tx}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-3 py-2 transition-colors hover:bg-white/[0.07]"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`${BADGE} ${e.kind === "harvest" ? "bg-emerald-500/15 text-emerald-300" : "bg-cyan-500/15 text-cyan-300"}`}
+                        >
+                          {e.kind === "harvest" ? "HARVEST" : "RANGE"}
+                        </span>
+                        <span className="text-secondary-foreground text-xs tabular-nums">{ago(BigInt(e.ts))}</span>
+                      </span>
+                      <span className="text-secondary-foreground text-right text-xs tabular-nums">
+                        {e.kind === "harvest"
+                          ? `+${fmtAmt(BigInt(e.fee0 ?? "0"), d0)} ${cfg.token0.symbol} · +${fmtAmt(BigInt(e.fee1 ?? "0"), d1)} ${cfg.token1.symbol}`
+                          : e.tickLower !== undefined
+                            ? `re-centered · ticks ${e.tickLower} → ${e.tickUpper}`
+                            : "range re-centered"}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* My position — placeholder when connected without a position (SPEC §2.4) */}
           {v.user && v.myShares === 0n && (
