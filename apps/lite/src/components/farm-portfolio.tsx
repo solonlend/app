@@ -11,6 +11,7 @@ import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { useFarmPositions } from "@/hooks/use-farm-positions";
+import { isSyncing } from "@/lib/auto-sync-hint";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { rangeVaultsForChain, type RangeVaultCfg } from "@/lib/solon-range";
 
@@ -27,6 +28,9 @@ type Row = {
   yieldUsd?: number;
   vsHodl?: number;
   mine: boolean;
+  /** Fully-exited history (SPEC §4 v1.8): lifetime realized P&L, shown as a CLOSED row. */
+  closed?: boolean;
+  realized?: number;
 };
 
 export function FarmPortfolio({
@@ -50,7 +54,9 @@ export function FarmPortfolio({
         cur.atDeposit === r.atDeposit &&
         cur.yieldUsd === r.yieldUsd &&
         cur.vsHodl === r.vsHodl &&
-        cur.mine === r.mine
+        cur.mine === r.mine &&
+        cur.closed === r.closed &&
+        cur.realized === r.realized
       )
         return prev;
       return { ...prev, [slug]: r };
@@ -111,6 +117,11 @@ export function FarmPortfolio({
       {/* Overview (Auto LP totals — leverage positions carry no cost-basis feed yet) */}
       <div className={PANEL}>
         <span className={LABEL}>Auto LP · overview</span>
+        {cfgs.some((c) => c.vault && isSyncing(c.chainId, c.vault)) && (
+          <p className="mt-2 rounded-xl bg-yellow-500/10 p-2 text-[11px] font-light text-yellow-300">
+            Syncing your last transaction — cost basis and vs-HODL can lag a few minutes.
+          </p>
+        )}
         <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {overview("Total value", totValue)}
           {overview("At deposit", totBasis)}
@@ -151,6 +162,33 @@ export function FarmPortfolio({
             })}
           </div>
         )}
+        {cfgs.some((c) => rows[c.slug]?.closed) && (
+          <div className="mt-2 flex flex-col gap-2">
+            {cfgs
+              .filter((c) => rows[c.slug]?.closed)
+              .map((cfg) => {
+                const r = rows[cfg.slug];
+                return (
+                  <button
+                    key={`closed-${cfg.slug}`}
+                    type="button"
+                    onClick={() => onOpenVault(cfg.slug)}
+                    className="grid grid-cols-2 items-center gap-x-6 gap-y-2 rounded-xl bg-white/[0.02] p-3 text-left transition-colors hover:bg-white/[0.06] md:grid-cols-[1.2fr_repeat(4,1fr)_24px]"
+                  >
+                    <span className="col-span-2 flex items-center gap-2 md:col-span-1">
+                      <span className="text-secondary-foreground text-base font-medium">{cfg.pair}</span>
+                      <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>CLOSED</span>
+                    </span>
+                    <Cell label="Realized" v={r.realized} signed />
+                    <span className="hidden md:block" />
+                    <span className="hidden md:block" />
+                    <span className="hidden md:block" />
+                    <span className="text-secondary-foreground hidden text-right md:block">→</span>
+                  </button>
+                );
+              })}
+          </div>
+        )}
       </div>
 
       {/* Leveraged positions — the existing table, embedded as-is (it brings its own heading
@@ -186,10 +224,14 @@ function PortfolioProbe({ cfg, onRow }: { cfg: RangeVaultCfg; onRow: (slug: stri
   if (mine && contribution && v.bal0 !== undefined && v.bal1 !== undefined && v.price !== undefined) {
     const d0 = v.bal0 * v.myFrac - Number(formatUnits(contribution.net0, cfg.token0.decimals));
     const d1 = v.bal1 * v.myFrac - Number(formatUnits(contribution.net1, cfg.token1.decimals));
-    vsHodl = d0 * v.price + d1;
+    // Fold into the stable leg (SPEC §5 v1.7) — same USD semantics as the detail page.
+    vsHodl = cfg.stableLeg === 1 ? d0 * v.price + d1 : d0 + d1 / v.price;
   }
+  // Fully-exited history (SPEC §4 v1.8): no live shares, but the basis feed has a lifetime.
+  const closed = !mine && basis !== undefined && (basis.lifetimeOutUsd ?? 0) > 0 && (basis.lifetimeInUsd ?? 0) > 0;
+  const realized = closed ? (basis!.lifetimeOutUsd ?? 0) - (basis!.lifetimeInUsd ?? 0) : undefined;
   useEffect(() => {
-    onRow(cfg.slug, { value, atDeposit, yieldUsd, vsHodl, mine });
-  }, [cfg.slug, value, atDeposit, yieldUsd, vsHodl, mine, onRow]);
+    onRow(cfg.slug, { value, atDeposit, yieldUsd, vsHodl, mine, closed, realized });
+  }, [cfg.slug, value, atDeposit, yieldUsd, vsHodl, mine, closed, realized, onRow]);
   return null;
 }

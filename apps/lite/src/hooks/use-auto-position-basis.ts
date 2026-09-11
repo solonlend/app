@@ -8,7 +8,14 @@ import { type RangeVaultCfg } from "@/lib/solon-range";
  * published by points/auto_positions.py to `${BASE_URL}data/auto-positions-<chainId>.json`.
  * Each deposit is priced at its own entry block; withdrawals reduce the basis proportionally.
  */
-export type PositionBasis = { costBasisUsd: number; deposits: number; withdrawals: number };
+export type PositionBasis = {
+  costBasisUsd: number;
+  deposits: number;
+  withdrawals: number;
+  /** Lifetime realized flow (SPEC §4 v1.8): every deposit/withdraw priced at its own block. */
+  lifetimeInUsd?: number;
+  lifetimeOutUsd?: number;
+};
 
 type Feed = {
   chainId: number;

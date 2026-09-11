@@ -22,6 +22,7 @@ import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
 import { useAutoVault } from "@/hooks/use-auto-vault";
 import { useBusy } from "@/hooks/use-busy";
 import { depositPctAmounts, depositShortfalls, swapLinkFor } from "@/lib/auto-deposit";
+import { isSyncing, recordAutoTx } from "@/lib/auto-sync-hint";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
 import { rangeVaultAbi, type RangeVaultCfg } from "@/lib/solon-range";
 import { runTx } from "@/lib/tx-toast";
@@ -461,6 +462,11 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
               </p>
             </div>
           )}
+          {v.user && v.myShares > 0n && cfg.vault && isSyncing(cfg.chainId, cfg.vault) && (
+            <p className="rounded-xl bg-yellow-500/10 p-3 text-[11px] font-light leading-relaxed text-yellow-300">
+              Syncing your last transaction — cost basis and vs-HODL can lag a few minutes.
+            </p>
+          )}
           {v.user && v.myShares > 0n && (
             <div className={PANEL}>
               <span className={LABEL}>My position</span>
@@ -757,6 +763,7 @@ function ActionSheetContent({
           }),
         );
         if (!h) return;
+        recordAutoTx(cfg.chainId, vault);
         setLastTx(h);
         setAmt0("");
         setAmt1("");
@@ -784,6 +791,7 @@ function ActionSheetContent({
           }),
         );
         if (!h) return;
+        recordAutoTx(cfg.chainId, vault);
         setLastTx(h);
         setPct(undefined);
         setWdPreview(undefined);
