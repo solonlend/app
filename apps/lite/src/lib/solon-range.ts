@@ -57,18 +57,36 @@ export const RANGE_VAULTS: RangeVaultCfg[] = [
     explorer: "https://robinhoodchain.blockscout.com",
   },
   {
-    // RH SPY/WETH 0.05% — candidate pool #3 (gateway pull: TVL $1.9M, fee APR ~91-125%). Same
-    // token1-quote caveat as above (token1 = SPY). Coming-soon until deployed.
+    // RH GLD/USDG 0.3% — first-batch candidate #3 (2026-09-11 gateway pull: TVL $4.8M, gross fee
+    // APR ~51%). Gold ETF leg = mild volatility, IL-friendly. Same token1-quote caveat as NVDA
+    // (token1 = GLD). Coming-soon until deployed. Replaced SPY/WETH (out of top-10 TVL, both
+    // legs volatile) per 2026-09-11 first-batch decision.
     chainId: 4663,
     testnet: false,
-    slug: "spy-weth",
-    pair: "SPY / WETH",
-    feeLabel: "0.05%",
+    slug: "gld-usdg",
+    pair: "GLD / USDG",
+    feeLabel: "0.3%",
     vault: undefined,
     strategy: undefined,
-    pool: "0xDDCBBa3666f578E3F09516f21Ff85BFee859AB5e",
-    token0: { address: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", symbol: "WETH", decimals: 18 },
-    token1: { address: "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C", symbol: "SPY", decimals: 18 },
+    pool: "0x7A6A053eCCf1446A2633E05aA6D40D09381997ec",
+    token0: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", symbol: "USDG", decimals: 6 },
+    token1: { address: "0xC9a981FEE1F9DEc688bb123ccDeCc63D0deBFC4e", symbol: "GLD", decimals: 18 },
+    explorer: "https://robinhoodchain.blockscout.com",
+  },
+  {
+    // RH SGOV/USDG 0.3% — first-batch candidate #4 (2026-09-11 gateway pull: TVL $5.1M, gross fee
+    // APR ~16%). Short-treasury ETF: price barely moves, IL≈0 — the conservative "fixed-income-
+    // like" entry. Same token1-quote caveat (token1 = SGOV). Coming-soon until deployed.
+    chainId: 4663,
+    testnet: false,
+    slug: "sgov-usdg",
+    pair: "SGOV / USDG",
+    feeLabel: "0.3%",
+    vault: undefined,
+    strategy: undefined,
+    pool: "0xfAb520051f96F4D2a32c22B6a3dD7fFfdf231bFe",
+    token0: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", symbol: "USDG", decimals: 6 },
+    token1: { address: "0x92FD66527192E3e61d4DDd13322Aa222DE86F9B5", symbol: "SGOV", decimals: 18 },
     explorer: "https://robinhoodchain.blockscout.com",
   },
   {
