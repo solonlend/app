@@ -255,7 +255,13 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
           farmSignedColor(v.netApr),
         )}
         {stat("Daily", v.netApr !== undefined ? `${((v.netApr / 365) * 100).toFixed(4)}%` : "－")}
-        {stat("TVL", v.tvl1 !== undefined ? fmtQuote(v.tvl1, cfg.token1.symbol) : "－")}
+        {stat(
+          "TVL",
+          v.tvl1 !== undefined ? fmtQuote(v.tvl1, cfg.token1.symbol) : "－",
+          // Vault-managed assets vs the whole pool it makes markets in (KousanS 2026-09-11:
+          // the bare number reads ambiguous right after the pre-launch pool-level figures).
+          v.poolStats ? `vault assets · in a ${fmtQuote(v.poolStats.tvlUsd, "USD")} pool` : "vault assets",
+        )}
         {stat(
           "My deposit",
           !v.user ? "－" : v.myShares > 0n && v.myValue1 !== undefined ? fmtQuote(v.myValue1, cfg.token1.symbol) : "$0",

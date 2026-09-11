@@ -30,16 +30,17 @@ export type RangeVaultCfg = {
 
 export const RANGE_VAULTS: RangeVaultCfg[] = [
   {
-    // Robinhood Chain mainnet — deployment pending sign-off; coming-soon card until addresses land.
+    // Robinhood Chain mainnet — LIVE 2026-09-11 (deployments/rh-mainnet-clm-2026-09-11.md).
     chainId: 4663,
     testnet: false,
     slug: "eth-usdg",
     pair: "ETH / USDG",
     feeLabel: "0.01%",
     stableLeg: 1,
-    vault: undefined,
-    strategy: undefined,
+    vault: "0xfd7Ab6A724f28cE958Ee29E7A9DfAE7b9efC6B91",
+    strategy: "0x6F7343369d9AaFFC45d790b64E9543A8c804E844",
     pool: "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca",
+    deployBlock: 60232400,
     token0: { address: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", symbol: "ETH", decimals: 18 },
     token1: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", symbol: "USDG", decimals: 6 },
     explorer: "https://robinhoodchain.blockscout.com",
