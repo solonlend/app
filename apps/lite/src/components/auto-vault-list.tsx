@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AutoPairIcons } from "@/components/auto-pair-icons";
 import { BADGE, LABEL, fmtQuote } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoVault } from "@/hooks/use-auto-vault";
@@ -93,7 +94,7 @@ export function AutoVaultList({ chainId, onOpen }: { chainId: number | undefined
       )}
 
       {/* Header — hidden on mobile where rows stack their own labels */}
-      <div className="hidden grid-cols-[1.4fr_repeat(5,1fr)_24px] items-center gap-x-6 px-4 md:grid">
+      <div className="hidden grid-cols-[2fr_repeat(5,1fr)_24px] items-center gap-x-6 px-4 md:grid">
         <span className={LABEL}>Vault</span>
         {sortHeader("apr", "Net APR")}
         <span className={LABEL}>Daily</span>
@@ -153,15 +154,18 @@ function AutoVaultRow({
     <button
       type="button"
       onClick={() => onOpen(cfg.slug)}
-      className={`bg-primary grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-2xl p-4 text-left transition-colors hover:bg-white/[0.08] md:grid-cols-[1.4fr_repeat(5,1fr)_24px] ${
+      className={`bg-primary grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-2xl p-4 text-left transition-colors hover:bg-white/[0.08] md:grid-cols-[2fr_repeat(5,1fr)_24px] ${
         v.myShares > 0n ? "ring-1 ring-white/[0.12]" : ""
       }`}
     >
       <div className="col-span-2 flex flex-wrap items-center gap-2 md:col-span-1">
         <AutoPairInfo cfg={cfg}>
           <span className="flex items-center gap-2">
-            <span className="text-primary-foreground text-base font-medium">{cfg.pair}</span>
-            <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
+            <AutoPairIcons cfg={cfg} />
+            <span className="text-primary-foreground whitespace-nowrap text-base font-medium">{cfg.pair}</span>
+            <span className={`${BADGE} text-secondary-foreground whitespace-nowrap bg-white/[0.06]`}>
+              V3 · {cfg.feeLabel}
+            </span>
           </span>
         </AutoPairInfo>
         {cfg.testnet && <span className={`${BADGE} bg-yellow-500/15 text-yellow-300`}>TESTNET</span>}

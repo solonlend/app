@@ -15,6 +15,7 @@ import { erc20Abi, formatUnits, parseUnits, type Address } from "viem";
 import { useAccount, useConfig, useReadContracts, useWriteContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 
+import { AutoPairIcons } from "@/components/auto-pair-icons";
 import { BADGE, INPUT, LABEL, PANEL, fmt, fmtAmt, fmtQuote } from "@/components/auto-vault-common";
 import { AutoPairInfo } from "@/components/auto-vault-info";
 import { useAutoHistory } from "@/hooks/use-auto-history";
@@ -50,6 +51,7 @@ export function AutoVaultDetail({ cfg, onBack }: { cfg: RangeVaultCfg; onBack: (
         </button>
         <AutoPairInfo cfg={cfg}>
           <span className="ml-2 flex items-center gap-2">
+            <AutoPairIcons cfg={cfg} />
             <span className="text-primary-foreground text-base font-medium">{cfg.pair}</span>
             <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
           </span>

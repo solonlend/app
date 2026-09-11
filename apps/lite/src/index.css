@@ -14,14 +14,10 @@
   --morpho-banner: var(--morpho-active);
 
   /* Farm semantic palette: shared by light and dark themes. */
-  --farm-safe: hsl(
-    172.8,
-    48.9%,
-    43.7%
-  ); /* = --morpho-valid; the Morpho design-system success color, not a neon candy green */
+  --farm-safe: #6ee7b7; /* emerald-300 — matched to the IN RANGE badge so all "good" signals share one green (user-picked 2026-09-11) */
   --farm-warning: #fbbf24;
   --farm-danger: #f87171;
-  --farm-safe-subtle: hsla(172.8, 48.9%, 43.7%, 0.12);
+  --farm-safe-subtle: rgba(110, 231, 183, 0.12);
   --farm-warning-subtle: rgba(251, 191, 36, 0.12);
   --farm-danger-subtle: rgba(248, 113, 113, 0.12);
 

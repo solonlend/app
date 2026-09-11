@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { useAccount } from "wagmi";
 
+import { AutoPairIcons } from "@/components/auto-pair-icons";
 import { BADGE, LABEL, PANEL, fmtQuote } from "@/components/auto-vault-common";
 import { FarmPositions } from "@/components/farm-positions";
 import { FarmRiskPanel } from "@/components/farm-risk-panel";
@@ -169,6 +170,7 @@ export function FarmPortfolio({
                   className="grid grid-cols-2 items-center gap-x-6 gap-y-2 rounded-xl bg-white/[0.04] p-3 text-left transition-colors hover:bg-white/[0.08] md:grid-cols-[1.2fr_repeat(4,1fr)_24px]"
                 >
                   <span className="col-span-2 flex items-center gap-2 md:col-span-1">
+                    <AutoPairIcons cfg={cfg} />
                     <span className="text-primary-foreground text-base font-medium">{cfg.pair}</span>
                     <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>V3 · {cfg.feeLabel}</span>
                   </span>
