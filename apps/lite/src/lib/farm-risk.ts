@@ -24,3 +24,18 @@ export function riskTier(usage: number | undefined): RiskTier {
   if (usage >= 0.75) return "warn";
   return "ok";
 }
+
+/** One row in the unified Risk section (SPEC §4 v1.10): leverage and borrow side by side. */
+export type GenericRiskRow = {
+  key: string;
+  label: string;
+  kind: "LEV" | "BORROW";
+  usage: number | undefined;
+  value: number;
+  debt: number;
+};
+
+/** Rank the merged board: most dangerous first, unknown usage always last. */
+export function mergeRiskRows(rows: GenericRiskRow[]): GenericRiskRow[] {
+  return [...rows].sort((a, b) => (b.usage ?? -1) - (a.usage ?? -1));
+}

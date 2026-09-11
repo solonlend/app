@@ -1,6 +1,6 @@
-import { LABEL, PANEL, fmtQuote } from "@/components/auto-vault-common";
+import { BADGE, LABEL, PANEL, fmtQuote } from "@/components/auto-vault-common";
 import { type FarmPos } from "@/hooks/use-farm-positions";
-import { rankRiskRows, riskTier, type RiskTier } from "@/lib/farm-risk";
+import { mergeRiskRows, rankRiskRows, riskTier, type GenericRiskRow, type RiskTier } from "@/lib/farm-risk";
 
 /*
   Portfolio Risk section (SPEC §4 Risk 区): every position with a liquidation line, most
@@ -21,8 +21,20 @@ const TIER_TEXT: Record<RiskTier, string> = {
   unknown: "text-secondary-foreground",
 };
 
-export function FarmRiskPanel({ positions, lltv }: { positions: FarmPos[]; lltv: bigint | undefined }) {
-  const rows = rankRiskRows(positions, lltv);
+export function FarmRiskPanel({
+  positions,
+  lltv,
+  borrowRows = [],
+}: {
+  positions: FarmPos[];
+  lltv: bigint | undefined;
+  borrowRows?: GenericRiskRow[];
+}) {
+  const lev: GenericRiskRow[] = rankRiskRows(positions, lltv).map((r) => {
+    const pos = positions.find((p) => p.id === r.id)!;
+    return { key: `lev-${r.id}`, label: `#${r.id}`, kind: "LEV", usage: r.usage, value: pos.value, debt: pos.debt };
+  });
+  const rows = mergeRiskRows([...lev, ...borrowRows]);
   if (rows.length === 0) return null;
   return (
     <div className={PANEL}>
@@ -33,13 +45,17 @@ export function FarmRiskPanel({ positions, lltv }: { positions: FarmPos[]; lltv:
       <div className="mt-2 flex flex-col gap-2">
         {rows.map((r) => {
           const tier = riskTier(r.usage);
-          const pos = positions.find((p) => p.id === r.id)!;
           return (
             <div
-              key={r.id.toString()}
-              className="grid grid-cols-2 items-center gap-x-6 gap-y-1 rounded-xl bg-white/[0.04] p-3 md:grid-cols-[64px_minmax(0,1fr)_90px_1fr]"
+              key={r.key}
+              className="grid grid-cols-2 items-center gap-x-6 gap-y-1 rounded-xl bg-white/[0.04] p-3 md:grid-cols-[110px_minmax(0,1fr)_90px_1fr]"
             >
-              <span className="text-primary-foreground text-sm font-medium tabular-nums">#{r.id.toString()}</span>
+              <span className="flex items-center gap-2">
+                <span className="text-primary-foreground text-sm font-medium tabular-nums">{r.label}</span>
+                <span className={`${BADGE} text-secondary-foreground bg-white/[0.06]`}>
+                  {r.kind === "LEV" ? "LEV" : "BORROW"}
+                </span>
+              </span>
               <div className="h-1.5 w-full rounded-full bg-white/[0.06]">
                 <div
                   className={`h-full rounded-full ${TIER_BAR[tier]}`}
@@ -50,7 +66,7 @@ export function FarmRiskPanel({ positions, lltv }: { positions: FarmPos[]; lltv:
                 {r.usage !== undefined ? r.usage.toFixed(2) : "－"}
               </span>
               <span className="text-secondary-foreground text-xs font-light tabular-nums">
-                {fmtQuote(pos.value, "USD")} value · {fmtQuote(pos.debt, "USD")} debt
+                {fmtQuote(r.value, "USD")} value · {fmtQuote(r.debt, "USD")} debt
               </span>
             </div>
           );

@@ -46,3 +46,17 @@ test("zero-value positions rank last and never divide by zero", async () => {
   );
   assert.equal(rows[1].usage, 0);
 });
+
+test("mergeRiskRows ranks lev+borrow together, unknown usage last", async () => {
+  const { mergeRiskRows } = await load();
+  const rows = mergeRiskRows([
+    { key: "lev-1", label: "#1", kind: "LEV", usage: 0.42, value: 1000, debt: 300 },
+    { key: "b-AAPL", label: "AAPL", kind: "BORROW", usage: 0.91, value: 500, debt: 280 },
+    { key: "b-TSLA", label: "TSLA", kind: "BORROW", usage: undefined, value: 100, debt: 10 },
+    { key: "lev-2", label: "#2", kind: "LEV", usage: 0.05, value: 50, debt: 1 },
+  ]);
+  assert.deepEqual(
+    rows.map((r) => r.key),
+    ["b-AAPL", "lev-1", "lev-2", "b-TSLA"],
+  );
+});

@@ -10,6 +10,8 @@ import { FarmRiskPanel } from "@/components/farm-risk-panel";
 import { useAutoNetContribution } from "@/hooks/use-auto-pnl";
 import { useAutoPositionBasis } from "@/hooks/use-auto-position-basis";
 import { useAutoVault } from "@/hooks/use-auto-vault";
+import { useBorrowRisk } from "@/hooks/use-borrow-risk";
+import { useFarmBasis } from "@/hooks/use-farm-basis";
 import { useFarmPositions } from "@/hooks/use-farm-positions";
 import { isSyncing } from "@/lib/auto-sync-hint";
 import { farmSignedColor } from "@/lib/farm-semantic-colors";
@@ -43,6 +45,8 @@ export function FarmPortfolio({
   const { address: user } = useAccount();
   const { setOpen: openConnect } = useModal();
   const farm = useFarmPositions();
+  const borrowRisk = useBorrowRisk();
+  const levBasis = useFarmBasis(user);
   const cfgs = rangeVaultsForChain(chainId).filter((c) => c.vault !== undefined);
   const [rows, setRows] = useState<Record<string, Row>>({});
   const report = useCallback((slug: string, r: Row) => {
@@ -70,9 +74,21 @@ export function FarmPortfolio({
       if (x === undefined) return acc;
       return (acc ?? 0) + x;
     }, undefined);
-  const totValue = sum((r) => r.value);
-  const totBasis = sum((r) => r.atDeposit);
-  const totYield = sum((r) => r.yieldUsd);
+  // Leverage fold (SPEC §4 v1.10 gap ②): equity from live positions, basis from the
+  // lifetime feed. Either side missing → that term is left out (never guessed as 0).
+  const levEquity = farm.positions.length > 0 ? farm.positions.reduce((a, p) => a + (p.value - p.debt), 0) : undefined;
+  const levNet = levBasis !== undefined ? levBasis.lifetimeInUsd - levBasis.lifetimeOutUsd : undefined;
+  const add = (a: number | undefined, b: number | undefined) =>
+    a === undefined && b === undefined ? undefined : (a ?? 0) + (b ?? 0);
+  const totValue = add(
+    sum((r) => r.value),
+    levEquity,
+  );
+  const totBasis = add(
+    sum((r) => r.atDeposit),
+    levNet,
+  );
+  const totYield = totValue !== undefined && totBasis !== undefined ? totValue - totBasis : undefined;
   const totHodl = sum((r) => r.vsHodl);
 
   const overview = (label: string, v: number | undefined, signed = false) => (
@@ -112,11 +128,11 @@ export function FarmPortfolio({
       ))}
 
       {/* Risk first — the account page's primary duty on a platform with liquidation lines */}
-      <FarmRiskPanel positions={farm.positions} lltv={farm.lltv} />
+      <FarmRiskPanel positions={farm.positions} lltv={farm.lltv} borrowRows={borrowRisk} />
 
       {/* Overview (Auto LP totals — leverage positions carry no cost-basis feed yet) */}
       <div className={PANEL}>
-        <span className={LABEL}>Auto LP · overview</span>
+        <span className={LABEL}>Positions · overview</span>
         {cfgs.some((c) => c.vault && isSyncing(c.chainId, c.vault)) && (
           <p className="mt-2 rounded-xl bg-yellow-500/10 p-2 text-[11px] font-light text-yellow-300">
             Syncing your last transaction — cost basis and vs-HODL can lag a few minutes.
@@ -128,6 +144,10 @@ export function FarmPortfolio({
           {overview("Yield", totYield, true)}
           {overview("vs HODL", totHodl, true)}
         </div>
+        <p className="text-secondary-foreground mt-2 text-[10px] font-light">
+          Value / At deposit / Yield include leveraged positions (equity vs lifetime net invested); vs HODL is
+          Auto-only.
+        </p>
       </div>
 
       {/* Auto positions */}
