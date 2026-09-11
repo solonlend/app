@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { URL } from "node:url";
 const load = () => import("./auto-deposit.ts");
 
 test("pct fills both sides in the vault's current ratio, limited by the scarcer wallet side", async () => {
@@ -44,8 +45,13 @@ test("swap link exists only for Robinhood chain and pre-fills the token address"
   const { swapLinkFor } = await load();
   const addr = "0x00000000000000000000000000000000000000AB";
   const rh = swapLinkFor(4663, addr);
-  assert.ok(rh && rh.includes("app.uniswap.org"), "RH gets a Uniswap link");
-  assert.ok(rh.includes(addr), "link pre-fills the token address");
+  assert.ok(rh, "RH gets a Uniswap link");
+  const u = new URL(rh);
+  assert.equal(u.protocol, "https:");
+  assert.equal(u.host, "app.uniswap.org");
+  assert.equal(u.pathname, "/swap");
+  assert.equal(u.searchParams.get("chain"), "robinhood");
+  assert.equal(u.searchParams.get("outputCurrency"), addr);
   assert.equal(swapLinkFor(11155111, addr), undefined, "Sepolia testnet gets no link");
   assert.equal(swapLinkFor(1, addr), undefined, "unmapped chains get no link");
 });

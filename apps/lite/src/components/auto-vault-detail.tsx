@@ -384,8 +384,10 @@ function DetailInner({ cfg }: { cfg: RangeVaultCfg }) {
                 </div>
               </div>
             )}
-            {/* Out-of-range explainer (SPEC §2.2, wording mirrors the Strategy panel) */}
-            {v.price !== undefined && v.lower !== undefined && !v.inRange && (
+            {/* Out-of-range explainer (SPEC §2.2, wording mirrors the Strategy panel).
+                inRange is a plain boolean that reads false while data loads — the price/lower
+                guards make it meaningful here, and === false keeps that explicit. */}
+            {v.price !== undefined && v.lower !== undefined && v.inRange === false && (
               <p className="mt-3 rounded-xl bg-yellow-500/10 p-3 text-[11px] font-light leading-relaxed text-yellow-300">
                 Price is outside the managed range: the position earns no fees and leans toward one token until the
                 keeper re-centers the range during a calm market. Nothing is force-sold.
@@ -629,6 +631,9 @@ function ActionSheetContent({
     setDepPreview(undefined);
     setPreviewing(true);
     debounceRef.current = setTimeout(() => {
+      // Refresh balances alongside the preview so the shortfall gate never judges fresh takes
+      // against a stale wallet snapshot (external transfers between opens).
+      void refetchWallet();
       void (async () => {
         try {
           const r = (await readContract(config, {
